@@ -686,6 +686,36 @@ abstract class AppLocalizations {
   /// **'Kode bayar ELNUX'**
   String get staticOfferDescription;
 
+  /// No description provided for @confirmPayOfferTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Bayar kode bayar ini?'**
+  String get confirmPayOfferTitle;
+
+  /// No description provided for @sendOfferAmountLine.
+  ///
+  /// In id, this message translates to:
+  /// **'Nominal: {amount} nusan'**
+  String sendOfferAmountLine(String amount);
+
+  /// No description provided for @sendOfferVariableHint.
+  ///
+  /// In id, this message translates to:
+  /// **'Kode bayar ini tidak menetapkan nominal — tentukan sendiri jumlah yang mau dibayar.'**
+  String get sendOfferVariableHint;
+
+  /// No description provided for @sendOfferInvalid.
+  ///
+  /// In id, this message translates to:
+  /// **'Kode bayar tidak valid.'**
+  String get sendOfferInvalid;
+
+  /// No description provided for @sendOfferExpired.
+  ///
+  /// In id, this message translates to:
+  /// **'Kode bayar sudah kedaluwarsa.'**
+  String get sendOfferExpired;
+
   /// No description provided for @pasteInvoiceFirst.
   ///
   /// In id, this message translates to:

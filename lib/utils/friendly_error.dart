@@ -33,6 +33,17 @@ String friendlyError(Object error,
     return l10n.errorBalance;
   }
 
+  // Kode bayar (offer Bolt12) tidak valid / tidak didukung —
+  // dipisah dari pesan invoice: pengguna yang membayar kode
+  // bayar tidak boleh membaca "invoice kedaluwarsa" untuk kode
+  // yang sebenarnya tidak dikenal atau berdenominasi asing.
+  if (s.contains('offer') &&
+      (s.contains('invalid') ||
+          s.contains('parse') ||
+          s.contains('unsupported'))) {
+    return l10n.sendOfferInvalid;
+  }
+
   // Invoice tidak valid / kedaluwarsa.
   if (s.contains('invoice') &&
       (s.contains('invalid') || s.contains('expired') || s.contains('parse'))) {

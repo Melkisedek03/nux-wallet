@@ -132,6 +132,18 @@
   "staticCodeNeedsConnection": "Kode bayar dibuat begitu dompet tersambung. Periksa koneksimu, lalu coba lagi.",
   "staticCodeFailed": "Gagal membuat kode bayar. Coba lagi.",
   "staticOfferDescription": "Kode bayar ELNUX",
+  "confirmPayOfferTitle": "Bayar kode bayar ini?",
+  "sendOfferAmountLine": "Nominal: {amount} nusan",
+  "@sendOfferAmountLine": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "sendOfferVariableHint": "Kode bayar ini tidak menetapkan nominal — tentukan sendiri jumlah yang mau dibayar.",
+  "sendOfferInvalid": "Kode bayar tidak valid.",
+  "sendOfferExpired": "Kode bayar sudah kedaluwarsa.",
   "pasteInvoiceFirst": "Tempel invoice dulu",
   "invalidInvoice": "Ini bukan invoice Lightning yang valid",
   "payFailed": "Pembayaran gagal. Coba lagi.",

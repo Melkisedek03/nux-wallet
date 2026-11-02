@@ -185,6 +185,39 @@ class LspService {
     return await payment.send(invoice: invoice);
   }
 
+  /// Bayar offer Bolt12 bernominal TETAP (nominalnya tertulis di
+  /// offer) dan kembalikan ID pembayaran-nya.
+  ///
+  /// PERHATIAN sama seperti [payInvoice]: kembalian hanya berarti
+  /// perintah kirim DITERIMA node; hasil akhir dipantau lewat
+  /// [waitForPaymentOutcome] — pembayaran offer tercatat di daftar
+  /// pembayaran node dengan ID yang sama seperti pembayaran
+  /// Bolt11 (jenisnya PaymentKind_Bolt12Offer), jadi penungguan
+  /// hasil tidak butuh jalur khusus.
+  ///
+  /// String offer diparse node dari bentuk teksnya ([Offer.s]);
+  /// string yang tidak sah ditolak node di sini. Memakai offer
+  /// tanpa nominal pada jalur ini ditolak node (InvalidOffer) —
+  /// pemanggil menentukan jalur dari info offer lebih dulu
+  /// (lihat parseOfferInfo di utils/bolt12_info.dart).
+  Future<PaymentId> payOffer(String offerStr) async {
+    _ensureRunning();
+    final payment = await FfiNode.bolt12Payment(ptr: _node!);
+    return await payment.send(offer: Offer(s: offerStr));
+  }
+
+  /// Bayar offer Bolt12 TANPA nominal tetap (variable-amount,
+  /// mis. Kode Bayar Statis) dengan nominal pilihan pembayar
+  /// sebesar [amountMsat]. Pasangan [payOffer] — keterangan
+  /// hasil akhir di sana berlaku sama.
+  Future<PaymentId> payOfferUsingAmount(
+      String offerStr, BigInt amountMsat) async {
+    _ensureRunning();
+    final payment = await FfiNode.bolt12Payment(ptr: _node!);
+    return await payment.sendUsingAmount(
+        offer: Offer(s: offerStr), amountMsat: amountMsat);
+  }
+
   /// Tunggu hasil akhir pembayaran [paymentId] dengan memeriksa
   /// catatan pembayaran node berkala.
   ///

@@ -60,6 +60,15 @@ class TransactionDetailScreen extends StatelessWidget {
     if (kind is PaymentKind_Bolt11) return _hex(kind.hash.data);
     if (kind is PaymentKind_Bolt11Jit) return _hex(kind.hash.data);
     if (kind is PaymentKind_Spontaneous) return _hex(kind.hash.data);
+    // Pembayaran offer/refund Bolt12: hash boleh kosong selama
+    // catatan belum tuntas — tampilkan bila ada, sama seperti
+    // pemetaan ekspor CSV.
+    if (kind is PaymentKind_Bolt12Offer) {
+      return kind.hash == null ? null : _hex(kind.hash!.data);
+    }
+    if (kind is PaymentKind_Bolt12Refund) {
+      return kind.hash == null ? null : _hex(kind.hash!.data);
+    }
     return null;
   }
 

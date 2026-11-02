@@ -332,6 +332,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get staticOfferDescription => 'ELNUX payment code';
 
   @override
+  String get confirmPayOfferTitle => 'Pay this payment code?';
+
+  @override
+  String sendOfferAmountLine(String amount) {
+    return 'Amount: $amount nusan';
+  }
+
+  @override
+  String get sendOfferVariableHint =>
+      'This payment code doesn\'t set an amount — choose how much to pay.';
+
+  @override
+  String get sendOfferInvalid => 'This payment code is invalid.';
+
+  @override
+  String get sendOfferExpired => 'This payment code has expired.';
+
+  @override
   String get pasteInvoiceFirst => 'Paste an invoice first';
 
   @override

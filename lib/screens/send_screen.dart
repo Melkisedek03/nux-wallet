@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import '../services/lsp_service.dart';
 import '../utils/animated_checkmark.dart';
 import '../utils/bolt11_info.dart';
+import '../utils/bolt12_info.dart';
 import '../utils/coin_alert.dart';
 import '../utils/format.dart';
 import '../utils/friendly_error.dart';
@@ -66,6 +67,24 @@ class SendScreen extends StatefulWidget {
 
 class _SendScreenState extends State<SendScreen> {
   final _invoiceController = TextEditingController();
+
+  /// Kolom nominal untuk offer Bolt12 variable-amount: hanya
+  /// tampil bila isi kolom kode terbaca sebagai offer tanpa
+  /// nominal tetap (lihat [_offerInfo]).
+  final _offerAmountController = TextEditingController();
+
+  /// Info offer dari isi kolom kode saat ini; null bila isinya
+  /// bukan offer atau strukturnya tidak terbaca. Diperbarui oleh
+  /// [_syncOfferInfo] setiap isi kolom berubah (ketik, tempel,
+  /// scan) — murni bahan tampilan panel offer; keputusan bayar
+  /// selalu membaca ulang dari teks saat tombol ditekan.
+  Bolt12OfferInfo? _offerInfo;
+
+  /// Isi kolom kode yang terakhir disinkronkan ke [_offerInfo],
+  /// supaya pendengar perubahan tidak memarse ulang string yang
+  /// sama berulang kali.
+  String _offerInfoText = '';
+
   bool _loading = false;
   String? _error;
   bool _paid = false;
@@ -108,13 +127,30 @@ class _SendScreenState extends State<SendScreen> {
   @override
   void initState() {
     super.initState();
+    _invoiceController.addListener(_syncOfferInfo);
     _refreshSendable();
   }
 
   @override
   void dispose() {
+    _invoiceController.removeListener(_syncOfferInfo);
     _invoiceController.dispose();
+    _offerAmountController.dispose();
     super.dispose();
+  }
+
+  /// Sinkronkan [_offerInfo] dengan isi kolom kode terbaru.
+  /// Dipanggil pendengar pengontrol — mencakup ketikan, tempel
+  /// dari tombol Tempel, dan hasil scan, karena ketiganya mengubah
+  /// teks pengontrol yang sama.
+  void _syncOfferInfo() {
+    final text = _invoiceController.text.trim();
+    if (text == _offerInfoText) return;
+    _offerInfoText = text;
+    final info = isBolt12Offer(text) ? parseOfferInfo(text) : null;
+    if (info != _offerInfo && mounted) {
+      setState(() => _offerInfo = info);
+    }
   }
 
   /// Muat/segarkan saldo + kapasitas kirim dari node.
@@ -177,6 +213,14 @@ class _SendScreenState extends State<SendScreen> {
       setState(() => _error = context.l10n.pasteInvoiceFirst);
       return;
     }
+    // Offer Bolt12 (kode bayar lno1…) jalurnya sendiri SEBELUM
+    // jalur Bolt11: parser Bolt11 node menolak string offer dan
+    // pengguna membaca pesan "tidak valid / kedaluwarsa" yang
+    // menyesatkan — offer-nya sendiri sah dan tanpa kedaluwarsa.
+    if (isBolt12Offer(invoice)) {
+      await _onPayOfferPressed(invoice);
+      return;
+    }
     if (!invoice.startsWith('ln')) {
       setState(() => _error = context.l10n.invalidInvoice);
       return;
@@ -190,38 +234,7 @@ class _SendScreenState extends State<SendScreen> {
     // sebelumnya; node tetap penentu akhirnya.
     final amountMsat = parseBolt11AmountMsat(invoice);
     if (amountMsat != null) {
-      await _refreshSendable();
-      if (!mounted) return;
-      final balance = _balanceMsat;
-      final sendable = _sendableMsat;
-      if (balance != null && sendable != null) {
-        final check = evaluateSend(
-          amountMsat: amountMsat,
-          balanceMsat: balance,
-          usableOutboundMsat: sendable,
-          hasUsableChannel: _hasUsableChannel,
-        );
-        if (check == SendCheck.insufficientBalance) {
-          setState(() {
-            _error = context.l10n.sendInsufficientBalance;
-            _reserveHeldMsat = null;
-            _reserveSendableMsat = null;
-          });
-          return;
-        }
-        if (check == SendCheck.reserveHeld) {
-          // Bila kotak nol-bisa-kirim sudah tampil, penjelasan
-          // yang sama sudah ada di layar — cukup jangan lanjut.
-          if (!_zeroSendable) {
-            setState(() {
-              _error = null;
-              _reserveHeldMsat = balance - sendable;
-              _reserveSendableMsat = sendable;
-            });
-          }
-          return;
-        }
-      }
+      if (!await _checkSendable(amountMsat)) return;
     }
     await _vibrateConfirm();
     if (!mounted) return;
@@ -258,21 +271,136 @@ class _SendScreenState extends State<SendScreen> {
       ),
     );
     if (confirmed == true && mounted) {
-      await _pay();
+      await _pay(() => widget.lspService.payInvoice(invoice));
     }
   }
 
-  Future<void> _pay() async {
-    final invoice = _invoiceController.text.trim();
-    if (invoice.isEmpty) {
-      setState(() => _error = context.l10n.pasteInvoiceFirst);
-      return;
+  /// Pemeriksaan pra-bayar bersama untuk invoice Bolt11 dan
+  /// offer Bolt12: nilai [amountMsat] terhadap saldo & kapasitas
+  /// kirim terbaru. Mengembalikan true bila pembayaran boleh
+  /// lanjut ke dialog konfirmasi; false berarti layar sudah
+  /// menyatakan alasannya (saldo tidak cukup / tertahan cadangan)
+  /// atau layar sudah tidak aktif. Bila angka saldo/kapasitas
+  /// belum terbaca, pemeriksaan tidak bisa dinilai — pembayaran
+  /// dilanjutkan dan node menjadi penentu, seperti perilaku lama.
+  Future<bool> _checkSendable(BigInt amountMsat) async {
+    await _refreshSendable();
+    if (!mounted) return false;
+    final balance = _balanceMsat;
+    final sendable = _sendableMsat;
+    if (balance == null || sendable == null) return true;
+    final check = evaluateSend(
+      amountMsat: amountMsat,
+      balanceMsat: balance,
+      usableOutboundMsat: sendable,
+      hasUsableChannel: _hasUsableChannel,
+    );
+    if (check == SendCheck.insufficientBalance) {
+      setState(() {
+        _error = context.l10n.sendInsufficientBalance;
+        _reserveHeldMsat = null;
+        _reserveSendableMsat = null;
+      });
+      return false;
     }
-    if (!invoice.startsWith('ln')) {
-      setState(() => _error = context.l10n.invalidInvoice);
-      return;
+    if (check == SendCheck.reserveHeld) {
+      // Bila kotak nol-bisa-kirim sudah tampil, penjelasan
+      // yang sama sudah ada di layar — cukup jangan lanjut.
+      if (!_zeroSendable) {
+        setState(() {
+          _error = null;
+          _reserveHeldMsat = balance - sendable;
+          _reserveSendableMsat = sendable;
+        });
+      }
+      return false;
     }
+    return true;
+  }
 
+  /// Ketukan Bayar untuk offer Bolt12: baca info offer, tentukan
+  /// nominal (tetap dari offer, atau isian pembayar untuk offer
+  /// variable), jalankan pemeriksaan pra-bayar yang sama dengan
+  /// invoice, minta konfirmasi, lalu bayar lewat jalur Bolt12.
+  Future<void> _onPayOfferPressed(String raw) async {
+    final offer = raw.trim().toLowerCase();
+    final info = parseOfferInfo(offer);
+    if (info == null || info.hasForeignCurrency) {
+      setState(() => _error = context.l10n.sendOfferInvalid);
+      return;
+    }
+    if (info.isExpiredAt(DateTime.now())) {
+      setState(() => _error = context.l10n.sendOfferExpired);
+      return;
+    }
+    final bool fixedAmount = info.isFixedAmount;
+    final BigInt amountMsat;
+    if (fixedAmount) {
+      amountMsat = info.amountMsat!;
+    } else {
+      final parsed = parseNusanInputToMsat(_offerAmountController.text);
+      if (parsed == null) {
+        setState(() => _error = context.l10n.invalidAmount);
+        return;
+      }
+      amountMsat = parsed;
+    }
+    if (!await _checkSendable(amountMsat)) return;
+    await _vibrateConfirm();
+    if (!mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.l10n.confirmPayOfferTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(context.l10n.confirmPayBody),
+            const SizedBox(height: 12),
+            Text(
+              context.l10n.sendOfferAmountLine(formatNusan(amountMsat)),
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            if (info.description != null) ...[
+              const SizedBox(height: 6),
+              Text(info.description!, style: const TextStyle(fontSize: 13)),
+            ],
+            const SizedBox(height: 12),
+            Text(
+              _invoicePreview(offer),
+              style: const TextStyle(fontSize: 12),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(context.l10n.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF10B981),
+              foregroundColor: Colors.white,
+            ),
+            child: Text(context.l10n.pay),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await _pay(() => fixedAmount
+          ? widget.lspService.payOffer(offer)
+          : widget.lspService.payOfferUsingAmount(offer, amountMsat));
+    }
+  }
+
+  /// Jalankan perintah kirim [sendPayment] (invoice Bolt11 atau
+  /// offer Bolt12 — keduanya mengembalikan ID pembayaran node)
+  /// lalu tunggu hasil akhirnya. Validasi bentuk & nominal sudah
+  /// dikerjakan pemanggil sebelum konfirmasi.
+  Future<void> _pay(Future<PaymentId> Function() sendPayment) async {
     setState(() {
       _loading = true;
       _error = null;
@@ -284,7 +412,7 @@ class _SendScreenState extends State<SendScreen> {
     });
 
     try {
-      final paymentId = await widget.lspService.payInvoice(invoice);
+      final paymentId = await sendPayment();
       if (!mounted) return;
       // Perintah kirim diterima node — mulai tunggu hasil AKHIR.
       // Tanpa penungguan ini centang berhasil tampil prematur dan
@@ -536,6 +664,54 @@ class _SendScreenState extends State<SendScreen> {
                 ),
               ],
             ),
+            // Panel offer Bolt12 — hanya tampil bila isi kolom
+            // kode terbaca sebagai offer. Nominal tetap cukup
+            // ditampilkan; nominal variable butuh kolom isian
+            // pembayar (pola kolom nominal layar Terima).
+            if (_offerInfo != null) ...[
+              const SizedBox(height: 20),
+              if (_offerInfo!.isFixedAmount)
+                Text(
+                  context.l10n
+                      .sendOfferAmountLine(formatNusan(_offerInfo!.amountMsat!)),
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: context.palette.label),
+                )
+              else ...[
+                Text(context.l10n.sendOfferVariableHint,
+                    style: TextStyle(
+                        fontSize: 13, color: context.palette.muted)),
+                const SizedBox(height: 10),
+                Text(context.l10n.amountLabel,
+                    style: TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _offerAmountController,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  style: const TextStyle(
+                      fontSize: 24, fontWeight: FontWeight.w800),
+                  decoration: InputDecoration(
+                    hintText: '0',
+                    hintStyle: TextStyle(color: context.palette.hint),
+                    filled: true,
+                    fillColor: context.palette.cardAlt,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                    suffixText: 'nusan',
+                    suffixStyle: TextStyle(
+                        fontSize: 16,
+                        color: context.palette.muted,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ],
             const SizedBox(height: 20),
             // Pay button
             ElevatedButton(

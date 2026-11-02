@@ -132,6 +132,18 @@
   "staticCodeNeedsConnection": "Your payment code is created once the wallet is connected. Check your connection, then try again.",
   "staticCodeFailed": "Couldn't create your payment code. Try again.",
   "staticOfferDescription": "ELNUX payment code",
+  "confirmPayOfferTitle": "Pay this payment code?",
+  "sendOfferAmountLine": "Amount: {amount} nusan",
+  "@sendOfferAmountLine": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "sendOfferVariableHint": "This payment code doesn't set an amount — choose how much to pay.",
+  "sendOfferInvalid": "This payment code is invalid.",
+  "sendOfferExpired": "This payment code has expired.",
   "pasteInvoiceFirst": "Paste an invoice first",
   "invalidInvoice": "This is not a valid Lightning invoice",
   "payFailed": "Payment failed. Try again.",

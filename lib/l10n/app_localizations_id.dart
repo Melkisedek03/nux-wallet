@@ -331,6 +331,24 @@ class AppLocalizationsId extends AppLocalizations {
   String get staticOfferDescription => 'Kode bayar ELNUX';
 
   @override
+  String get confirmPayOfferTitle => 'Bayar kode bayar ini?';
+
+  @override
+  String sendOfferAmountLine(String amount) {
+    return 'Nominal: $amount nusan';
+  }
+
+  @override
+  String get sendOfferVariableHint =>
+      'Kode bayar ini tidak menetapkan nominal — tentukan sendiri jumlah yang mau dibayar.';
+
+  @override
+  String get sendOfferInvalid => 'Kode bayar tidak valid.';
+
+  @override
+  String get sendOfferExpired => 'Kode bayar sudah kedaluwarsa.';
+
+  @override
   String get pasteInvoiceFirst => 'Tempel invoice dulu';
 
   @override
