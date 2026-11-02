@@ -6,6 +6,7 @@ import '../theme.dart';
 import 'package:flutter/services.dart';
 import 'package:ldk_node/src/generated/api/types.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../services/bolt12_service.dart';
 import '../services/lsp_service.dart';
 import '../services/saved_invoices.dart';
 import '../utils/animated_checkmark.dart';
@@ -63,10 +64,69 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   /// dibuat di sesi ini — ditandai dengan petunjuk di bawah QR.
   bool _restored = false;
 
+  /// Keadaan panel Kode Bayar Statis (offer Bolt12).
+  late final Bolt12OfferService _bolt12Service =
+      Bolt12OfferService(widget.lspService);
+  bool _staticOpen = false;
+  bool _staticLoading = false;
+  String? _staticOffer;
+  String? _staticError;
+
   @override
   void initState() {
     super.initState();
     _restoreLastInvoice();
+    // Sesudah frame pertama: context.l10n belum boleh dibaca di
+    // initState.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _prefetchStaticOffer();
+    });
+  }
+
+  /// Panaskan offer statis tanpa memblokir layar: bila simpanan
+  /// ada (atau node sudah tersambung dan offer bisa dibuat), panel
+  /// Kode Bayar Statis langsung siap saat dibuka. Hasil "belum ada
+  /// peer" dan kegagalan ditelan diam-diam di sini — usaha yang
+  /// sesungguhnya (dengan pesan ke user) terjadi saat panel dibuka,
+  /// dan saat itu node mungkin sudah tersambung.
+  Future<void> _prefetchStaticOffer() async {
+    final result = await _bolt12Service.ensureOffer(
+        description: context.l10n.staticOfferDescription);
+    if (result.outcome == StaticOfferOutcome.ready && mounted) {
+      setState(() => _staticOffer = result.offer);
+    }
+  }
+
+  /// Buka/tutup panel Kode Bayar Statis. Saat dibuka dan offer
+  /// belum tersedia, pembuatan dicoba (lagi) — inilah titik coba
+  /// ulang alami sesudah node tersambung ke LSP.
+  void _toggleStaticCode() {
+    setState(() => _staticOpen = !_staticOpen);
+    if (_staticOpen && _staticOffer == null && !_staticLoading) {
+      _loadStaticOffer();
+    }
+  }
+
+  Future<void> _loadStaticOffer() async {
+    setState(() {
+      _staticLoading = true;
+      _staticError = null;
+    });
+    final result = await _bolt12Service.ensureOffer(
+        description: context.l10n.staticOfferDescription);
+    if (!mounted) return;
+    setState(() {
+      _staticLoading = false;
+      switch (result.outcome) {
+        case StaticOfferOutcome.ready:
+          _staticOffer = result.offer;
+          _staticError = null;
+        case StaticOfferOutcome.needsPeer:
+          _staticError = context.l10n.staticCodeNeedsConnection;
+        case StaticOfferOutcome.failed:
+          _staticError = context.l10n.staticCodeFailed;
+      }
+    });
   }
 
   /// Pulihkan invoice pending terakhir yang belum kedaluwarsa dari
@@ -486,6 +546,106 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                     TextStyle(fontSize: 12, color: context.palette.muted),
                 textAlign: TextAlign.center,
               ),
+            ],
+            // Kode Bayar Statis (offer Bolt12) — fondasi Mode
+            // Toko: satu kode untuk semua pembayaran masuk,
+            // pembayar yang menentukan jumlahnya.
+            const SizedBox(height: 28),
+            OutlinedButton.icon(
+              onPressed: _toggleStaticCode,
+              icon: const Icon(Icons.qr_code_2_rounded, size: 20),
+              label: Text(context.l10n.staticCodeTitle,
+                  style: TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.w700)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF34D399),
+                side: BorderSide(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.5)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+            if (_staticOpen) ...[
+              const SizedBox(height: 16),
+              if (_staticLoading)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Color(0xFF34D399)),
+                  ),
+                )
+              else if (_staticOffer != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Center(
+                    child: QrImageView(
+                      data: _staticOffer!,
+                      version: QrVersions.auto,
+                      size: 220,
+                      backgroundColor: Colors.white,
+                      errorCorrectionLevel: QrErrorCorrectLevel.M,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: context.palette.cardAlt,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _staticOffer!,
+                          style: TextStyle(
+                              fontSize: 12, color: context.palette.label),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.copy,
+                            color: Color(0xFF34D399)),
+                        onPressed: () {
+                          Clipboard.setData(
+                              ClipboardData(text: _staticOffer!));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content:
+                                    Text(context.l10n.staticCodeCopied)),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  context.l10n.staticCodeHint,
+                  style: TextStyle(
+                      fontSize: 12, color: context.palette.muted),
+                  textAlign: TextAlign.center,
+                ),
+              ] else if (_staticError != null) ...[
+                Text(_staticError!,
+                    style: const TextStyle(
+                        color: Colors.redAccent, fontSize: 13),
+                    textAlign: TextAlign.center),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: _staticLoading ? null : _loadStaticOffer,
+                  child: Text(context.l10n.updateRetry),
+                ),
+              ],
             ],
           ],
         ),

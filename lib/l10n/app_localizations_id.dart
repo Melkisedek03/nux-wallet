@@ -311,6 +311,26 @@ class AppLocalizationsId extends AppLocalizations {
       'Bagikan invoice ini ke pengirim. Channel akan dibuka otomatis saat pembayaran diterima.';
 
   @override
+  String get staticCodeTitle => 'Kode Bayar Statis';
+
+  @override
+  String get staticCodeHint =>
+      'Kode ini bisa dipakai berulang kali tanpa kedaluwarsa — bagikan sekali, pembayar menentukan jumlahnya setiap kali membayar.';
+
+  @override
+  String get staticCodeCopied => 'Kode bayar disalin';
+
+  @override
+  String get staticCodeNeedsConnection =>
+      'Kode bayar dibuat begitu dompet tersambung. Periksa koneksimu, lalu coba lagi.';
+
+  @override
+  String get staticCodeFailed => 'Gagal membuat kode bayar. Coba lagi.';
+
+  @override
+  String get staticOfferDescription => 'Kode bayar ELNUX';
+
+  @override
   String get pasteInvoiceFirst => 'Tempel invoice dulu';
 
   @override

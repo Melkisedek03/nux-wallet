@@ -650,6 +650,42 @@ abstract class AppLocalizations {
   /// **'Bagikan invoice ini ke pengirim. Channel akan dibuka otomatis saat pembayaran diterima.'**
   String get shareInvoiceHint;
 
+  /// No description provided for @staticCodeTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Kode Bayar Statis'**
+  String get staticCodeTitle;
+
+  /// No description provided for @staticCodeHint.
+  ///
+  /// In id, this message translates to:
+  /// **'Kode ini bisa dipakai berulang kali tanpa kedaluwarsa — bagikan sekali, pembayar menentukan jumlahnya setiap kali membayar.'**
+  String get staticCodeHint;
+
+  /// No description provided for @staticCodeCopied.
+  ///
+  /// In id, this message translates to:
+  /// **'Kode bayar disalin'**
+  String get staticCodeCopied;
+
+  /// No description provided for @staticCodeNeedsConnection.
+  ///
+  /// In id, this message translates to:
+  /// **'Kode bayar dibuat begitu dompet tersambung. Periksa koneksimu, lalu coba lagi.'**
+  String get staticCodeNeedsConnection;
+
+  /// No description provided for @staticCodeFailed.
+  ///
+  /// In id, this message translates to:
+  /// **'Gagal membuat kode bayar. Coba lagi.'**
+  String get staticCodeFailed;
+
+  /// No description provided for @staticOfferDescription.
+  ///
+  /// In id, this message translates to:
+  /// **'Kode bayar ELNUX'**
+  String get staticOfferDescription;
+
   /// No description provided for @pasteInvoiceFirst.
   ///
   /// In id, this message translates to:

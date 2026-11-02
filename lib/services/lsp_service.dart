@@ -123,6 +123,33 @@ class LspService {
     return invoice.signedRawInvoice;
   }
 
+  /// Jumlah peer yang sedang tersambung ke node ini.
+  Future<int> connectedPeerCount() async {
+    _ensureRunning();
+    final peers = await _node!.listPeers();
+    return peers.where((p) => p.isConnected).length;
+  }
+
+  /// Buat offer Bolt12 statis: nominal bebas (ditentukan pembayar)
+  /// dan TANPA kedaluwarsa — satu string `lno1…` yang bisa dibayar
+  /// berulang kali, fondasi kode bayar Mode Toko.
+  ///
+  /// SYARAT terbukti dari spike Bolt12 2 Nov 2026: pembuatan offer
+  /// membutuhkan blinded path, dan blinded path membutuhkan minimal
+  /// satu peer tersambung (di produksi peer itu LSP). Node tanpa
+  /// peer melempar OfferCreationFailed — pemanggil wajib memeriksa
+  /// [connectedPeerCount] dulu dan menunda pembuatan bila masih 0
+  /// (lihat Bolt12OfferService), bukan membiarkan error ini tampil.
+  Future<String> createStaticOffer({required String description}) async {
+    _ensureRunning();
+    final payment = await FfiNode.bolt12Payment(ptr: _node!);
+    final offer = await payment.receiveVariableAmountUnsafe(
+      description: description,
+      expirySecs: null,
+    );
+    return offer.s;
+  }
+
   /// Daftar channel node saat ini, apa adanya dari binding.
   Future<List<ChannelDetails>> listChannels() async {
     _ensureRunning();

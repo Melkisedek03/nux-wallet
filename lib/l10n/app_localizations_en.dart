@@ -311,6 +311,27 @@ class AppLocalizationsEn extends AppLocalizations {
       'Share this invoice with the sender. The channel will open automatically when the payment is received.';
 
   @override
+  String get staticCodeTitle => 'Static Payment Code';
+
+  @override
+  String get staticCodeHint =>
+      'This code can be used again and again with no expiry — share it once, and the payer chooses the amount each time they pay.';
+
+  @override
+  String get staticCodeCopied => 'Payment code copied';
+
+  @override
+  String get staticCodeNeedsConnection =>
+      'Your payment code is created once the wallet is connected. Check your connection, then try again.';
+
+  @override
+  String get staticCodeFailed =>
+      'Couldn\'t create your payment code. Try again.';
+
+  @override
+  String get staticOfferDescription => 'ELNUX payment code';
+
+  @override
   String get pasteInvoiceFirst => 'Paste an invoice first';
 
   @override
