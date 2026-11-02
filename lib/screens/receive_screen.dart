@@ -14,6 +14,7 @@ import '../utils/coin_alert.dart';
 import '../utils/bolt11_info.dart';
 import '../utils/format.dart';
 import '../utils/friendly_error.dart';
+import '../utils/receive_watch.dart';
 
 /// Layar Terima — buat invoice Lightning.
 ///
@@ -56,8 +57,18 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   /// Pengawasan event pembayaran masuk untuk invoice aktif.
   Timer? _eventTimer;
   int _watchGen = 0;
+  bool _watching = false;
   bool _received = false;
   BigInt? _receivedMsat;
+
+  /// Timer jeda tampil panel sukses: sesudah
+  /// [receiveCelebrationDuration] layar mereset panel dan
+  /// pengawas dipersenjatai untuk penerimaan berikutnya.
+  Timer? _celebrationTimer;
+
+  /// Penggulir body: penerimaan mengantar layar ke atas supaya
+  /// panel sukses terlihat tanpa scroll manual dari user.
+  final _scrollController = ScrollController();
 
   /// True bila [_invoice] berasal dari simpanan lokal (invoice
   /// pending terakhir dipulihkan saat layar dibuka), bukan baru
@@ -100,11 +111,22 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   /// Buka/tutup panel Kode Bayar Statis. Saat dibuka dan offer
   /// belum tersedia, pembuatan dicoba (lagi) — inilah titik coba
   /// ulang alami sesudah node tersambung ke LSP.
+  ///
+  /// Membuka panel juga menyalakan pengawas event: pembayaran
+  /// offer masuk lewat Event_PaymentReceived yang sama seperti
+  /// invoice Bolt11 (handler PaymentClaimed di ldk-node menerbitkan
+  /// event itu untuk semua PaymentPurpose, termasuk
+  /// Bolt12OfferPayment), jadi panel sukses kini tampil juga untuk
+  /// pembayaran ke kode statis — bukan cuma suara + getar dari
+  /// detektor dashboard. Menutup panel menghentikan pengawas,
+  /// kecuali ada invoice pending atau perayaan yang sedang tampil
+  /// (diputuskan murni oleh [_syncWatcher]).
   void _toggleStaticCode() {
     setState(() => _staticOpen = !_staticOpen);
     if (_staticOpen && _staticOffer == null && !_staticLoading) {
       _loadStaticOffer();
     }
+    _syncWatcher();
   }
 
   Future<void> _loadStaticOffer() async {
@@ -168,14 +190,16 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
       _restored = true;
       _amountController.text = formatNusan(restored.amountMsat);
     });
-    _startWatching();
+    _syncWatcher();
   }
 
   @override
   void dispose() {
     _eventTimer?.cancel();
+    _celebrationTimer?.cancel();
     _watchGen++;
     _amountController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -193,7 +217,8 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
       return;
     }
 
-    _eventTimer?.cancel();
+    _stopWatching();
+    _celebrationTimer?.cancel();
     setState(() {
       _loading = true;
       _error = null;
@@ -249,7 +274,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
           expiresAt: info.expiresAt.toLocal(),
         ));
       }
-      _startWatching();
+      _syncWatcher();
     } catch (e) {
       // Di bawah minimum kelahiran (1.000 nusan = 1.000.000 msat,
       // parameter LSP) invoice JIT memang tidak bisa dibuat —
@@ -266,11 +291,45 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
               l10n: context.l10n));
     } finally {
       setState(() => _loading = false);
+      // Pembuatan gagal dengan panel statis masih terbuka:
+      // pengawas offer harus hidup lagi (di awal pembuatan ia
+      // dimatikan supaya antrean bersih untuk invoice baru).
+      _syncWatcher();
     }
   }
 
-  /// Tunggu pembayaran invoice ini lewat antrean event node
-  /// (Event.paymentReceived dari binding LDK).
+  /// Selaraskan pengawas event dengan keadaan layar: jalankan
+  /// bila ada yang ditunggu (invoice pending, panel Kode Bayar
+  /// Statis terbuka, atau panel sukses sedang tampil) dan hentikan
+  /// bila tidak ada — keputusan murninya di
+  /// [receiveWatcherShouldRun]. Aman dipanggil berulang: pengawas
+  /// yang sudah sesuai keadaan tidak diutak-atik, jadi tidak ada
+  /// timer ganda dan tidak ada kuras antrean berulang.
+  void _syncWatcher() {
+    final shouldRun = receiveWatcherShouldRun(
+      invoicePending: _invoice != null,
+      staticPanelOpen: _staticOpen,
+      celebrating: _received,
+    );
+    if (shouldRun && !_watching) {
+      _startWatching();
+    } else if (!shouldRun && _watching) {
+      _stopWatching();
+    }
+  }
+
+  void _stopWatching() {
+    _eventTimer?.cancel();
+    _eventTimer = null;
+    _watchGen++;
+    _watching = false;
+  }
+
+  /// Tunggu pembayaran lewat antrean event node
+  /// (Event.paymentReceived dari binding LDK). Satu event yang
+  /// sama melayani invoice Bolt11 dan offer Bolt12: di ldk-node,
+  /// PaymentReceived diterbitkan dari handler PaymentClaimed untuk
+  /// semua PaymentPurpose, termasuk Bolt12OfferPayment.
   ///
   /// Antrean event lebih dulu dikuras: event adalah antrean bersama
   /// satu node, jadi PaymentReceived milik pembayaran lama yang belum
@@ -278,6 +337,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   Future<void> _startWatching() async {
     _eventTimer?.cancel();
     final gen = ++_watchGen;
+    _watching = true;
     await _drainEvents();
     if (!mounted || gen != _watchGen) return;
     _eventTimer = Timer.periodic(
@@ -298,52 +358,100 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   }
 
   Future<void> _pollEvents(int gen) async {
-    if (!mounted || gen != _watchGen || _received) return;
+    if (!mounted || gen != _watchGen) return;
     try {
       // Sekali tick, baca sampai 20 event: pembukaan channel JIT
       // menghasilkan beberapa event sebelum PaymentReceived.
+      // Pengawas SENGAJA tetap membaca selama panel sukses tampil:
+      // pembayaran berikutnya yang tiba di tengah perayaan harus
+      // tertangkap dan menggantikan panel (lihat _handleReceived).
       for (var i = 0; i < 20; i++) {
         final e = await widget.lspService.pollNextEvent();
         if (e == null) break;
         if (e is Event_PaymentReceived) {
-          _eventTimer?.cancel();
-          // Rayakan di sini juga (bunyi + getar), bersamaan dengan
-          // tanda centang: pengawas event layar ini adalah pemicu
-          // tercepat dan pasti untuk invoice yang sedang ditunggu,
-          // sedangkan deteksi polling dashboard bisa datang beberapa
-          // detik sesudahnya. CoinAlert menahan perayaan ganda untuk
-          // penerimaan yang sama.
-          CoinAlert.play();
-          // Invoice ini sudah lunas: hapus dari simpanan supaya
-          // tidak dipulihkan lagi sebagai pending di sesi berikut.
-          final currentInvoice = _invoice;
-          if (currentInvoice != null) {
-            final info = parseBolt11Info(currentInvoice);
-            if (info != null) {
-              SavedInvoiceStore().removeByHash(info.paymentHashHex);
-            }
-          }
-          if (mounted && gen == _watchGen) {
-            setState(() {
-              _received = true;
-              _receivedMsat = e.amountMsat;
-              // Layar kembali bersih untuk penerimaan berikutnya
-              // (keputusan NUX 2 Nov 2026): invoice yang sudah
-              // lunas dibersihkan — panel sukses di bawah sudah
-              // menggantikannya — dan kolom jumlah dikosongkan;
-              // sebelumnya nominal invoice yang lunas tetap
-              // tertinggal di kolom.
-              _invoice = null;
-              _restored = false;
-              _amountController.clear();
-            });
-          }
+          _handleReceived(e, gen);
           return;
         }
       }
     } catch (_) {
       // Gagal baca sesaat — coba lagi di tick berikut.
     }
+  }
+
+  /// Satu pembayaran sungguhan tiba (invoice Bolt11 maupun offer
+  /// Bolt12 — cabang ini buta-jenis; untuk offer [_invoice] memang
+  /// null sehingga pembersihan simpanan terlewati dengan aman).
+  ///
+  /// Panel sukses tampil dengan nominal penerimaan INI, layar
+  /// digulir ke atas supaya panel terlihat, dan timer perayaan
+  /// (di)mulai: penerimaan lain yang tiba selama jendela tampil
+  /// menggantikan nominal panel dan memulai ulang jedanya, jadi
+  /// tidak ada penerimaan yang hilang diam-diam. Pengawas TIDAK
+  /// dimatikan di sini — ia terus membaca selama perayaan dan
+  /// selama ada yang ditunggu sesudahnya.
+  void _handleReceived(Event_PaymentReceived e, int gen) {
+    // Rayakan di sini juga (bunyi + getar), bersamaan dengan
+    // tanda centang: pengawas event layar ini adalah pemicu
+    // tercepat dan pasti untuk pembayaran yang sedang ditunggu,
+    // sedangkan deteksi polling dashboard bisa datang beberapa
+    // detik sesudahnya. CoinAlert menahan perayaan ganda untuk
+    // penerimaan yang sama.
+    CoinAlert.play();
+    // Invoice ini sudah lunas: hapus dari simpanan supaya
+    // tidak dipulihkan lagi sebagai pending di sesi berikut.
+    final currentInvoice = _invoice;
+    if (currentInvoice != null) {
+      final info = parseBolt11Info(currentInvoice);
+      if (info != null) {
+        SavedInvoiceStore().removeByHash(info.paymentHashHex);
+      }
+    }
+    if (!mounted || gen != _watchGen) return;
+    setState(() {
+      _received = true;
+      _receivedMsat = e.amountMsat;
+      // Layar kembali bersih untuk penerimaan berikutnya
+      // (keputusan NUX 2 Nov 2026): invoice yang sudah
+      // lunas dibersihkan — panel sukses di bawah sudah
+      // menggantikannya — dan kolom jumlah dikosongkan;
+      // sebelumnya nominal invoice yang lunas tetap
+      // tertinggal di kolom.
+      _invoice = null;
+      _restored = false;
+      _amountController.clear();
+    });
+    _scrollToTop();
+    _celebrationTimer?.cancel();
+    _celebrationTimer = Timer(receiveCelebrationDuration, _finishCelebration);
+    _syncWatcher();
+  }
+
+  /// Jeda tampil panel sukses selesai: reset panel supaya layar
+  /// siap menerima pembayaran berikutnya tanpa user keluar
+  /// halaman, lalu selaraskan pengawas — ia berhenti bila tidak
+  /// ada lagi yang ditunggu (panel statis tertutup dan tidak ada
+  /// invoice), dan tetap berjalan bila panel statis masih terbuka
+  /// (offer memang untuk dibayar berulang).
+  void _finishCelebration() {
+    if (!mounted) return;
+    setState(() {
+      _received = false;
+      _receivedMsat = null;
+    });
+    _scrollToTop();
+    _syncWatcher();
+  }
+
+  /// Gulir halus ke atas: panel sukses dirender dekat atas kolom,
+  /// sedangkan pemicu penerimaan (panel offer) ada di bawah —
+  /// tanpa ini user harus scroll manual untuk melihatnya.
+  void _scrollToTop() {
+    if (!_scrollController.hasClients) return;
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
   }
 
   @override
@@ -355,6 +463,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
         elevation: 0,
       ),
       body: SingleChildScrollView(
+        controller: _scrollController,
         padding: const EdgeInsets.all(22),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
