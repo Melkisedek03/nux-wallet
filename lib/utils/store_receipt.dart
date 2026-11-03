@@ -114,6 +114,10 @@ class StoreReceiptData {
   /// Tanggal transaksi terformat 'dd/MM/yyyy' (gaya contoh).
   final String dateText;
   final int billNo;
+
+  /// Nomor Bill terformat tampil ('INV261103-0002') — dari
+  /// [billNo] + tanggal record via [formatBillNo].
+  final String billNoText;
   final int tokenNo;
   final bool showBillNo;
   final bool showTokenNo;
@@ -148,6 +152,7 @@ class StoreReceiptData {
     required this.customerName,
     required this.dateText,
     required this.billNo,
+    required this.billNoText,
     required this.tokenNo,
     required this.showBillNo,
     required this.showTokenNo,
@@ -211,6 +216,7 @@ StoreReceiptData buildStoreReceiptData({
     customerName: record.customerName,
     dateText: dateText,
     billNo: record.billNo,
+    billNoText: formatBillNo(t, record.billNo),
     tokenNo: record.tokenNo,
     showBillNo: record.billNo > 0,
     showTokenNo: settings.showTokenNumber && record.tokenNo > 0,
@@ -234,15 +240,38 @@ StoreReceiptData buildStoreReceiptData({
   );
 }
 
-/// Bill No berikutnya untuk satu shift: jumlah record LUNAS era
-/// rupiah pada/ sesudah [shiftOpenedAt] + 1. Murni &
-/// deterministik dari record yang tersimpan — VOID tidak
-/// bernomor (ia tidak pernah menjadi struk pelanggan).
-int nextBillNoForShift(List<CompletedOrder> orders, DateTime shiftOpenedAt) {
+/// Format tampil Nomor Bill: 'INV' + tanggal transaksi
+/// YYMMDD + '-' + nomor urut 4 digit zero-padded. Urut di
+/// atas 9999 tumbuh alami menjadi 5 digit dst — tidak
+/// terpotong. Murni: [time] adalah timestamp record, [seq]
+/// nomor urut per tanggal yang tersimpan di record.
+/// Contoh (dari permintaan NUX): 3 Nov 2026 urut 2 →
+/// 'INV261103-0002'.
+String formatBillNo(DateTime time, int seq) {
+  final yy = (time.year % 100).toString().padLeft(2, '0');
+  final mm = time.month.toString().padLeft(2, '0');
+  final dd = time.day.toString().padLeft(2, '0');
+  return 'INV$yy$mm$dd-${seq.toString().padLeft(4, '0')}';
+}
+
+/// Nomor urut bill berikutnya untuk TANGGAL kalender lokal
+/// [date]: jumlah record LUNAS era rupiah pada tanggal yang
+/// sama + 1. Murni & deterministik dari record yang
+/// tersimpan — VOID tidak bernomor (ia tidak pernah menjadi
+/// struk pelanggan).
+///
+/// Urut berjalan per hari LINTAS shift (menggantikan urut
+/// per shift): tanggal kini tertanam di nomor bill, jadi
+/// urut per shift akan melahirkan nomor INV yang sama dua
+/// kali di hari yang sama — cacat identitas faktur.
+int nextBillSeqForDate(List<CompletedOrder> orders, DateTime date) {
   var count = 0;
   for (final order in orders) {
     if (!order.isRupiahEra || order.isVoid) continue;
-    if (order.time.isBefore(shiftOpenedAt)) continue;
+    final t = order.time;
+    if (t.year != date.year || t.month != date.month || t.day != date.day) {
+      continue;
+    }
     count++;
   }
   return count + 1;
@@ -349,7 +378,7 @@ List<StoreReceiptElement> buildStoreReceiptElements(
   }
   out.add(ReceiptMetaRow(labels.dateLabel, data.dateText));
   if (data.showBillNo) {
-    out.add(ReceiptMetaRow(labels.billNoLabel, '${data.billNo}'));
+    out.add(ReceiptMetaRow(labels.billNoLabel, data.billNoText));
   }
   if (data.showTokenNo) {
     out.add(ReceiptMetaRow(labels.tokenNoLabel, '${data.tokenNo}'));

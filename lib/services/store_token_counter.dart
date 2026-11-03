@@ -6,8 +6,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// pada struk): nomor urut yang mulai dari 1 setiap tanggal
 /// kalender lokal baru dan naik SEKALI per transaksi lunas.
 ///
-/// Berbeda dengan Bill No (urut di dalam shift, diturunkan dari
-/// record), Token No adalah penghitung persisten kecil miliknya
+/// Berbeda dengan Bill No (urut per tanggal kalender,
+/// diturunkan dari record), Token No adalah penghitung
+/// persisten kecil miliknya
 /// sendiri — tamu membacanya sebagai nomor antrean hari itu,
 /// apa pun shift-nya. Keadaannya hanya {tanggal, counter}.
 class StoreTokenCounterState {

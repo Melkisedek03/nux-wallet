@@ -1121,10 +1121,11 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
       return;
     }
     // Cap metadata struk TEPAT saat pencatatan: Bill No =
-    // nomor urut lunas dalam shift berjalan (diturunkan dari
-    // record shift itu), Token No = nomor antrean harian dari
-    // penghitungnya (naik sekali per transaksi lunas, hanya
-    // bila pengaturan toko menampilkannya).
+    // nomor urut lunas pada TANGGAL transaksi (lintas shift,
+    // diturunkan dari record tanggal itu; tampil sebagai
+    // INV<YYMMDD>-<urut 4 digit>), Token No = nomor antrean
+    // harian dari penghitungnya (naik sekali per transaksi
+    // lunas, hanya bila pengaturan toko menampilkannya).
     var settled = result;
     final shift = _openShift;
     if (shift != null) {
@@ -1134,7 +1135,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
           : 0;
       if (!mounted) return;
       settled = result.withReceiptMeta(
-        billNo: nextBillNoForShift(history, shift.openedAt),
+        billNo: nextBillSeqForDate(history, result.time),
         tokenNo: tokenNo,
       );
     }

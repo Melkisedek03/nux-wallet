@@ -87,6 +87,7 @@ void main() {
       expect(data.totalQty, 3);
       expect(data.lineCount, 2);
       expect(data.dateText, '03/11/2026');
+      expect(data.billNoText, 'INV261103-0001');
       expect(data.showBillNo, isTrue);
       expect(data.showTokenNo, isTrue);
     });
@@ -126,7 +127,7 @@ void main() {
         'Pelanggan:${' ' * 11}Advika Mate',
         '-' * 32,
         'Tanggal:    03/11/2026',
-        'No. Bill:   1',
+        'No. Bill:   INV261103-0001',
         'No. Token:  15',
         '-' * 32,
         'Item${' ' * 22}Jumlah',
@@ -188,7 +189,7 @@ void main() {
     });
   });
 
-  group('penomoran bill per shift', () {
+  group('penomoran bill per tanggal & format INV', () {
     CompletedOrder paidAt(DateTime t, {bool voided = false, String? era}) {
       final base = buildCompletedOrder(
         time: t,
@@ -215,17 +216,44 @@ void main() {
       );
     }
 
-    test('urut dari record lunas era rupiah dalam jendela shift', () {
-      final opened = DateTime(2026, 11, 3, 8, 0);
+    test('urut dari record lunas era rupiah pada tanggal yang '
+        'sama, lintas shift; VOID & era nusan tak dihitung', () {
       final orders = [
-        paidAt(DateTime(2026, 11, 2, 20, 0)), // shift kemarin
-        paidAt(DateTime(2026, 11, 3, 8, 30)),
+        paidAt(DateTime(2026, 11, 2, 20, 0)), // kemarin
+        paidAt(DateTime(2026, 11, 3, 8, 30)), // shift pagi
         paidAt(DateTime(2026, 11, 3, 9, 0), voided: true), // VOID
         paidAt(DateTime(2026, 11, 3, 9, 15), era: storeEraNusan),
-        paidAt(DateTime(2026, 11, 3, 9, 30)),
+        paidAt(DateTime(2026, 11, 3, 13, 30)), // shift siang
       ];
-      expect(nextBillNoForShift(orders, opened), 3);
-      expect(nextBillNoForShift(const [], opened), 1);
+      // Dua shift di hari yang sama: urut BERLANJUT (bukan
+      // mulai lagi per shift) supaya nomor INV tak ganda.
+      expect(nextBillSeqForDate(orders, DateTime(2026, 11, 3, 14, 0)), 3);
+      expect(nextBillSeqForDate(orders, DateTime(2026, 11, 2, 21, 0)), 2);
+      expect(nextBillSeqForDate(const [], DateTime(2026, 11, 3)), 1);
+    });
+
+    test('ganti tanggal kalender: urut kembali ke 1', () {
+      final orders = [
+        paidAt(DateTime(2026, 11, 3, 23, 55)),
+        paidAt(DateTime(2026, 11, 3, 23, 59)),
+      ];
+      expect(nextBillSeqForDate(orders, DateTime(2026, 11, 4, 0, 5)), 1);
+    });
+
+    test('formatBillNo: INV + YYMMDD + urut 4 digit zero-padded, '
+        'tumbuh alami di atas 9999', () {
+      final d = DateTime(2026, 11, 3, 13, 45);
+      expect(formatBillNo(d, 1), 'INV261103-0001');
+      // Contoh persis dari permintaan NUX.
+      expect(formatBillNo(d, 2), 'INV261103-0002');
+      expect(formatBillNo(d, 99), 'INV261103-0099');
+      expect(formatBillNo(d, 100), 'INV261103-0100');
+      expect(formatBillNo(d, 9999), 'INV261103-9999');
+      expect(formatBillNo(d, 10000), 'INV261103-10000');
+      expect(
+        formatBillNo(DateTime(2027, 1, 5), 7),
+        'INV270105-0007',
+      );
     });
   });
 }

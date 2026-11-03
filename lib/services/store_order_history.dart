@@ -109,10 +109,13 @@ class CompletedOrder {
   /// dicatat — record lama tanpa field ini terbaca ''.
   final String customerName;
 
-  /// Nomor urut transaksi LUNAS di dalam shift berjalan saat
-  /// record dicatat ("Bill No" pada struk), ditentukan dari
-  /// jumlah record lunas era 'rp' pada jendela shift itu.
-  /// 0 = tidak bernomor (VOID & record lama).
+  /// Nomor urut transaksi LUNAS pada TANGGAL kalender lokal
+  /// transaksi (lintas shift), dicap saat record dicatat dari
+  /// jumlah record lunas era 'rp' pada tanggal itu. Tampil
+  /// di struk sebagai "No. Bill" berformat
+  /// INV<YYMMDD>-<urut 4 digit> (formatBillNo di
+  /// utils/store_receipt.dart). 0 = tidak bernomor (VOID &
+  /// record lama).
   final int billNo;
 
   /// Nomor antrean harian ("Token No" pada struk) dari
@@ -178,8 +181,9 @@ class CompletedOrder {
 
   /// Salinan record dengan metadata struk (Bill No & Token No)
   /// dicap — dipakai layar Mode Toko tepat sebelum record lunas
-  /// disimpan: Bill No dihitung dari record shift berjalan dan
-  /// Token No diambil dari penghitung antrean harian, keduanya
+  /// disimpan: Bill No dihitung dari record lunas pada
+  /// tanggal transaksi dan Token No diambil dari penghitung
+  /// antrean harian, keduanya
   /// baru dapat ditentukan saat pencatatan, bukan saat kasir
   /// masih berada di halaman pembayaran.
   CompletedOrder withReceiptMeta({int? billNo, int? tokenNo}) {
