@@ -793,4 +793,136 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get storeProductFormError =>
       'Periksa lagi: kode, nama, dan harga (di atas 0) wajib diisi.';
+
+  @override
+  String get storeProductCategory => 'Kategori (opsional)';
+
+  @override
+  String get storeShiftTitle => 'Shift Kasir';
+
+  @override
+  String get storeShiftNotOpen => 'Shift Belum Dibuka';
+
+  @override
+  String get storeShiftOpenHint =>
+      'Buka shift dulu untuk menyusun pesanan, membuat kode bayar, dan menerima pembayaran di Mode Toko.';
+
+  @override
+  String get storeShiftOpen => 'Buka Shift';
+
+  @override
+  String get storeShiftClose => 'Tutup Shift';
+
+  @override
+  String storeShiftOpenedAt(String time) {
+    return 'Dibuka $time';
+  }
+
+  @override
+  String get storeShiftStillOpen => 'Masih Berjalan';
+
+  @override
+  String get storeCloseShiftBlocked =>
+      'Tidak bisa menutup shift: masih ada kode bayar yang menunggu pembayaran atau penerimaan yang sedang dirayakan. Selesaikan atau batalkan dulu.';
+
+  @override
+  String get storeCloseShiftConfirmTitle => 'Tutup Shift Ini?';
+
+  @override
+  String get storeCloseShiftConfirmBody =>
+      'Sesudah ditutup, penjualan berikutnya masuk ke shift baru.';
+
+  @override
+  String get storeShiftClosedTitle => 'Shift Ditutup';
+
+  @override
+  String get storeShiftClosedBody =>
+      'Laporan shift ini sudah bisa dilihat, dicetak, atau dibagikan sebagai PDF.';
+
+  @override
+  String get storeLater => 'Nanti';
+
+  @override
+  String get storeViewReport => 'Lihat Laporan';
+
+  @override
+  String get storeSalesReport => 'Laporan Penjualan';
+
+  @override
+  String get storeReportCurrentShift => 'Shift Berjalan';
+
+  @override
+  String get storeReportByDate => 'Per Tanggal';
+
+  @override
+  String get storeReportPastShifts => 'Shift Lampau';
+
+  @override
+  String get storeReportPrint => 'Cetak Laporan';
+
+  @override
+  String get storeReportSharePdf => 'Bagikan PDF';
+
+  @override
+  String get storeReportEmpty =>
+      'Belum ada penjualan tercatat pada periode ini.';
+
+  @override
+  String get storeInvoiceExpiredVoid =>
+      'Kode bayar kedaluwarsa — pesanan dicatat sebagai VOID.';
+
+  @override
+  String get storeReportSummaryTitle => 'LAPORAN SHIFT';
+
+  @override
+  String get storeReportDetailsTitle => 'RINCIAN PENJUALAN';
+
+  @override
+  String get storeReportItemQty => 'Qty Item';
+
+  @override
+  String get storeReportTotalOrder => 'Total ORDER';
+
+  @override
+  String get storeReportTotalOrderInfo => 'Info Total ORDER';
+
+  @override
+  String get storeReportInvoices => '#Invoice';
+
+  @override
+  String get storeReportInvUnit => 'inv.';
+
+  @override
+  String get storeReportVoidInfo => 'Info VOID';
+
+  @override
+  String get storeReportVoidItemQty => 'Qty Item VOID';
+
+  @override
+  String get storeReportVoidSubTotal => 'Sub Total VOID';
+
+  @override
+  String get storeReportVoidDiscount => 'Diskon VOID';
+
+  @override
+  String get storeReportVoidTotalOrder => 'Total ORDER VOID';
+
+  @override
+  String get storeReportOther => 'LAINNYA';
+
+  @override
+  String get storeReportQty => 'Qty';
+
+  @override
+  String storeReportMenus(int count) {
+    return '$count menu(s)';
+  }
+
+  @override
+  String get storeReportGeneratedOn => 'Laporan dibuat';
+
+  @override
+  String storeReportShiftsNote(int count) {
+    return 'Meliputi $count shift';
+  }
 }

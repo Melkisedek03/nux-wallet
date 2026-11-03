@@ -18,17 +18,25 @@ class CatalogItem {
   final int priceNusan;
   final Discount? defaultDiscount;
 
+  /// Kategori produk untuk pengelompokan laporan penjualan
+  /// (mis. "MENTARI"). Kosong = tanpa kategori → item masuk
+  /// kelompok LAINNYA di laporan. Item simpanan lama tanpa field
+  /// ini terbaca sebagai kategori kosong (kompatibel mundur).
+  final String category;
+
   const CatalogItem({
     required this.code,
     required this.name,
     required this.priceNusan,
     this.defaultDiscount,
+    this.category = '',
   });
 
   Map<String, Object?> toJson() => {
     'code': code,
     'name': name,
     'priceNusan': priceNusan,
+    if (category.isNotEmpty) 'category': category,
     if (defaultDiscount != null) ...{
       'discountKind': defaultDiscount!.kind.name,
       'discountValue': defaultDiscount!.value,
@@ -59,11 +67,13 @@ class CatalogItem {
         _ => null,
       };
     }
+    final category = raw['category'];
     return CatalogItem(
       code: code.trim(),
       name: name.trim(),
       priceNusan: price.toInt(),
       defaultDiscount: discount,
+      category: category is String ? category.trim() : '',
     );
   }
 
@@ -73,10 +83,12 @@ class CatalogItem {
       other.code == code &&
       other.name == name &&
       other.priceNusan == priceNusan &&
-      other.defaultDiscount == defaultDiscount;
+      other.defaultDiscount == defaultDiscount &&
+      other.category == category;
 
   @override
-  int get hashCode => Object.hash(code, name, priceNusan, defaultDiscount);
+  int get hashCode =>
+      Object.hash(code, name, priceNusan, defaultDiscount, category);
 }
 
 /// Serialkan katalog ke string JSON untuk simpanan lokal.

@@ -12,6 +12,7 @@ import '../services/lsp_service.dart';
 import '../services/print_service.dart';
 import '../services/store_catalog.dart';
 import '../services/store_order_history.dart';
+import '../services/store_shift.dart';
 import '../utils/animated_checkmark.dart';
 import '../utils/bolt11_info.dart';
 import '../utils/coin_alert.dart';
@@ -19,7 +20,9 @@ import '../utils/format.dart';
 import '../utils/friendly_error.dart';
 import '../utils/receive_watch.dart';
 import '../utils/store_mode_logic.dart';
+import '../utils/store_report.dart';
 import 'scan_screen.dart';
+import 'store_shift_report_screen.dart';
 
 /// Mode Toko — kasir (PoS) di dalam ELNUX untuk UMKM.
 ///
@@ -45,6 +48,15 @@ import 'scan_screen.dart';
 /// adalah yang sungguh diterima (terpotong fee kelahiran), bukan
 /// nominal invoice. Panel sukses tidak pernah tampil sebelum
 /// event penerimaan sungguhan (layar adalah kebenarannya).
+///
+/// Alur shift (keputusan NUX 3 Nov 2026): kasir MEMULAI dengan
+/// Buka Shift; tanpa shift terbuka panel kasir nonaktif dan kode
+/// bayar tidak bisa dibuat — semua penjualan tercatat di dalam
+/// shift. Tutup Shift terhalang selama ada invoice menunggu /
+/// perayaan berjalan; invoice yang dibatalkan kasir atau
+/// kedaluwarsa tak terbayar dicatat sebagai VOID (satu record
+/// per invoice, anti-ganda). Laporan per shift (atau per
+/// tanggal) dibuka dari kartu shift di panel status.
 class StoreModeScreen extends StatefulWidget {
   final LspService lspService;
 
@@ -82,9 +94,20 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
   final _catalogStore = StoreCatalogStore();
   List<CatalogItem> _catalog = const [];
 
+  // --- Shift kasir ---
+  final _shiftStore = StoreShiftStore();
+  List<StoreShift> _shifts = const [];
+  StoreShift? _openShift;
+
   // --- Invoice toko aktif ---
   String? _invoice;
   String? _invoiceHashHex;
+  DateTime? _invoiceExpiresAt;
+
+  /// Anti-ganda pencatatan VOID: satu invoice toko paling banyak
+  /// satu record void (batal dan kedaluwarsa tidak boleh
+  /// mencatat dua kali untuk invoice yang sama).
+  bool _invoiceVoidRecorded = false;
 
   /// Total (nusan) saat invoice dibuat — yang ditampilkan selama
   /// menunggu, bukan total pesanan berjalan yang masih bisa
@@ -120,6 +143,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
   void initState() {
     super.initState();
     _loadCatalog();
+    _loadShifts();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _prefetchStaticOffer();
     });
@@ -136,6 +160,217 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
   Future<void> _loadCatalog() async {
     final items = await _catalogStore.load();
     if (mounted) setState(() => _catalog = items);
+  }
+
+  // ------------------------------------------------------------------
+  // Shift kasir (alur NUX: Open Shift dulu, Close Shift penutup)
+  // ------------------------------------------------------------------
+
+  Future<void> _loadShifts() async {
+    final shifts = await _shiftStore.load();
+    if (!mounted) return;
+    setState(() {
+      _shifts = shifts;
+      _openShift = openShiftIn(shifts);
+    });
+  }
+
+  String get _reportLocale =>
+      context.l10n.localeName.startsWith('en') ? 'en' : 'id';
+
+  Future<void> _openShiftAction() async {
+    if (_openShift != null) return;
+    final shift = StoreShift(openedAt: DateTime.now());
+    final next = [..._shifts, shift];
+    await _shiftStore.save(next);
+    if (!mounted) return;
+    setState(() {
+      _shifts = next;
+      _openShift = shift;
+    });
+  }
+
+  /// Tutup shift. TERHALANG selama masih ada invoice menunggu,
+  /// invoice sedang dibuat, atau perayaan penerimaan berjalan —
+  /// kasir menyelesaikan atau membatalkan dulu (pembatalan
+  /// tercatat VOID). Sesudah bersih, tutup berhasil dan laporan
+  /// shift yang baru ditutup ditawarkan.
+  Future<void> _requestCloseShift() async {
+    final shift = _openShift;
+    if (shift == null) return;
+    final l10n = context.l10n;
+    if (_invoice != null || _received || _creating) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.storeCloseShiftBlocked)));
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ctx.palette.card,
+        title: Text(l10n.storeCloseShiftConfirmTitle),
+        content: Text(l10n.storeCloseShiftConfirmBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.storeShiftClose),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final closed = shift.close(DateTime.now());
+    final next = [
+      for (final s in _shifts) s == shift ? closed : s,
+    ];
+    await _shiftStore.save(next);
+    if (!mounted) return;
+    setState(() {
+      _shifts = next;
+      _openShift = null;
+      _staticOpen = false;
+    });
+    _syncWatcher();
+    final view = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ctx.palette.card,
+        title: Text(l10n.storeShiftClosedTitle),
+        content: Text(l10n.storeShiftClosedBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.storeLater),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.storeViewReport),
+          ),
+        ],
+      ),
+    );
+    if (view == true && mounted) _openShiftReport(closed);
+  }
+
+  void _openShiftReport(StoreShift shift) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StoreShiftReportScreen.forShift(shift),
+      ),
+    );
+  }
+
+  Future<void> _pickDayReport() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: now,
+      firstDate: DateTime(2025, 1, 1),
+      lastDate: now,
+    );
+    if (picked == null || !mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StoreShiftReportScreen.forDay(picked),
+      ),
+    );
+  }
+
+  /// Pemilih laporan: shift berjalan, per tanggal, atau shift
+  /// lampau dari daftar tersimpan.
+  Future<void> _openReportChooser() async {
+    final l10n = context.l10n;
+    final closed = _shifts.where((s) => !s.isOpen).toList().reversed.toList();
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: context.palette.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 16, 18, 6),
+                child: Text(
+                  l10n.storeSalesReport,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              if (_openShift != null)
+                ListTile(
+                  leading: const Icon(Icons.play_circle_outline_rounded),
+                  title: Text(l10n.storeReportCurrentShift),
+                  subtitle: Text(
+                    formatShiftPeriod(
+                      openedAt: _openShift!.openedAt,
+                      closedAt: null,
+                      locale: _reportLocale,
+                      stillOpenWord: l10n.storeShiftStillOpen,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _openShiftReport(_openShift!);
+                  },
+                ),
+              ListTile(
+                leading: const Icon(Icons.calendar_month_outlined),
+                title: Text(l10n.storeReportByDate),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickDayReport();
+                },
+              ),
+              if (closed.isNotEmpty) ...[
+                const Divider(height: 16),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 2, 18, 4),
+                  child: Text(
+                    l10n.storeReportPastShifts,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: context.palette.muted,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                for (final s in closed)
+                  ListTile(
+                    leading: const Icon(Icons.history_rounded),
+                    title: Text(
+                      formatShiftPeriod(
+                        openedAt: s.openedAt,
+                        closedAt: s.closedAt,
+                        locale: _reportLocale,
+                        stillOpenWord: l10n.storeShiftStillOpen,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _openShiftReport(s);
+                    },
+                  ),
+              ],
+              const SizedBox(height: 10),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _prefetchStaticOffer() async {
@@ -160,6 +395,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
         code: item.code,
         label: item.name,
         unitPriceNusan: item.priceNusan,
+        category: item.category,
         defaultDiscount: item.defaultDiscount,
       );
     });
@@ -350,6 +586,9 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
   // ------------------------------------------------------------------
 
   Future<void> _createPaymentCode() async {
+    // Kode bayar hanya di dalam shift terbuka (alur NUX) — panel
+    // kasir memang nonaktif tanpa shift; ini pagar keduanya.
+    if (_openShift == null) return;
     final total = _grandTotal;
     if (total <= 0 || _lines.isEmpty) return;
     _stopWatching();
@@ -359,6 +598,8 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
       _error = null;
       _invoice = null;
       _invoiceHashHex = null;
+      _invoiceExpiresAt = null;
+      _invoiceVoidRecorded = false;
       _received = false;
       _receivedMsat = null;
       _staticOpen = false;
@@ -392,14 +633,17 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
               description: description,
             );
       if (!mounted) return;
+      final info = parseBolt11Info(invoice);
       setState(() {
         _invoice = invoice;
         _invoiceTotalNusan = total;
-        // Hash untuk pencocokan event penerimaan. Invoice toko
+        // Hash untuk pencocokan event penerimaan + waktu
+        // kedaluwarsa untuk pencatatan VOID. Invoice toko
         // SENGAJA tidak disimpan ke SavedInvoiceStore: ia urusan
         // kasir sesaat, bukan invoice pending personal yang perlu
         // dipulihkan layar Terima.
-        _invoiceHashHex = parseBolt11Info(invoice)?.paymentHashHex;
+        _invoiceHashHex = info?.paymentHashHex;
+        _invoiceExpiresAt = info?.expiresAt;
       });
       _syncWatcher();
     } catch (e) {
@@ -425,10 +669,47 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
     }
   }
 
+  /// Catat invoice toko aktif sebagai VOID dari pesanan berjalan
+  /// saat ini. Anti-ganda: bendera per invoice memastikan batal
+  /// dan kedaluwarsa tidak mencatat dua kali untuk invoice yang
+  /// sama (dan invoice yang sudah lunas tidak pernah jadi VOID).
+  void _recordVoidForActiveInvoice() {
+    if (_invoice == null || _invoiceVoidRecorded || _lines.isEmpty) return;
+    _invoiceVoidRecorded = true;
+    _historyStore.append(
+      buildCompletedOrder(
+        time: DateTime.now(),
+        lines: _lines,
+        orderDiscount: _orderDiscount,
+        paymentHashHex: _invoiceHashHex,
+        isVoid: true,
+      ),
+    );
+  }
+
   void _cancelPaymentCode() {
+    _recordVoidForActiveInvoice();
     setState(() {
       _invoice = null;
       _invoiceHashHex = null;
+      _invoiceExpiresAt = null;
+    });
+    _syncWatcher();
+  }
+
+  /// Kedaluwarsa invoice yang sedang ditunggu terdeteksi di
+  /// layar: catat VOID, bersihkan invoice, beri tahu kasir.
+  void _checkInvoiceExpiry() {
+    final expiresAt = _invoiceExpiresAt;
+    if (_invoice == null || expiresAt == null) return;
+    if (!DateTime.now().isAfter(expiresAt)) return;
+    _recordVoidForActiveInvoice();
+    if (!mounted) return;
+    setState(() {
+      _invoice = null;
+      _invoiceHashHex = null;
+      _invoiceExpiresAt = null;
+      _error = context.l10n.storeInvoiceExpiredVoid;
     });
     _syncWatcher();
   }
@@ -496,6 +777,10 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
     } catch (_) {
       // Gagal baca sesaat — coba lagi di tick berikut.
     }
+    // Pembayaran yang datang pada tick ini sudah ditangani di
+    // atas (return lebih dulu) — kedaluwarsa hanya dinilai bila
+    // invoice masih menunggu sesudah antrean event dibaca.
+    if (mounted && gen == _watchGen) _checkInvoiceExpiry();
   }
 
   String _eventHashHex(Event_PaymentReceived e) =>
@@ -524,6 +809,9 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
     final now = DateTime.now();
     var saleDiscountNusan = 0;
     if (isOrderSale) {
+      // Invoice ini LUNAS — kunci supaya tidak pernah tercatat
+      // VOID oleh jalur batal/kedaluwarsa yang terlambat.
+      _invoiceVoidRecorded = true;
       saleDiscountNusan = orderTotalDiscountNusan(_lines, _orderDiscount);
       // Simpan fakta penjualan lengkap sebagai bahan laporan
       // (rendering laporan menyusul; fondasi datanya di sini).
@@ -550,6 +838,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
       if (isOrderSale) {
         _invoice = null;
         _invoiceHashHex = null;
+        _invoiceExpiresAt = null;
       }
     });
     _celebrationTimer?.cancel();
@@ -738,7 +1027,75 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
     );
   }
 
+  /// Keadaan "shift belum dibuka": panel kasir nonaktif, yang
+  /// tampil hanya gerbang Buka Shift (penegasan alur NUX — tidak
+  /// ada jalan menyusun/menagih pesanan di luar shift).
+  Widget _buildShiftGate(BuildContext context) {
+    final l10n = context.l10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            color: context.palette.card,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: context.palette.border),
+          ),
+          child: Column(
+            children: [
+              const Icon(
+                Icons.lock_clock_rounded,
+                size: 44,
+                color: Color(0xFF34D399),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l10n.storeShiftNotOpen,
+                style: const TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w800,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l10n.storeShiftOpenHint,
+                style: TextStyle(fontSize: 13, color: context.palette.muted),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 18),
+              ElevatedButton.icon(
+                onPressed: _openShiftAction,
+                icon: const Icon(Icons.play_circle_rounded, size: 22),
+                label: Text(
+                  l10n.storeShiftOpen,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 28,
+                    vertical: 16,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildCashier(BuildContext context) {
+    if (_openShift == null) return _buildShiftGate(context);
     final l10n = context.l10n;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1226,6 +1583,129 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
   };
 
   Widget _buildStatusPanel(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildShiftCard(context),
+        const SizedBox(height: 16),
+        if (_openShift != null)
+          _buildSellingStatusPanel(context)
+        else
+          _buildClosedStatusPanel(context),
+      ],
+    );
+  }
+
+  /// Kartu status shift: selalu tampil di panel status — status
+  /// buka/tutup, waktu buka, aksi Tutup Shift dan Laporan
+  /// Penjualan (pemilih shift berjalan / per tanggal / lampau).
+  Widget _buildShiftCard(BuildContext context) {
+    final l10n = context.l10n;
+    final shift = _openShift;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: context.palette.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.palette.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(
+                shift != null
+                    ? Icons.storefront_rounded
+                    : Icons.lock_outline_rounded,
+                color: const Color(0xFF34D399),
+                size: 22,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.storeShiftTitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.palette.muted,
+                      ),
+                    ),
+                    Text(
+                      shift != null
+                          ? l10n.storeShiftOpenedAt(
+                              _receiptTime(shift.openedAt),
+                            )
+                          : l10n.storeShiftNotOpen,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (shift != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0x2610B981),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    l10n.storeShiftStillOpen,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF34D399),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              if (shift != null) ...[
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _requestCloseShift,
+                    child: Text(l10n.storeShiftClose),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _openReportChooser,
+                  icon: const Icon(Icons.receipt_long_rounded, size: 18),
+                  label: Text(l10n.storeSalesReport),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Panel status saat shift tertutup: penjualan nonaktif; yang
+  /// ditawarkan hanya membuka shift (di panel kasir) atau melihat
+  /// laporan periode lampau.
+  Widget _buildClosedStatusPanel(BuildContext context) {
+    return Text(
+      context.l10n.storeShiftOpenHint,
+      style: TextStyle(fontSize: 13, color: context.palette.muted),
+      textAlign: TextAlign.center,
+    );
+  }
+
+  Widget _buildSellingStatusPanel(BuildContext context) {
     final l10n = context.l10n;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1466,6 +1946,7 @@ class _CatalogManagerSheetState extends State<_CatalogManagerSheet> {
   );
   final _nameController = TextEditingController();
   final _priceController = TextEditingController();
+  final _categoryController = TextEditingController();
   final _discountValueController = TextEditingController();
   DiscountKind? _discountKind;
   String? _formError;
@@ -1475,6 +1956,7 @@ class _CatalogManagerSheetState extends State<_CatalogManagerSheet> {
     _codeController.dispose();
     _nameController.dispose();
     _priceController.dispose();
+    _categoryController.dispose();
     _discountValueController.dispose();
     super.dispose();
   }
@@ -1485,6 +1967,7 @@ class _CatalogManagerSheetState extends State<_CatalogManagerSheet> {
     String nusanOf(int nusan) =>
         formatNusan(BigInt.from(nusan) * BigInt.from(1000));
     var text = '${item.code} • ${nusanOf(item.priceNusan)} nusan';
+    if (item.category.isNotEmpty) text = '$text • ${item.category}';
     final d = item.defaultDiscount;
     if (d != null) {
       final badge = d.kind == DiscountKind.percent
@@ -1493,6 +1976,21 @@ class _CatalogManagerSheetState extends State<_CatalogManagerSheet> {
       text = '$text • ${context.l10n.storeDiscount} $badge';
     }
     return text;
+  }
+
+  /// Ketuk item di daftar = muat ke formulir untuk diedit
+  /// (termasuk kategori); simpan menimpa item berkode sama.
+  void _loadIntoForm(CatalogItem item) {
+    setState(() {
+      _codeController.text = item.code;
+      _nameController.text = item.name;
+      _priceController.text = item.priceNusan.toString();
+      _categoryController.text = item.category;
+      _discountKind = item.defaultDiscount?.kind;
+      _discountValueController.text =
+          item.defaultDiscount?.value.toString() ?? '';
+      _formError = null;
+    });
   }
 
   Future<void> _scanIntoCode() async {
@@ -1528,6 +2026,7 @@ class _CatalogManagerSheetState extends State<_CatalogManagerSheet> {
       name: name,
       priceNusan: price,
       defaultDiscount: discount,
+      category: _categoryController.text.trim(),
     );
     setState(() {
       _items = [
@@ -1539,6 +2038,7 @@ class _CatalogManagerSheetState extends State<_CatalogManagerSheet> {
       _codeController.clear();
       _nameController.clear();
       _priceController.clear();
+      _categoryController.clear();
       _discountValueController.clear();
       _discountKind = null;
     });
@@ -1574,6 +2074,7 @@ class _CatalogManagerSheetState extends State<_CatalogManagerSheet> {
                 ListTile(
                   dense: true,
                   contentPadding: EdgeInsets.zero,
+                  onTap: () => _loadIntoForm(item),
                   title: Text(
                     item.name,
                     style: const TextStyle(fontWeight: FontWeight.w600),
@@ -1635,6 +2136,19 @@ class _CatalogManagerSheetState extends State<_CatalogManagerSheet> {
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               decoration: InputDecoration(
                 labelText: l10n.storeProductPrice,
+                filled: true,
+                fillColor: context.palette.cardAlt,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _categoryController,
+              decoration: InputDecoration(
+                labelText: l10n.storeProductCategory,
                 filled: true,
                 fillColor: context.palette.cardAlt,
                 border: OutlineInputBorder(

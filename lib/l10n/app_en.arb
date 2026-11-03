@@ -346,5 +346,66 @@
     }
   },
   "storeClearKeypad": "Clear",
-  "storeProductFormError": "Check again: code, name, and a price above 0 are all required."
+  "storeProductFormError": "Check again: code, name, and a price above 0 are all required.",
+  "storeProductCategory": "Category (optional)",
+  "storeShiftTitle": "Cashier Shift",
+  "storeShiftNotOpen": "Shift Not Open",
+  "storeShiftOpenHint": "Open a shift first to build orders, create payment codes, and take payments in Store Mode.",
+  "storeShiftOpen": "Open Shift",
+  "storeShiftClose": "Close Shift",
+  "storeShiftOpenedAt": "Opened {time}",
+  "@storeShiftOpenedAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "storeShiftStillOpen": "Still Open",
+  "storeCloseShiftBlocked": "Can't close the shift yet: a payment code is still waiting or a payment is being celebrated. Finish or cancel it first.",
+  "storeCloseShiftConfirmTitle": "Close This Shift?",
+  "storeCloseShiftConfirmBody": "Once closed, later sales go into a new shift.",
+  "storeShiftClosedTitle": "Shift Closed",
+  "storeShiftClosedBody": "This shift's report is ready to view, print, or share as PDF.",
+  "storeLater": "Later",
+  "storeViewReport": "View Report",
+  "storeSalesReport": "Sales Report",
+  "storeReportCurrentShift": "Current Shift",
+  "storeReportByDate": "By Date",
+  "storeReportPastShifts": "Past Shifts",
+  "storeReportPrint": "Print Report",
+  "storeReportSharePdf": "Share PDF",
+  "storeReportEmpty": "No sales recorded in this period yet.",
+  "storeInvoiceExpiredVoid": "The payment code expired — the order was recorded as VOID.",
+  "storeReportSummaryTitle": "SELECTED REPORT",
+  "storeReportDetailsTitle": "MENU SALES DETAILS",
+  "storeReportItemQty": "Item Qty",
+  "storeReportTotalOrder": "Total ORDER",
+  "storeReportTotalOrderInfo": "Total ORDER Info",
+  "storeReportInvoices": "#Invoices",
+  "storeReportInvUnit": "inv.",
+  "storeReportVoidInfo": "VOID Info",
+  "storeReportVoidItemQty": "VOID Item Qty",
+  "storeReportVoidSubTotal": "VOID Sub Total",
+  "storeReportVoidDiscount": "VOID Discount",
+  "storeReportVoidTotalOrder": "VOID Total ORDER",
+  "storeReportOther": "OTHER",
+  "storeReportQty": "Qty",
+  "storeReportMenus": "{count} menu(s)",
+  "@storeReportMenus": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "storeReportGeneratedOn": "Rpt.generated on",
+  "storeReportShiftsNote": "Covers {count} shift(s)",
+  "@storeReportShiftsNote": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -113,6 +113,13 @@ class OrderLine {
   final int unitPriceNusan;
   final int qty;
 
+  /// Kategori produk saat baris dibuat (snapshot dari katalog;
+  /// '' = tanpa kategori → kelompok LAINNYA di laporan). Baris
+  /// bebas selalu ''. Perubahan kategori di katalog belakangan
+  /// tidak mengubah baris yang sudah ada — laporan membaca
+  /// snapshot ini, bukan keadaan katalog terbaru.
+  final String category;
+
   /// Diskon baris ini (persen atau nominal), null = tanpa diskon.
   /// Untuk baris produk, awalnya terisi dari diskon bawaan katalog
   /// lalu bebas diubah/dihapus kasir di baris.
@@ -123,6 +130,7 @@ class OrderLine {
     required this.label,
     required this.unitPriceNusan,
     required this.qty,
+    this.category = '',
     this.discount,
   });
 
@@ -144,6 +152,7 @@ class OrderLine {
     label: label,
     unitPriceNusan: unitPriceNusan,
     qty: qty ?? this.qty,
+    category: category,
     discount: clearDiscount ? null : (discount ?? this.discount),
   );
 
@@ -154,10 +163,12 @@ class OrderLine {
       other.label == label &&
       other.unitPriceNusan == unitPriceNusan &&
       other.qty == qty &&
+      other.category == category &&
       other.discount == discount;
 
   @override
-  int get hashCode => Object.hash(code, label, unitPriceNusan, qty, discount);
+  int get hashCode =>
+      Object.hash(code, label, unitPriceNusan, qty, category, discount);
 }
 
 /// Tambah satu produk katalog ke pesanan: baris berkode sama yang
@@ -170,6 +181,7 @@ List<OrderLine> orderAddProduct(
   required String code,
   required String label,
   required int unitPriceNusan,
+  String category = '',
   Discount? defaultDiscount,
 }) {
   final idx = lines.indexWhere((l) => l.code == code);
@@ -181,6 +193,7 @@ List<OrderLine> orderAddProduct(
         label: label,
         unitPriceNusan: unitPriceNusan,
         qty: 1,
+        category: category,
         discount: defaultDiscount,
       ),
     ];

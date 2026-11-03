@@ -346,5 +346,66 @@
     }
   },
   "storeClearKeypad": "Bersih",
-  "storeProductFormError": "Periksa lagi: kode, nama, dan harga (di atas 0) wajib diisi."
+  "storeProductFormError": "Periksa lagi: kode, nama, dan harga (di atas 0) wajib diisi.",
+  "storeProductCategory": "Kategori (opsional)",
+  "storeShiftTitle": "Shift Kasir",
+  "storeShiftNotOpen": "Shift Belum Dibuka",
+  "storeShiftOpenHint": "Buka shift dulu untuk menyusun pesanan, membuat kode bayar, dan menerima pembayaran di Mode Toko.",
+  "storeShiftOpen": "Buka Shift",
+  "storeShiftClose": "Tutup Shift",
+  "storeShiftOpenedAt": "Dibuka {time}",
+  "@storeShiftOpenedAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "storeShiftStillOpen": "Masih Berjalan",
+  "storeCloseShiftBlocked": "Tidak bisa menutup shift: masih ada kode bayar yang menunggu pembayaran atau penerimaan yang sedang dirayakan. Selesaikan atau batalkan dulu.",
+  "storeCloseShiftConfirmTitle": "Tutup Shift Ini?",
+  "storeCloseShiftConfirmBody": "Sesudah ditutup, penjualan berikutnya masuk ke shift baru.",
+  "storeShiftClosedTitle": "Shift Ditutup",
+  "storeShiftClosedBody": "Laporan shift ini sudah bisa dilihat, dicetak, atau dibagikan sebagai PDF.",
+  "storeLater": "Nanti",
+  "storeViewReport": "Lihat Laporan",
+  "storeSalesReport": "Laporan Penjualan",
+  "storeReportCurrentShift": "Shift Berjalan",
+  "storeReportByDate": "Per Tanggal",
+  "storeReportPastShifts": "Shift Lampau",
+  "storeReportPrint": "Cetak Laporan",
+  "storeReportSharePdf": "Bagikan PDF",
+  "storeReportEmpty": "Belum ada penjualan tercatat pada periode ini.",
+  "storeInvoiceExpiredVoid": "Kode bayar kedaluwarsa — pesanan dicatat sebagai VOID.",
+  "storeReportSummaryTitle": "LAPORAN SHIFT",
+  "storeReportDetailsTitle": "RINCIAN PENJUALAN",
+  "storeReportItemQty": "Qty Item",
+  "storeReportTotalOrder": "Total ORDER",
+  "storeReportTotalOrderInfo": "Info Total ORDER",
+  "storeReportInvoices": "#Invoice",
+  "storeReportInvUnit": "inv.",
+  "storeReportVoidInfo": "Info VOID",
+  "storeReportVoidItemQty": "Qty Item VOID",
+  "storeReportVoidSubTotal": "Sub Total VOID",
+  "storeReportVoidDiscount": "Diskon VOID",
+  "storeReportVoidTotalOrder": "Total ORDER VOID",
+  "storeReportOther": "LAINNYA",
+  "storeReportQty": "Qty",
+  "storeReportMenus": "{count} menu(s)",
+  "@storeReportMenus": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "storeReportGeneratedOn": "Laporan dibuat",
+  "storeReportShiftsNote": "Meliputi {count} shift",
+  "@storeReportShiftsNote": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

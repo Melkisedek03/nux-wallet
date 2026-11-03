@@ -795,4 +795,135 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get storeProductFormError =>
       'Check again: code, name, and a price above 0 are all required.';
+
+  @override
+  String get storeProductCategory => 'Category (optional)';
+
+  @override
+  String get storeShiftTitle => 'Cashier Shift';
+
+  @override
+  String get storeShiftNotOpen => 'Shift Not Open';
+
+  @override
+  String get storeShiftOpenHint =>
+      'Open a shift first to build orders, create payment codes, and take payments in Store Mode.';
+
+  @override
+  String get storeShiftOpen => 'Open Shift';
+
+  @override
+  String get storeShiftClose => 'Close Shift';
+
+  @override
+  String storeShiftOpenedAt(String time) {
+    return 'Opened $time';
+  }
+
+  @override
+  String get storeShiftStillOpen => 'Still Open';
+
+  @override
+  String get storeCloseShiftBlocked =>
+      'Can\'t close the shift yet: a payment code is still waiting or a payment is being celebrated. Finish or cancel it first.';
+
+  @override
+  String get storeCloseShiftConfirmTitle => 'Close This Shift?';
+
+  @override
+  String get storeCloseShiftConfirmBody =>
+      'Once closed, later sales go into a new shift.';
+
+  @override
+  String get storeShiftClosedTitle => 'Shift Closed';
+
+  @override
+  String get storeShiftClosedBody =>
+      'This shift\'s report is ready to view, print, or share as PDF.';
+
+  @override
+  String get storeLater => 'Later';
+
+  @override
+  String get storeViewReport => 'View Report';
+
+  @override
+  String get storeSalesReport => 'Sales Report';
+
+  @override
+  String get storeReportCurrentShift => 'Current Shift';
+
+  @override
+  String get storeReportByDate => 'By Date';
+
+  @override
+  String get storeReportPastShifts => 'Past Shifts';
+
+  @override
+  String get storeReportPrint => 'Print Report';
+
+  @override
+  String get storeReportSharePdf => 'Share PDF';
+
+  @override
+  String get storeReportEmpty => 'No sales recorded in this period yet.';
+
+  @override
+  String get storeInvoiceExpiredVoid =>
+      'The payment code expired — the order was recorded as VOID.';
+
+  @override
+  String get storeReportSummaryTitle => 'SELECTED REPORT';
+
+  @override
+  String get storeReportDetailsTitle => 'MENU SALES DETAILS';
+
+  @override
+  String get storeReportItemQty => 'Item Qty';
+
+  @override
+  String get storeReportTotalOrder => 'Total ORDER';
+
+  @override
+  String get storeReportTotalOrderInfo => 'Total ORDER Info';
+
+  @override
+  String get storeReportInvoices => '#Invoices';
+
+  @override
+  String get storeReportInvUnit => 'inv.';
+
+  @override
+  String get storeReportVoidInfo => 'VOID Info';
+
+  @override
+  String get storeReportVoidItemQty => 'VOID Item Qty';
+
+  @override
+  String get storeReportVoidSubTotal => 'VOID Sub Total';
+
+  @override
+  String get storeReportVoidDiscount => 'VOID Discount';
+
+  @override
+  String get storeReportVoidTotalOrder => 'VOID Total ORDER';
+
+  @override
+  String get storeReportOther => 'OTHER';
+
+  @override
+  String get storeReportQty => 'Qty';
+
+  @override
+  String storeReportMenus(int count) {
+    return '$count menu(s)';
+  }
+
+  @override
+  String get storeReportGeneratedOn => 'Rpt.generated on';
+
+  @override
+  String storeReportShiftsNote(int count) {
+    return 'Covers $count shift(s)';
+  }
 }

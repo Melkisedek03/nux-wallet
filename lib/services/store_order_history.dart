@@ -4,19 +4,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../utils/store_mode_logic.dart';
 
-/// Satu penjualan Mode Toko yang LUNAS, tersimpan lengkap sebagai
-/// bahan laporan penjualan (print 58mm + PDF — renderingnya
-/// menyusul mengikuti contoh format dari NUX; file ini fondasi
-/// datanya, format-agnostik).
+/// Satu pesanan Mode Toko yang SELESAI — lunas ATAU batal (VOID) —
+/// tersimpan lengkap sebagai bahan laporan penjualan per shift
+/// (print 58mm + PDF). Lihat `lib/utils/store_report.dart` untuk
+/// agregasi + renderingnya.
 ///
 /// Yang disimpan adalah FAKTA penjualan saat terjadi: baris-baris
-/// apa adanya (label, harga satuan, qty, diskon baris), diskon
-/// order, dan tiga angka hasil hitung (subtotal, total diskon,
-/// total akhir) — supaya laporan kelak tidak perlu menebak ulang
-/// dari keadaan katalog yang mungkin sudah berubah.
+/// apa adanya (label, harga satuan, qty, kategori snapshot, diskon
+/// baris), diskon order, dan tiga angka hasil hitung (subtotal,
+/// total diskon, total akhir) — supaya laporan tidak perlu menebak
+/// ulang dari keadaan katalog yang mungkin sudah berubah.
 ///
 /// Hanya penjualan BERPESANAN yang tercatat di sini (invoice toko
-/// terbayar). Pembayaran kode statis tanpa pesanan berjalan bukan
+/// terbayar, atau invoice toko yang dibatalkan/kedaluwarsa —
+/// VOID). Pembayaran kode statis tanpa pesanan berjalan bukan
 /// pesanan — tidak punya baris — jadi tidak masuk riwayat ini
 /// (ia tetap terhitung di ringkasan sesi layar).
 class CompletedOrder {
@@ -30,6 +31,11 @@ class CompletedOrder {
   /// Hash pembayaran (hex) bila diketahui dari invoice toko.
   final String? paymentHashHex;
 
+  /// True = pesanan BATAL (VOID): invoicenya dibatalkan kasir atau
+  /// kedaluwarsa tak terbayar. Record simpanan lama tanpa field
+  /// status terbaca sebagai lunas (kompatibel mundur).
+  final bool isVoid;
+
   const CompletedOrder({
     required this.time,
     required this.lines,
@@ -38,6 +44,7 @@ class CompletedOrder {
     required this.totalDiscountNusan,
     required this.grandTotalNusan,
     required this.paymentHashHex,
+    this.isVoid = false,
   });
 
   Map<String, Object?> toJson() => {
@@ -48,6 +55,7 @@ class CompletedOrder {
     'totalDiscountNusan': totalDiscountNusan,
     'grandTotalNusan': grandTotalNusan,
     'paymentHashHex': paymentHashHex,
+    'status': isVoid ? 'void' : 'paid',
   };
 
   /// Baca satu record; null bila bentuknya tidak sah (waktu/baris/
@@ -79,6 +87,7 @@ class CompletedOrder {
       totalDiscountNusan: totalDiscount.toInt(),
       grandTotalNusan: grandTotal.toInt(),
       paymentHashHex: hash is String && hash.isNotEmpty ? hash : null,
+      isVoid: raw['status'] == 'void',
     );
   }
 
@@ -91,6 +100,7 @@ class CompletedOrder {
       other.totalDiscountNusan == totalDiscountNusan &&
       other.grandTotalNusan == grandTotalNusan &&
       other.paymentHashHex == paymentHashHex &&
+      other.isVoid == isVoid &&
       _linesEqual(other.lines, lines);
 
   @override
@@ -101,6 +111,7 @@ class CompletedOrder {
     totalDiscountNusan,
     grandTotalNusan,
     paymentHashHex,
+    isVoid,
     Object.hashAll(lines),
   );
 }
@@ -134,6 +145,7 @@ Map<String, Object?> _lineToJson(OrderLine l) => {
   'label': l.label,
   'unitPriceNusan': l.unitPriceNusan,
   'qty': l.qty,
+  'category': l.category,
   'discount': _discountToJson(l.discount),
 };
 
@@ -145,11 +157,13 @@ OrderLine? _lineFromJson(Object? raw) {
   if (label is! String || label.isEmpty) return null;
   if (price is! num || price < 0 || qty is! num || qty <= 0) return null;
   final code = raw['code'];
+  final category = raw['category'];
   return OrderLine(
     code: code is String && code.isNotEmpty ? code : null,
     label: label,
     unitPriceNusan: price.toInt(),
     qty: qty.toInt(),
+    category: category is String ? category : '',
     discount: _discountFromJson(raw['discount']),
   );
 }
@@ -157,12 +171,15 @@ OrderLine? _lineFromJson(Object? raw) {
 /// Susun record penjualan dari keadaan pesanan saat pembayaran
 /// lunas — angka hasil dihitung dengan fungsi murni yang sama
 /// dengan yang menampilkan total ke kasir, jadi yang tersimpan
-/// persis yang dilihat kasir.
+/// persis yang dilihat kasir. Dengan [isVoid] true, record yang
+/// sama disusun untuk invoice yang dibatalkan/kedaluwarsa
+/// (angkanya tetap fakta pesanan saat itu, hanya statusnya batal).
 CompletedOrder buildCompletedOrder({
   required DateTime time,
   required List<OrderLine> lines,
   required Discount? orderDiscount,
   required String? paymentHashHex,
+  bool isVoid = false,
 }) {
   return CompletedOrder(
     time: time,
@@ -172,6 +189,7 @@ CompletedOrder buildCompletedOrder({
     totalDiscountNusan: orderTotalDiscountNusan(lines, orderDiscount),
     grandTotalNusan: orderGrandTotalNusan(lines, orderDiscount),
     paymentHashHex: paymentHashHex,
+    isVoid: isVoid,
   );
 }
 
@@ -304,6 +322,10 @@ SalesReport aggregateSales(
   final byLabel = <String, ItemSales>{};
   for (final order in orders) {
     if (order.time.isBefore(from) || !order.time.isBefore(to)) continue;
+    // Pesanan batal (VOID) bukan penjualan — agregasi penjualan
+    // melompati mereka; rekap VOID dihitung terpisah oleh
+    // agregasi laporan shift (store_report.dart).
+    if (order.isVoid) continue;
     txCount++;
     discount += order.totalDiscountNusan;
     net += order.grandTotalNusan;

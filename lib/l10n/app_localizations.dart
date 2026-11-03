@@ -1519,6 +1519,246 @@ abstract class AppLocalizations {
   /// In id, this message translates to:
   /// **'Periksa lagi: kode, nama, dan harga (di atas 0) wajib diisi.'**
   String get storeProductFormError;
+
+  /// No description provided for @storeProductCategory.
+  ///
+  /// In id, this message translates to:
+  /// **'Kategori (opsional)'**
+  String get storeProductCategory;
+
+  /// No description provided for @storeShiftTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Shift Kasir'**
+  String get storeShiftTitle;
+
+  /// No description provided for @storeShiftNotOpen.
+  ///
+  /// In id, this message translates to:
+  /// **'Shift Belum Dibuka'**
+  String get storeShiftNotOpen;
+
+  /// No description provided for @storeShiftOpenHint.
+  ///
+  /// In id, this message translates to:
+  /// **'Buka shift dulu untuk menyusun pesanan, membuat kode bayar, dan menerima pembayaran di Mode Toko.'**
+  String get storeShiftOpenHint;
+
+  /// No description provided for @storeShiftOpen.
+  ///
+  /// In id, this message translates to:
+  /// **'Buka Shift'**
+  String get storeShiftOpen;
+
+  /// No description provided for @storeShiftClose.
+  ///
+  /// In id, this message translates to:
+  /// **'Tutup Shift'**
+  String get storeShiftClose;
+
+  /// No description provided for @storeShiftOpenedAt.
+  ///
+  /// In id, this message translates to:
+  /// **'Dibuka {time}'**
+  String storeShiftOpenedAt(String time);
+
+  /// No description provided for @storeShiftStillOpen.
+  ///
+  /// In id, this message translates to:
+  /// **'Masih Berjalan'**
+  String get storeShiftStillOpen;
+
+  /// No description provided for @storeCloseShiftBlocked.
+  ///
+  /// In id, this message translates to:
+  /// **'Tidak bisa menutup shift: masih ada kode bayar yang menunggu pembayaran atau penerimaan yang sedang dirayakan. Selesaikan atau batalkan dulu.'**
+  String get storeCloseShiftBlocked;
+
+  /// No description provided for @storeCloseShiftConfirmTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Tutup Shift Ini?'**
+  String get storeCloseShiftConfirmTitle;
+
+  /// No description provided for @storeCloseShiftConfirmBody.
+  ///
+  /// In id, this message translates to:
+  /// **'Sesudah ditutup, penjualan berikutnya masuk ke shift baru.'**
+  String get storeCloseShiftConfirmBody;
+
+  /// No description provided for @storeShiftClosedTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Shift Ditutup'**
+  String get storeShiftClosedTitle;
+
+  /// No description provided for @storeShiftClosedBody.
+  ///
+  /// In id, this message translates to:
+  /// **'Laporan shift ini sudah bisa dilihat, dicetak, atau dibagikan sebagai PDF.'**
+  String get storeShiftClosedBody;
+
+  /// No description provided for @storeLater.
+  ///
+  /// In id, this message translates to:
+  /// **'Nanti'**
+  String get storeLater;
+
+  /// No description provided for @storeViewReport.
+  ///
+  /// In id, this message translates to:
+  /// **'Lihat Laporan'**
+  String get storeViewReport;
+
+  /// No description provided for @storeSalesReport.
+  ///
+  /// In id, this message translates to:
+  /// **'Laporan Penjualan'**
+  String get storeSalesReport;
+
+  /// No description provided for @storeReportCurrentShift.
+  ///
+  /// In id, this message translates to:
+  /// **'Shift Berjalan'**
+  String get storeReportCurrentShift;
+
+  /// No description provided for @storeReportByDate.
+  ///
+  /// In id, this message translates to:
+  /// **'Per Tanggal'**
+  String get storeReportByDate;
+
+  /// No description provided for @storeReportPastShifts.
+  ///
+  /// In id, this message translates to:
+  /// **'Shift Lampau'**
+  String get storeReportPastShifts;
+
+  /// No description provided for @storeReportPrint.
+  ///
+  /// In id, this message translates to:
+  /// **'Cetak Laporan'**
+  String get storeReportPrint;
+
+  /// No description provided for @storeReportSharePdf.
+  ///
+  /// In id, this message translates to:
+  /// **'Bagikan PDF'**
+  String get storeReportSharePdf;
+
+  /// No description provided for @storeReportEmpty.
+  ///
+  /// In id, this message translates to:
+  /// **'Belum ada penjualan tercatat pada periode ini.'**
+  String get storeReportEmpty;
+
+  /// No description provided for @storeInvoiceExpiredVoid.
+  ///
+  /// In id, this message translates to:
+  /// **'Kode bayar kedaluwarsa — pesanan dicatat sebagai VOID.'**
+  String get storeInvoiceExpiredVoid;
+
+  /// No description provided for @storeReportSummaryTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'LAPORAN SHIFT'**
+  String get storeReportSummaryTitle;
+
+  /// No description provided for @storeReportDetailsTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'RINCIAN PENJUALAN'**
+  String get storeReportDetailsTitle;
+
+  /// No description provided for @storeReportItemQty.
+  ///
+  /// In id, this message translates to:
+  /// **'Qty Item'**
+  String get storeReportItemQty;
+
+  /// No description provided for @storeReportTotalOrder.
+  ///
+  /// In id, this message translates to:
+  /// **'Total ORDER'**
+  String get storeReportTotalOrder;
+
+  /// No description provided for @storeReportTotalOrderInfo.
+  ///
+  /// In id, this message translates to:
+  /// **'Info Total ORDER'**
+  String get storeReportTotalOrderInfo;
+
+  /// No description provided for @storeReportInvoices.
+  ///
+  /// In id, this message translates to:
+  /// **'#Invoice'**
+  String get storeReportInvoices;
+
+  /// No description provided for @storeReportInvUnit.
+  ///
+  /// In id, this message translates to:
+  /// **'inv.'**
+  String get storeReportInvUnit;
+
+  /// No description provided for @storeReportVoidInfo.
+  ///
+  /// In id, this message translates to:
+  /// **'Info VOID'**
+  String get storeReportVoidInfo;
+
+  /// No description provided for @storeReportVoidItemQty.
+  ///
+  /// In id, this message translates to:
+  /// **'Qty Item VOID'**
+  String get storeReportVoidItemQty;
+
+  /// No description provided for @storeReportVoidSubTotal.
+  ///
+  /// In id, this message translates to:
+  /// **'Sub Total VOID'**
+  String get storeReportVoidSubTotal;
+
+  /// No description provided for @storeReportVoidDiscount.
+  ///
+  /// In id, this message translates to:
+  /// **'Diskon VOID'**
+  String get storeReportVoidDiscount;
+
+  /// No description provided for @storeReportVoidTotalOrder.
+  ///
+  /// In id, this message translates to:
+  /// **'Total ORDER VOID'**
+  String get storeReportVoidTotalOrder;
+
+  /// No description provided for @storeReportOther.
+  ///
+  /// In id, this message translates to:
+  /// **'LAINNYA'**
+  String get storeReportOther;
+
+  /// No description provided for @storeReportQty.
+  ///
+  /// In id, this message translates to:
+  /// **'Qty'**
+  String get storeReportQty;
+
+  /// No description provided for @storeReportMenus.
+  ///
+  /// In id, this message translates to:
+  /// **'{count} menu(s)'**
+  String storeReportMenus(int count);
+
+  /// No description provided for @storeReportGeneratedOn.
+  ///
+  /// In id, this message translates to:
+  /// **'Laporan dibuat'**
+  String get storeReportGeneratedOn;
+
+  /// No description provided for @storeReportShiftsNote.
+  ///
+  /// In id, this message translates to:
+  /// **'Meliputi {count} shift'**
+  String storeReportShiftsNote(int count);
 }
 
 class _AppLocalizationsDelegate

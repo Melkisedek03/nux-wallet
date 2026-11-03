@@ -173,6 +173,31 @@ class PrintService {
     return _send(settings, bytes);
   }
 
+  /// Cetak teks mentah berbaris (satu perintah teks per baris)
+  /// untuk dokumen yang sudah terformat monospace ≤32 kolom —
+  /// dipakai laporan penjualan Mode Toko. TANPA bingkai
+  /// header/footer struk: dokumen laporan membawa kepala dan
+  /// kakinya sendiri. Karakter non-ASCII diganti '?' karena
+  /// printer thermal hanya mengenal halaman kode dasar.
+  static Future<PrintOutcome> printTextLines({
+    required PrinterSettings settings,
+    required List<String> lines,
+  }) async {
+    if (!settings.hasPrinter) return PrintOutcome.noPrinter;
+    final profile = await CapabilityProfile.load();
+    final gen = Generator(PaperSize.mm58, profile);
+    var bytes = <int>[];
+    bytes += gen.reset();
+    for (final line in lines) {
+      bytes += gen.text(_asciiSafe(line.isEmpty ? ' ' : line));
+    }
+    bytes += gen.feed(3);
+    return _send(settings, bytes);
+  }
+
+  static String _asciiSafe(String s) =>
+      String.fromCharCodes(s.runes.map((r) => r > 126 ? 63 : r));
+
   static Future<PrintOutcome> printTest({
     required PrinterSettings settings,
     required String testTitle,
