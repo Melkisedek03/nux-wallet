@@ -27,11 +27,14 @@ class StoreSettingsScreen extends StatefulWidget {
 class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
   final _store = StoreSettingsStore();
   final _nameController = TextEditingController();
+  final _addressController = TextEditingController();
   final _stepController = TextEditingController();
   final _perStepController = TextEditingController();
   final _rateController = TextEditingController();
   final _maxPercentController = TextEditingController();
+  final _footerController = TextEditingController();
   bool _pointsEnabled = true;
+  bool _showToken = true;
   bool _loading = true;
   String? _error;
 
@@ -51,10 +54,12 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _addressController.dispose();
     _stepController.dispose();
     _perStepController.dispose();
     _rateController.dispose();
     _maxPercentController.dispose();
+    _footerController.dispose();
     super.dispose();
   }
 
@@ -63,12 +68,15 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
     if (!mounted) return;
     setState(() {
       _nameController.text = settings.storeName;
+      _addressController.text = settings.storeAddress;
       _pointsEnabled = settings.pointsEnabled;
       _stepController.text = settings.earnStepRp.toString();
       _perStepController.text = settings.earnPointsPerStep.toString();
       _rateController.text = settings.redeemRateRp.toString();
       _maxPercentController.text =
           settings.maxRedeemPercent?.toString() ?? '';
+      _footerController.text = settings.receiptFooterText;
+      _showToken = settings.showTokenNumber;
       _loading = false;
     });
   }
@@ -103,6 +111,9 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
       earnPointsPerStep: perStep,
       redeemRateRp: rate,
       maxRedeemPercent: maxPercent,
+      storeAddress: _addressController.text.trim(),
+      showTokenNumber: _showToken,
+      receiptFooterText: _footerController.text.trim(),
     );
     await _store.save(settings);
     if (!mounted) return;
@@ -164,6 +175,19 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _addressController,
+                  decoration: InputDecoration(
+                    labelText: l10n.storeSettingsAddress,
+                    filled: true,
+                    fillColor: context.palette.cardAlt,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 22),
                 Row(
                   children: [
@@ -216,6 +240,42 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
                     formatRupiah(_parseField(_stepController) ?? 0),
                     _parseField(_perStepController) ?? 0,
                   ),
+                  style: TextStyle(fontSize: 12, color: context.palette.muted),
+                ),
+                const SizedBox(height: 22),
+                TextField(
+                  controller: _footerController,
+                  decoration: InputDecoration(
+                    labelText: l10n.storeSettingsFooterText,
+                    hintText: l10n.storeSettingsFooterTextHint,
+                    filled: true,
+                    fillColor: context.palette.cardAlt,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        l10n.storeSettingsShowToken,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    Switch(
+                      value: _showToken,
+                      onChanged: (v) => setState(() => _showToken = v),
+                    ),
+                  ],
+                ),
+                Text(
+                  l10n.storeSettingsShowTokenHint,
                   style: TextStyle(fontSize: 12, color: context.palette.muted),
                 ),
                 if (_error != null) ...[

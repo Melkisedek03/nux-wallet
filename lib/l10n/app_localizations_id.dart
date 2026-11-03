@@ -1255,6 +1255,68 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeReceiptPromo => 'Tanpa pembayaran (promosi)';
 
   @override
+  String get storeReceiptCustomer => 'Pelanggan';
+
+  @override
+  String get storeReceiptDate => 'Tanggal';
+
+  @override
+  String get storeReceiptBillNo => 'No. Bill';
+
+  @override
+  String get storeReceiptTokenNo => 'No. Token';
+
+  @override
+  String get storeReceiptItemHeader => 'Item';
+
+  @override
+  String get storeReceiptAmountHeader => 'Jumlah';
+
+  @override
+  String get storeReceiptOrderDiscount => 'Diskon Order';
+
+  @override
+  String get storeReceiptGrandTotal => 'TOTAL BAYAR';
+
+  @override
+  String storeReceiptPointsDiscountLabel(String points) {
+    return 'Diskon poin nusan ($points poin)';
+  }
+
+  @override
+  String get storeReceiptFooterDefault =>
+      'Terima kasih & silakan berkunjung kembali';
+
+  @override
+  String get storeShareReceipt => 'Bagikan Struk';
+
+  @override
+  String get storeReceiptPreviewTitle => 'Struk';
+
+  @override
+  String get storeShareReceiptFailed => 'Tidak dapat membuat gambar struk.';
+
+  @override
+  String get storeCustomerNameLabel => 'Nama Pelanggan (opsional)';
+
+  @override
+  String get storeSettingsAddress => 'Alamat Toko (baris kop struk)';
+
+  @override
+  String get storeSettingsShowToken => 'Tampilkan Nomor Token di Struk';
+
+  @override
+  String get storeSettingsShowTokenHint =>
+      'Nomor antrean harian pada struk; mulai dari 1 setiap hari.';
+
+  @override
+  String get storeSettingsFooterText => 'Teks Penutup Struk';
+
+  @override
+  String get storeSettingsFooterTextHint =>
+      'Kosongkan untuk teks bawaan bahasa aplikasi.';
+
+  @override
   String get storeSettingsTitle => 'Pengaturan Toko';
 
   @override

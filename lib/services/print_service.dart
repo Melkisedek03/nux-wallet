@@ -3,6 +3,7 @@ import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/app_localizations.dart';
+import '../utils/store_receipt.dart';
 
 /// Pesan lokal untuk satu [PrintOutcome] — dipakai layar
 /// Pengaturan Printer dan layar Detail Transaksi.
@@ -196,6 +197,151 @@ class PrintService {
         return b;
       },
     );
+    return _send(settings, bytes);
+  }
+
+  /// Cetak struk pelanggan Mode Toko dari urutan elemen
+  /// bersama (lib/utils/store_receipt.dart) mengikuti layout
+  /// contoh struk kasir: kop nama toko di tengah dengan
+  /// DOUBLE HEIGHT + tebal (standar printer thermal 58mm —
+  /// nama toko adalah judul struk), alamat ukuran normal,
+  /// garis putus-putus, meta Customer/Date/Bill No/Token No,
+  /// tabel Item/Amount, baris hitung Subtotal, diskon-diskon,
+  /// Grand Total ukuran ganda, tender, poin, footer tengah.
+  ///
+  /// Metode ini KHUSUS struk toko; [printReceipt] generik dan
+  /// pemanggil lainnya tidak berubah sama sekali.
+  static Future<PrintOutcome> printStoreReceipt({
+    required PrinterSettings settings,
+    required List<StoreReceiptElement> elements,
+  }) async {
+    if (!settings.hasPrinter) return PrintOutcome.noPrinter;
+    final profile = await CapabilityProfile.load();
+    final gen = Generator(PaperSize.mm58, profile);
+    var bytes = <int>[];
+    bytes += gen.reset();
+
+    List<int> rowLine(String label, String value, {bool bold = false}) {
+      // Label panjang (mis. baris diskon poin) tidak muat satu
+      // baris kolom: cetak labelnya dulu, jumlah rata kanan di
+      // baris berikut — isi tetap sama, hanya membungkus.
+      if (label.length > 20) {
+        return [
+          ...gen.text(
+            _asciiSafe(label),
+            styles: PosStyles(bold: bold),
+          ),
+          ...gen.text(
+            _asciiSafe(value),
+            styles: PosStyles(align: PosAlign.right, bold: bold),
+          ),
+        ];
+      }
+      return gen.row([
+        PosColumn(
+          text: _asciiSafe(label),
+          width: 8,
+          styles: PosStyles(bold: bold),
+        ),
+        PosColumn(
+          text: _asciiSafe(value),
+          width: 4,
+          styles: PosStyles(align: PosAlign.right, bold: bold),
+        ),
+      ]);
+    }
+
+    for (final e in elements) {
+      switch (e) {
+        case ReceiptCenterText(:final text, :final bold, :final big):
+          bytes += gen.text(
+            _asciiSafe(text),
+            styles: PosStyles(
+              align: PosAlign.center,
+              bold: bold,
+              // Nama toko (big) = double height: tinggi size2,
+              // lebar normal — standar kop printer thermal.
+              height: big ? PosTextSize.size2 : PosTextSize.size1,
+              width: PosTextSize.size1,
+            ),
+          );
+        case ReceiptDashedRule():
+          bytes += gen.hr();
+        case ReceiptMetaRow(:final label, :final value, :final spread):
+          if (spread) {
+            bytes += gen.row([
+              PosColumn(text: _asciiSafe('$label:'), width: 5),
+              PosColumn(
+                text: _asciiSafe(value),
+                width: 7,
+                styles: const PosStyles(align: PosAlign.right),
+              ),
+            ]);
+          } else {
+            bytes += gen.text(
+              _asciiSafe('${'$label:'.padRight(12)}$value'),
+            );
+          }
+        case ReceiptItemsHeader(:final itemLabel, :final amountLabel):
+          bytes += gen.row([
+            PosColumn(
+              text: _asciiSafe(itemLabel),
+              width: 8,
+              styles: const PosStyles(bold: true),
+            ),
+            PosColumn(
+              text: _asciiSafe(amountLabel),
+              width: 4,
+              styles: const PosStyles(align: PosAlign.right, bold: true),
+            ),
+          ]);
+        case ReceiptItemRow(:final name, :final amountText):
+          if (name.length <= 20 && amountText.length <= 11) {
+            bytes += gen.row([
+              PosColumn(text: _asciiSafe(name), width: 8),
+              PosColumn(
+                text: _asciiSafe(amountText),
+                width: 4,
+                styles: const PosStyles(align: PosAlign.right),
+              ),
+            ]);
+          } else {
+            bytes += gen.text(_asciiSafe(name));
+            bytes += gen.text(
+              _asciiSafe(amountText),
+              styles: const PosStyles(align: PosAlign.right),
+            );
+          }
+        case ReceiptItemSub(:final text):
+          bytes += gen.text(_asciiSafe('  $text'));
+        case ReceiptRow(:final label, :final amountText, :final bold):
+          bytes += rowLine(label, amountText, bold: bold);
+        case ReceiptGrandTotal(:final label, :final amountText):
+          // Ukuran ganda (tinggi+lebar size2 = 16 kolom efektif):
+          // label & jumlah dua baris supaya keduanya terbaca
+          // penuh, jumlah rata kanan seperti contoh.
+          bytes += gen.text(
+            _asciiSafe(label),
+            styles: const PosStyles(
+              bold: true,
+              height: PosTextSize.size2,
+              width: PosTextSize.size2,
+            ),
+          );
+          bytes += gen.text(
+            _asciiSafe(amountText),
+            styles: const PosStyles(
+              align: PosAlign.right,
+              bold: true,
+              height: PosTextSize.size2,
+              width: PosTextSize.size2,
+            ),
+          );
+        case ReceiptTextLine(:final text):
+          bytes += gen.text(_asciiSafe(text));
+      }
+    }
+    bytes += gen.feed(3);
     return _send(settings, bytes);
   }
 

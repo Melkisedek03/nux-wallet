@@ -256,6 +256,36 @@ void main() {
       expect(loaded.single.pointsIssueHashHex, 'beef');
     });
 
+    test('metadata struk (pelanggan, Bill No, Token No) roundtrip; '
+        'record lama tanpa field terbaca kosong/tanpa nomor', () {
+      final order = sample(
+        time: DateTime(2026, 11, 3, 9, 30),
+      ).withReceiptMeta(billNo: 4, tokenNo: 21);
+      final named = CompletedOrder.fromJson({
+        ...order.toJson(),
+        'customerName': 'Advika Mate',
+      })!;
+      expect(named.customerName, 'Advika Mate');
+      expect(named.billNo, 4);
+      expect(named.tokenNo, 21);
+      expect(decodeOrderHistory(encodeOrderHistory([named])).single, named);
+      // Record lama: tanpa ketiga field → '' dan 0.
+      final legacy = sample(time: DateTime(2026, 11, 3, 9, 30));
+      final decoded = decodeOrderHistory(encodeOrderHistory([legacy]));
+      expect(decoded.single.customerName, '');
+      expect(decoded.single.billNo, 0);
+      expect(decoded.single.tokenNo, 0);
+      // Nama pelanggan dari buildCompletedOrder (sudah di-trim).
+      final built = buildCompletedOrder(
+        time: DateTime(2026, 11, 3),
+        lines: const [OrderLine(label: 'Teh', unitPriceRp: 3000, qty: 1)],
+        orderDiscount: null,
+        paymentHashHex: null,
+        customerName: '  Budi  ',
+      );
+      expect(built.customerName, 'Budi');
+    });
+
     test('agregasi v2 mengecualikan record era nusan', () {
       const legacy =
           '[{"timeMs":1793865600000,"lines":[{"code":"A1","label":"Kopi","unitPriceNusan":5000,"qty":2,"category":"","discount":{"kind":null,"value":null}}],"orderDiscount":{"kind":null,"value":null},"subtotalNusan":10000,"totalDiscountNusan":0,"grandTotalNusan":10000,"paymentHashHex":"ab12","status":"paid"}]';

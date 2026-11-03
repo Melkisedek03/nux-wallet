@@ -36,6 +36,19 @@ class StoreSettings {
   /// batas selain sisa tagihan itu sendiri.
   final int? maxRedeemPercent;
 
+  /// Baris kedua kop struk (alamat toko), tampil di tengah tepat
+  /// di bawah nama toko; '' = tanpa baris alamat.
+  final String storeAddress;
+
+  /// Tampilkan nomor token (antrean harian) pada struk? Bawaan
+  /// tampil — mengikuti contoh struk yang dipakai kasir.
+  final bool showTokenNumber;
+
+  /// Teks penutup struk toko (footer ucapan); '' = teks bawaan
+  /// bahasa aplikasi ("Terima kasih & silakan berkunjung
+  /// kembali" / "Thank You & Visit Again").
+  final String receiptFooterText;
+
   const StoreSettings({
     this.storeName = '',
     this.pointsEnabled = true,
@@ -43,6 +56,9 @@ class StoreSettings {
     this.earnPointsPerStep = 1000,
     this.redeemRateRp = 1,
     this.maxRedeemPercent,
+    this.storeAddress = '',
+    this.showTokenNumber = true,
+    this.receiptFooterText = '',
   });
 
   static const defaults = StoreSettings();
@@ -55,6 +71,9 @@ class StoreSettings {
     int? redeemRateRp,
     int? maxRedeemPercent,
     bool clearMaxRedeemPercent = false,
+    String? storeAddress,
+    bool? showTokenNumber,
+    String? receiptFooterText,
   }) => StoreSettings(
     storeName: storeName ?? this.storeName,
     pointsEnabled: pointsEnabled ?? this.pointsEnabled,
@@ -64,6 +83,9 @@ class StoreSettings {
     maxRedeemPercent: clearMaxRedeemPercent
         ? null
         : (maxRedeemPercent ?? this.maxRedeemPercent),
+    storeAddress: storeAddress ?? this.storeAddress,
+    showTokenNumber: showTokenNumber ?? this.showTokenNumber,
+    receiptFooterText: receiptFooterText ?? this.receiptFooterText,
   );
 
   Map<String, Object?> toJson() => {
@@ -73,6 +95,9 @@ class StoreSettings {
     'earnPointsPerStep': earnPointsPerStep,
     'redeemRateRp': redeemRateRp,
     'maxRedeemPercent': maxRedeemPercent,
+    'storeAddress': storeAddress,
+    'showTokenNumber': showTokenNumber,
+    'receiptFooterText': receiptFooterText,
   };
 
   /// Baca pengaturan dari JSON; field yang hilang/tak sah jatuh
@@ -89,6 +114,9 @@ class StoreSettings {
     final perStep = raw['earnPointsPerStep'];
     final rate = raw['redeemRateRp'];
     final maxPct = raw['maxRedeemPercent'];
+    final address = raw['storeAddress'];
+    final showToken = raw['showTokenNumber'];
+    final footer = raw['receiptFooterText'];
     return StoreSettings(
       storeName: name is String ? name.trim() : '',
       pointsEnabled: enabled is bool ? enabled : true,
@@ -100,6 +128,11 @@ class StoreSettings {
       maxRedeemPercent: maxPct is num && maxPct >= 1 && maxPct <= 100
           ? maxPct.toInt()
           : null,
+      // Field struk baru: simpanan lama tanpa field ini jatuh ke
+      // bawaannya (alamat kosong, token tampil, footer bawaan).
+      storeAddress: address is String ? address.trim() : '',
+      showTokenNumber: showToken is bool ? showToken : true,
+      receiptFooterText: footer is String ? footer.trim() : '',
     );
   }
 
@@ -111,7 +144,10 @@ class StoreSettings {
       other.earnStepRp == earnStepRp &&
       other.earnPointsPerStep == earnPointsPerStep &&
       other.redeemRateRp == redeemRateRp &&
-      other.maxRedeemPercent == maxRedeemPercent;
+      other.maxRedeemPercent == maxRedeemPercent &&
+      other.storeAddress == storeAddress &&
+      other.showTokenNumber == showTokenNumber &&
+      other.receiptFooterText == receiptFooterText;
 
   @override
   int get hashCode => Object.hash(
@@ -121,6 +157,9 @@ class StoreSettings {
     earnPointsPerStep,
     redeemRateRp,
     maxRedeemPercent,
+    storeAddress,
+    showTokenNumber,
+    receiptFooterText,
   );
 }
 

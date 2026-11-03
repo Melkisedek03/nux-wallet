@@ -104,6 +104,23 @@ class CompletedOrder {
   /// Id pembayaran (hex) pengiriman poin saat berstatus 'issued'.
   final String? pointsIssueHashHex;
 
+  /// Nama pelanggan yang dicatat kasir di halaman pembayaran
+  /// (opsional, untuk struk: baris "Customer: …"). '' = tidak
+  /// dicatat — record lama tanpa field ini terbaca ''.
+  final String customerName;
+
+  /// Nomor urut transaksi LUNAS di dalam shift berjalan saat
+  /// record dicatat ("Bill No" pada struk), ditentukan dari
+  /// jumlah record lunas era 'rp' pada jendela shift itu.
+  /// 0 = tidak bernomor (VOID & record lama).
+  final int billNo;
+
+  /// Nomor antrean harian ("Token No" pada struk) dari
+  /// penghitung token harian toko; naik sekali per transaksi
+  /// lunas dan mulai lagi dari 1 tiap tanggal baru.
+  /// 0 = tidak tampil (penghitung mati / VOID / record lama).
+  final int tokenNo;
+
   const CompletedOrder({
     this.id = '',
     required this.time,
@@ -123,6 +140,9 @@ class CompletedOrder {
     this.pointsEarned = 0,
     this.pointsIssueStatus = issueStatusNone,
     this.pointsIssueHashHex,
+    this.customerName = '',
+    this.billNo = 0,
+    this.tokenNo = 0,
   });
 
   bool get isRupiahEra => era == storeEraRupiah;
@@ -150,6 +170,41 @@ class CompletedOrder {
       pointsEarned: pointsEarned,
       pointsIssueStatus: status,
       pointsIssueHashHex: issueHashHex ?? pointsIssueHashHex,
+      customerName: customerName,
+      billNo: billNo,
+      tokenNo: tokenNo,
+    );
+  }
+
+  /// Salinan record dengan metadata struk (Bill No & Token No)
+  /// dicap — dipakai layar Mode Toko tepat sebelum record lunas
+  /// disimpan: Bill No dihitung dari record shift berjalan dan
+  /// Token No diambil dari penghitung antrean harian, keduanya
+  /// baru dapat ditentukan saat pencatatan, bukan saat kasir
+  /// masih berada di halaman pembayaran.
+  CompletedOrder withReceiptMeta({int? billNo, int? tokenNo}) {
+    return CompletedOrder(
+      id: id,
+      time: time,
+      lines: lines,
+      orderDiscount: orderDiscount,
+      era: era,
+      subtotalRp: subtotalRp,
+      totalDiscountRp: totalDiscountRp,
+      grandTotalRp: grandTotalRp,
+      paymentHashHex: paymentHashHex,
+      isVoid: isVoid,
+      payMethod: payMethod,
+      cashReceivedRp: cashReceivedRp,
+      changeRp: changeRp,
+      pointsRedeemed: pointsRedeemed,
+      pointsDiscountRp: pointsDiscountRp,
+      pointsEarned: pointsEarned,
+      pointsIssueStatus: pointsIssueStatus,
+      pointsIssueHashHex: pointsIssueHashHex,
+      customerName: customerName,
+      billNo: billNo ?? this.billNo,
+      tokenNo: tokenNo ?? this.tokenNo,
     );
   }
 
@@ -173,6 +228,9 @@ class CompletedOrder {
     if (pointsIssueStatus != issueStatusNone)
       'pointsIssueStatus': pointsIssueStatus,
     if (pointsIssueHashHex != null) 'pointsIssueHashHex': pointsIssueHashHex,
+    if (customerName.isNotEmpty) 'customerName': customerName,
+    if (billNo != 0) 'billNo': billNo,
+    if (tokenNo != 0) 'tokenNo': tokenNo,
   };
 
   /// Baca satu record; null bila bentuknya tidak sah (waktu/baris/
@@ -212,6 +270,7 @@ class CompletedOrder {
     final method = raw['payMethod'];
     final issueStatus = raw['pointsIssueStatus'];
     final issueHash = raw['pointsIssueHashHex'];
+    final customer = raw['customerName'];
     int intOr0(Object? v) => v is num ? v.toInt() : 0;
     return CompletedOrder(
       id: id is String ? id : '',
@@ -241,6 +300,11 @@ class CompletedOrder {
       pointsIssueHashHex: issueHash is String && issueHash.isNotEmpty
           ? issueHash
           : null,
+      // Metadata struk: record lama tanpa field ini terbaca
+      // kosong/tanpa nomor (kompatibel mundur).
+      customerName: customer is String ? customer : '',
+      billNo: intOr0(raw['billNo']),
+      tokenNo: intOr0(raw['tokenNo']),
     );
   }
 
@@ -264,6 +328,9 @@ class CompletedOrder {
       other.pointsEarned == pointsEarned &&
       other.pointsIssueStatus == pointsIssueStatus &&
       other.pointsIssueHashHex == pointsIssueHashHex &&
+      other.customerName == customerName &&
+      other.billNo == billNo &&
+      other.tokenNo == tokenNo &&
       _linesEqual(other.lines, lines);
 
   @override
@@ -285,7 +352,7 @@ class CompletedOrder {
     pointsEarned,
     pointsIssueStatus,
     pointsIssueHashHex,
-    Object.hashAll(lines),
+    Object.hash(customerName, billNo, tokenNo, Object.hashAll(lines)),
   );
 }
 
@@ -389,6 +456,7 @@ CompletedOrder buildCompletedOrder({
   int pointsDiscountRp = 0,
   int pointsEarned = 0,
   String pointsIssueStatus = issueStatusNone,
+  String customerName = '',
 }) {
   final subtotal = orderSubtotalRp(lines);
   final orderDisc = orderDiscountAmountRp(lines, orderDiscount);
@@ -418,6 +486,7 @@ CompletedOrder buildCompletedOrder({
     pointsDiscountRp: pointsDiscountRp,
     pointsEarned: pointsEarned,
     pointsIssueStatus: pointsIssueStatus,
+    customerName: customerName.trim(),
   );
 }
 

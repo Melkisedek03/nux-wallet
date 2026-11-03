@@ -101,6 +101,11 @@ dependencies:
   # share sheet. Lihat lib/services/store_report_export.dart.
   pdf: ^3.11.3
 
+  # Konversi tangkapan pratinjau struk Mode Toko (PNG dari
+  # RepaintBoundary) menjadi JPG untuk dibagikan. Paket murni
+  # Dart. Lihat lib/services/store_receipt_image.dart.
+  image: ^4.5.4
+
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8

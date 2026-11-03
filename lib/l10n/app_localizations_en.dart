@@ -1254,6 +1254,67 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeReceiptPromo => 'No payment (promotion)';
 
   @override
+  String get storeReceiptCustomer => 'Customer';
+
+  @override
+  String get storeReceiptDate => 'Date';
+
+  @override
+  String get storeReceiptBillNo => 'Bill No';
+
+  @override
+  String get storeReceiptTokenNo => 'Token No';
+
+  @override
+  String get storeReceiptItemHeader => 'Item';
+
+  @override
+  String get storeReceiptAmountHeader => 'Amount';
+
+  @override
+  String get storeReceiptOrderDiscount => 'Order Discount';
+
+  @override
+  String get storeReceiptGrandTotal => 'GRAND TOTAL';
+
+  @override
+  String storeReceiptPointsDiscountLabel(String points) {
+    return 'Nusan points discount ($points pts)';
+  }
+
+  @override
+  String get storeReceiptFooterDefault => 'Thank You & Visit Again';
+
+  @override
+  String get storeShareReceipt => 'Share Receipt';
+
+  @override
+  String get storeReceiptPreviewTitle => 'Receipt';
+
+  @override
+  String get storeShareReceiptFailed => 'Could not create the receipt image.';
+
+  @override
+  String get storeCustomerNameLabel => 'Customer Name (optional)';
+
+  @override
+  String get storeSettingsAddress => 'Store Address (receipt header line)';
+
+  @override
+  String get storeSettingsShowToken => 'Show Token Number on Receipt';
+
+  @override
+  String get storeSettingsShowTokenHint =>
+      'Daily queue number on the receipt; restarts from 1 each day.';
+
+  @override
+  String get storeSettingsFooterText => 'Receipt Footer Text';
+
+  @override
+  String get storeSettingsFooterTextHint =>
+      'Leave empty for the default text in the app language.';
+
+  @override
   String get storeSettingsTitle => 'Store Settings';
 
   @override

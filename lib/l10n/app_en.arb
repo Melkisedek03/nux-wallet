@@ -643,6 +643,32 @@
     }
   },
   "storeReceiptPromo": "No payment (promotion)",
+  "storeReceiptCustomer": "Customer",
+  "storeReceiptDate": "Date",
+  "storeReceiptBillNo": "Bill No",
+  "storeReceiptTokenNo": "Token No",
+  "storeReceiptItemHeader": "Item",
+  "storeReceiptAmountHeader": "Amount",
+  "storeReceiptOrderDiscount": "Order Discount",
+  "storeReceiptGrandTotal": "GRAND TOTAL",
+  "storeReceiptPointsDiscountLabel": "Nusan points discount ({points} pts)",
+  "@storeReceiptPointsDiscountLabel": {
+    "placeholders": {
+      "points": {
+        "type": "String"
+      }
+    }
+  },
+  "storeReceiptFooterDefault": "Thank You & Visit Again",
+  "storeShareReceipt": "Share Receipt",
+  "storeReceiptPreviewTitle": "Receipt",
+  "storeShareReceiptFailed": "Could not create the receipt image.",
+  "storeCustomerNameLabel": "Customer Name (optional)",
+  "storeSettingsAddress": "Store Address (receipt header line)",
+  "storeSettingsShowToken": "Show Token Number on Receipt",
+  "storeSettingsShowTokenHint": "Daily queue number on the receipt; restarts from 1 each day.",
+  "storeSettingsFooterText": "Receipt Footer Text",
+  "storeSettingsFooterTextHint": "Leave empty for the default text in the app language.",
   "storeSettingsTitle": "Store Settings",
   "storeSettingsStoreName": "Store Name",
   "storeSettingsPointsEnabled": "Nusan Points Program On",

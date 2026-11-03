@@ -54,6 +54,32 @@ void main() {
       expect(s.copyWith(storeName: 'X').maxRedeemPercent, 25);
     });
 
+    test('field struk baru: bawaan alamat kosong, token tampil, '
+        'footer bawaan; roundtrip utuh', () {
+      const d = StoreSettings.defaults;
+      expect(d.storeAddress, '');
+      expect(d.showTokenNumber, isTrue);
+      expect(d.receiptFooterText, '');
+      const s = StoreSettings(
+        storeName: 'Kafe Nusantara',
+        storeAddress: 'Jl. Merdeka No. 1',
+        showTokenNumber: false,
+        receiptFooterText: 'Makasih, sampai jumpa!',
+      );
+      expect(decodeStoreSettings(encodeStoreSettings(s)), s);
+    });
+
+    test('simpanan lama tanpa field struk baru → bawaan per field', () {
+      final legacy = decodeStoreSettings(
+        '{"storeName":"Toko Lama","pointsEnabled":false,'
+        '"earnStepRp":2000,"earnPointsPerStep":10,"redeemRateRp":1}',
+      );
+      expect(legacy.storeName, 'Toko Lama');
+      expect(legacy.storeAddress, '');
+      expect(legacy.showTokenNumber, isTrue);
+      expect(legacy.receiptFooterText, '');
+    });
+
     test('store roundtrip lewat SharedPreferences + fail-open', () async {
       SharedPreferences.setMockInitialValues({});
       final store = StoreSettingsStore();

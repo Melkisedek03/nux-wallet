@@ -15,6 +15,7 @@ import '../services/store_hold.dart';
 import '../services/store_order_history.dart';
 import '../services/store_settings.dart';
 import '../services/store_shift.dart';
+import '../services/store_token_counter.dart';
 import '../utils/animated_checkmark.dart';
 import '../utils/bolt11_info.dart';
 import '../utils/bolt12_info.dart';
@@ -24,8 +25,10 @@ import '../utils/friendly_error.dart';
 import '../utils/receive_watch.dart';
 import '../utils/store_migration.dart';
 import '../utils/store_mode_logic.dart';
+import '../utils/store_receipt.dart';
 import '../utils/store_report.dart';
 import 'scan_screen.dart';
+import 'store_receipt_preview.dart';
 import 'store_point_rules_screen.dart';
 import 'store_settings_screen.dart';
 import 'store_shift_report_screen.dart';
@@ -126,6 +129,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
 
   // --- Penjualan terakhir & panel sukses ---
   final _historyStore = StoreOrderHistoryStore();
+  final _tokenCounterStore = StoreTokenCounterStore();
   CompletedOrder? _saleRecord;
   bool _received = false;
   Timer? _celebrationTimer;
@@ -1096,18 +1100,38 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
       ),
     );
     if (result == null || !mounted) return;
-    await _historyStore.append(result);
-    if (!mounted) return;
     if (result.isVoid) {
+      await _historyStore.append(result);
+      if (!mounted) return;
       setState(_resetOrderPanel);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(context.l10n.storeVoidRecorded)));
       return;
     }
+    // Cap metadata struk TEPAT saat pencatatan: Bill No =
+    // nomor urut lunas dalam shift berjalan (diturunkan dari
+    // record shift itu), Token No = nomor antrean harian dari
+    // penghitungnya (naik sekali per transaksi lunas, hanya
+    // bila pengaturan toko menampilkannya).
+    var settled = result;
+    final shift = _openShift;
+    if (shift != null) {
+      final history = await _historyStore.load();
+      final tokenNo = _settings.showTokenNumber
+          ? await _tokenCounterStore.next(DateTime.now())
+          : 0;
+      if (!mounted) return;
+      settled = result.withReceiptMeta(
+        billNo: nextBillNoForShift(history, shift.openedAt),
+        tokenNo: tokenNo,
+      );
+    }
+    await _historyStore.append(settled);
+    if (!mounted) return;
     setState(() {
-      _session = _session.recordSale(result.grandTotalRp);
-      _saleRecord = result;
+      _session = _session.recordSale(settled.grandTotalRp);
+      _saleRecord = settled;
       _received = true;
       _resetOrderPanel();
     });
@@ -1383,69 +1407,93 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
   // Struk
   // ------------------------------------------------------------------
 
-  /// Struk penjualan terakhir: kop nama toko (bila diatur),
-  /// rincian item, lalu ringkasan rupiah mengikuti contoh
-  /// pedoman §4 — subtotal, diskon, diskon poin, TOTAL BAYAR,
-  /// metode & kembalian, poin diperoleh, dan baris ketentuan
-  /// nilai potongan. TANPA baris saldo poin (aplikasi toko tidak
-  /// tahu saldo dompet pelanggan).
+  /// Label struk dari bahasa aplikasi — dipakai bersama oleh
+  /// cetak kertas, pratinjau, dan gambar berbagi.
+  StoreReceiptLabels _receiptLabels() {
+    final l10n = context.l10n;
+    return StoreReceiptLabels(
+      customerLabel: l10n.storeReceiptCustomer,
+      dateLabel: l10n.storeReceiptDate,
+      billNoLabel: l10n.storeReceiptBillNo,
+      tokenNoLabel: l10n.storeReceiptTokenNo,
+      itemHeader: l10n.storeReceiptItemHeader,
+      amountHeader: l10n.storeReceiptAmountHeader,
+      discountLabel: l10n.storeDiscount,
+      orderDiscountLabel: l10n.storeReceiptOrderDiscount,
+      grandTotalLabel: l10n.storeReceiptGrandTotal,
+      cashLabel: l10n.storeCash,
+      changeLabel: l10n.storeChange,
+      qrisLabel: l10n.storeQris,
+      promoLabel: l10n.storeReceiptPromo,
+      noteWord: l10n.storeNoteWord,
+      pointsDiscountLabel: (points) =>
+          l10n.storeReceiptPointsDiscountLabel(_fmtRp(points)),
+      pointsEarnedText: (points) => l10n.storeReceiptPointsEarned(points),
+      pointsPendingText: (points) => l10n.storeReceiptPointsPending(points),
+      pointsRuleText: (rate) => l10n.storeReceiptPointsRule(rate),
+    );
+  }
+
+  /// Data struk penjualan dari model bersama: kop = nama toko
+  /// (cadangan: kop pengaturan printer, lalu 'ELNUX'); footer =
+  /// teks penutup pengaturan toko (cadangan: bawaan bahasa).
+  /// TANPA baris saldo poin (aplikasi toko tidak tahu saldo
+  /// dompet pelanggan — pedoman §4).
+  StoreReceiptData _receiptData(
+    CompletedOrder record,
+    PrinterSettings printerSettings,
+  ) {
+    final shopName = _settings.storeName.isNotEmpty
+        ? _settings.storeName
+        : printerSettings.headerText.trim().isNotEmpty
+        ? printerSettings.headerText.trim()
+        : 'ELNUX';
+    final footer = _settings.receiptFooterText.isNotEmpty
+        ? _settings.receiptFooterText
+        : context.l10n.storeReceiptFooterDefault;
+    return buildStoreReceiptData(
+      record: record,
+      settings: _settings,
+      shopName: shopName,
+      footerText: footer,
+    );
+  }
+
+  /// Cetak struk penjualan terakhir ke printer thermal lewat
+  /// metode khusus struk toko (layout contoh struk kasir).
   Future<void> _printLastReceipt() async {
     final record = _saleRecord;
     if (record == null) return;
-    final l10n = context.l10n;
-    final settings = await PrintService.loadSettings();
-    final gross = record.lines.fold(0, (s, l) => s + l.lineGrossRp);
-    final regularDiscount = record.totalDiscountRp - record.pointsDiscountRp;
-    final detail = <String>[
-      ...orderReceiptDetailLines(
-        record.lines,
-        formatRp: (rp) => 'Rp${_fmtRp(rp)}',
-        noteWord: l10n.storeNoteWord,
-      ),
-      '',
-      '${l10n.storeSubtotal} Rp${_fmtRp(gross)}',
-      if (regularDiscount > 0)
-        '${l10n.storeDiscount} -Rp${_fmtRp(regularDiscount)}',
-      if (record.pointsRedeemed > 0)
-        l10n.storeReceiptPointsDiscount(
-          record.pointsRedeemed,
-          _fmtRp(record.pointsDiscountRp),
-        ),
-      '${l10n.storeReceiptTotalPay} Rp${_fmtRp(record.grandTotalRp)}',
-      if (record.payMethod == payMethodCash)
-        '${l10n.storeCash} Rp${_fmtRp(record.cashReceivedRp)}',
-      if (record.payMethod == payMethodQris) l10n.storeQris,
-      if (record.payMethod == null) l10n.storeReceiptPromo,
-      if (record.changeRp > 0)
-        '${l10n.storeChange} Rp${_fmtRp(record.changeRp)}',
-      if (_settings.pointsEnabled && record.pointsEarned > 0)
-        record.pointsIssueStatus == issueStatusIssued
-            ? l10n.storeReceiptPointsEarned(record.pointsEarned)
-            : l10n.storeReceiptPointsPending(record.pointsEarned),
-      if (_settings.pointsEnabled)
-        l10n.storeReceiptPointsRule(_fmtRp(_settings.redeemRateRp)),
-    ];
-    final outcome = await PrintService.printReceipt(
-      settings: settings,
-      receipt: ReceiptData(
-        typeText: l10n.storeMode,
-        statusText: l10n.txSucceeded,
-        amountText: 'Rp${_fmtRp(record.grandTotalRp)}',
-        timeText: _receiptTime(record.time),
-        hashLabel: record.paymentHashHex != null ? 'Hash' : null,
-        hashValue: record.paymentHashHex,
-        detailLines: detail,
-        headerText: _settings.storeName.isNotEmpty
-            ? _settings.storeName
-            : null,
-      ),
-      typeLabel: l10n.txType,
-      statusLabel: l10n.txStatus,
-      timeLabel: l10n.txTime,
-      defaultFooter: l10n.receiptDefaultFooter,
+    final printerSettings = await PrintService.loadSettings();
+    if (!mounted) return;
+    final elements = buildStoreReceiptElements(
+      _receiptData(record, printerSettings),
+      _receiptLabels(),
+    );
+    final outcome = await PrintService.printStoreReceipt(
+      settings: printerSettings,
+      elements: elements,
     );
     if (!mounted) return;
-    _snack(printOutcomeMessage(l10n, outcome));
+    _snack(printOutcomeMessage(context.l10n, outcome));
+  }
+
+  /// Bagikan struk penjualan terakhir sebagai gambar: buka
+  /// pratinjau struk (kasir melihat struknya dulu), tombol
+  /// Bagikan di dalamnya merender gambar JPG lewat share sheet.
+  Future<void> _shareLastReceipt() async {
+    final record = _saleRecord;
+    if (record == null) return;
+    final printerSettings = await PrintService.loadSettings();
+    if (!mounted) return;
+    final elements = buildStoreReceiptElements(
+      _receiptData(record, printerSettings),
+      _receiptLabels(),
+    );
+    await showDialog<void>(
+      context: context,
+      builder: (_) => StoreReceiptPreviewDialog(elements: elements),
+    );
   }
 
   String _receiptTime(DateTime t) {
@@ -2269,7 +2317,21 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _shareLastReceipt,
+                  icon: const Icon(Icons.share_rounded, size: 19),
+                  label: Text(l10n.storeShareReceipt),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
               TextButton(
                 onPressed: _finishCelebration,
                 child: Text(l10n.storeDoneButton),
@@ -2640,6 +2702,7 @@ class _StorePaymentPage extends StatefulWidget {
 class _StorePaymentPageState extends State<_StorePaymentPage> {
   final _pointsController = TextEditingController();
   final _cashController = TextEditingController();
+  final _customerController = TextEditingController();
   _RedeemState _redeemState = _RedeemState.idle;
   String? _redeemInvoice;
   String? _redeemHashHex;
@@ -2688,6 +2751,7 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
     _redeemTimer?.cancel();
     _pointsController.dispose();
     _cashController.dispose();
+    _customerController.dispose();
     super.dispose();
   }
 
@@ -2861,6 +2925,7 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
       pointsIssueStatus: _earnedPreview > 0
           ? issueStatusPending
           : issueStatusNone,
+      customerName: _customerController.text,
     );
     Navigator.pop(context, record);
   }
@@ -2959,6 +3024,21 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              TextField(
+                controller: _customerController,
+                textCapitalization: TextCapitalization.words,
+                decoration: InputDecoration(
+                  labelText: l10n.storeCustomerNameLabel,
+                  prefixIcon: const Icon(Icons.person_outline_rounded),
+                  filled: true,
+                  fillColor: context.palette.cardAlt,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
               _paySummaryRow(
                 context,
                 l10n.storePayTotalLabel,

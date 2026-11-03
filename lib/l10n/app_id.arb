@@ -643,6 +643,32 @@
     }
   },
   "storeReceiptPromo": "Tanpa pembayaran (promosi)",
+  "storeReceiptCustomer": "Pelanggan",
+  "storeReceiptDate": "Tanggal",
+  "storeReceiptBillNo": "No. Bill",
+  "storeReceiptTokenNo": "No. Token",
+  "storeReceiptItemHeader": "Item",
+  "storeReceiptAmountHeader": "Jumlah",
+  "storeReceiptOrderDiscount": "Diskon Order",
+  "storeReceiptGrandTotal": "TOTAL BAYAR",
+  "storeReceiptPointsDiscountLabel": "Diskon poin nusan ({points} poin)",
+  "@storeReceiptPointsDiscountLabel": {
+    "placeholders": {
+      "points": {
+        "type": "String"
+      }
+    }
+  },
+  "storeReceiptFooterDefault": "Terima kasih & silakan berkunjung kembali",
+  "storeShareReceipt": "Bagikan Struk",
+  "storeReceiptPreviewTitle": "Struk",
+  "storeShareReceiptFailed": "Tidak dapat membuat gambar struk.",
+  "storeCustomerNameLabel": "Nama Pelanggan (opsional)",
+  "storeSettingsAddress": "Alamat Toko (baris kop struk)",
+  "storeSettingsShowToken": "Tampilkan Nomor Token di Struk",
+  "storeSettingsShowTokenHint": "Nomor antrean harian pada struk; mulai dari 1 setiap hari.",
+  "storeSettingsFooterText": "Teks Penutup Struk",
+  "storeSettingsFooterTextHint": "Kosongkan untuk teks bawaan bahasa aplikasi.",
   "storeSettingsTitle": "Pengaturan Toko",
   "storeSettingsStoreName": "Nama Toko",
   "storeSettingsPointsEnabled": "Program Poin Nusan Aktif",
