@@ -273,5 +273,78 @@
   "updateCheckTitle": "Check for Updates",
   "updateCheckSubtitle": "See if a newer ELNUX version is available",
   "updateUpToDate": "ELNUX is up to date.",
-  "updateCheckFailed": "Couldn't check for updates right now."
+  "updateCheckFailed": "Couldn't check for updates right now.",
+  "storeMode": "Store Mode",
+  "storeModeSubtitle": "Cashier mode for accepting payments in your store",
+  "storeCreateCode": "Create Payment Code",
+  "storeWaitingPayment": "Waiting for payment…",
+  "storeCancelCode": "Cancel Code",
+  "storeIdleHint": "Build an order, then create a payment code for its total — or show the static payment code.",
+  "storeFreeAmountLabel": "Custom Amount (nusan)",
+  "storeAddFreeItem": "Add Custom Item",
+  "storeFreeItem": "Custom Item",
+  "storeOrderTitle": "Order",
+  "storeOrderEmpty": "No items yet — tap a catalog product, scan a code, or add a custom amount.",
+  "storeSubtotal": "Subtotal",
+  "storeTotalDiscount": "Total Discount",
+  "storeGrandTotal": "Total",
+  "storeOrderDiscount": "Order Discount",
+  "storeDiscount": "Discount",
+  "storeSetDiscount": "Set Discount",
+  "storeApplyDiscount": "Apply",
+  "storeRemoveDiscount": "Remove Discount",
+  "storeDiscountPercent": "Percent (%)",
+  "storeDiscountFixed": "Fixed (nusan)",
+  "storeDiscountValue": "Discount Value",
+  "storeZeroTotalHint": "A total of 0 can't be made into a payment code — reduce the discount or add items.",
+  "storeSessionTitle": "This Session",
+  "storeSessionSales": "{count} sales • {total} nusan",
+  "@storeSessionSales": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "storePrintReceipt": "Print Receipt",
+  "storeScanCode": "Scan Code",
+  "storeCatalogTitle": "Product Catalog",
+  "storeManageCatalog": "Manage",
+  "storeCatalogEmpty": "The catalog is still empty — add the first product via Manage.",
+  "storeCodeNotRegistered": "This code isn't registered in the catalog yet.",
+  "storeRegisterNow": "Register It Now",
+  "storeProductCode": "Product Code",
+  "storeProductName": "Product Name",
+  "storeProductPrice": "Price (nusan)",
+  "storeProductDiscount": "Default Discount (optional)",
+  "storeSaveProduct": "Save Product",
+  "storeProductSaved": "Product saved: {name}",
+  "@storeProductSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "storeProductAdded": "Added: {name}",
+  "@storeProductAdded": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "storeReceiptDiscountNote": "Total discount on this sale: {amount} nusan",
+  "@storeReceiptDiscountNote": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "storeClearKeypad": "Clear",
+  "storeProductFormError": "Check again: code, name, and a price above 0 are all required."
 }

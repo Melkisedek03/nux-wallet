@@ -654,4 +654,145 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get updateCheckFailed => 'Couldn\'t check for updates right now.';
+
+  @override
+  String get storeMode => 'Store Mode';
+
+  @override
+  String get storeModeSubtitle =>
+      'Cashier mode for accepting payments in your store';
+
+  @override
+  String get storeCreateCode => 'Create Payment Code';
+
+  @override
+  String get storeWaitingPayment => 'Waiting for payment…';
+
+  @override
+  String get storeCancelCode => 'Cancel Code';
+
+  @override
+  String get storeIdleHint =>
+      'Build an order, then create a payment code for its total — or show the static payment code.';
+
+  @override
+  String get storeFreeAmountLabel => 'Custom Amount (nusan)';
+
+  @override
+  String get storeAddFreeItem => 'Add Custom Item';
+
+  @override
+  String get storeFreeItem => 'Custom Item';
+
+  @override
+  String get storeOrderTitle => 'Order';
+
+  @override
+  String get storeOrderEmpty =>
+      'No items yet — tap a catalog product, scan a code, or add a custom amount.';
+
+  @override
+  String get storeSubtotal => 'Subtotal';
+
+  @override
+  String get storeTotalDiscount => 'Total Discount';
+
+  @override
+  String get storeGrandTotal => 'Total';
+
+  @override
+  String get storeOrderDiscount => 'Order Discount';
+
+  @override
+  String get storeDiscount => 'Discount';
+
+  @override
+  String get storeSetDiscount => 'Set Discount';
+
+  @override
+  String get storeApplyDiscount => 'Apply';
+
+  @override
+  String get storeRemoveDiscount => 'Remove Discount';
+
+  @override
+  String get storeDiscountPercent => 'Percent (%)';
+
+  @override
+  String get storeDiscountFixed => 'Fixed (nusan)';
+
+  @override
+  String get storeDiscountValue => 'Discount Value';
+
+  @override
+  String get storeZeroTotalHint =>
+      'A total of 0 can\'t be made into a payment code — reduce the discount or add items.';
+
+  @override
+  String get storeSessionTitle => 'This Session';
+
+  @override
+  String storeSessionSales(int count, String total) {
+    return '$count sales • $total nusan';
+  }
+
+  @override
+  String get storePrintReceipt => 'Print Receipt';
+
+  @override
+  String get storeScanCode => 'Scan Code';
+
+  @override
+  String get storeCatalogTitle => 'Product Catalog';
+
+  @override
+  String get storeManageCatalog => 'Manage';
+
+  @override
+  String get storeCatalogEmpty =>
+      'The catalog is still empty — add the first product via Manage.';
+
+  @override
+  String get storeCodeNotRegistered =>
+      'This code isn\'t registered in the catalog yet.';
+
+  @override
+  String get storeRegisterNow => 'Register It Now';
+
+  @override
+  String get storeProductCode => 'Product Code';
+
+  @override
+  String get storeProductName => 'Product Name';
+
+  @override
+  String get storeProductPrice => 'Price (nusan)';
+
+  @override
+  String get storeProductDiscount => 'Default Discount (optional)';
+
+  @override
+  String get storeSaveProduct => 'Save Product';
+
+  @override
+  String storeProductSaved(String name) {
+    return 'Product saved: $name';
+  }
+
+  @override
+  String storeProductAdded(String name) {
+    return 'Added: $name';
+  }
+
+  @override
+  String storeReceiptDiscountNote(String amount) {
+    return 'Total discount on this sale: $amount nusan';
+  }
+
+  @override
+  String get storeClearKeypad => 'Clear';
+
+  @override
+  String get storeProductFormError =>
+      'Check again: code, name, and a price above 0 are all required.';
 }

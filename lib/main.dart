@@ -20,6 +20,7 @@ import 'screens/restore_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/send_screen.dart';
 import 'screens/printer_settings_screen.dart';
+import 'screens/store_mode_screen.dart';
 import 'screens/transaction_detail_screen.dart';
 import 'services/lsp_profile.dart';
 import 'services/saved_invoices.dart';
@@ -1090,6 +1091,14 @@ _quickAction(const Icon(Icons.add_rounded, size: 25), context.l10n.buy, false, (
               onRestoreWallet: _restoreWalletWithPhrase,
               onShareLog: _shareNodeLog,
               onCheckUpdate: _cekUpdateManual,
+              onOpenStoreMode: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => StoreModeScreen(lspService: lspService),
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -1313,6 +1322,10 @@ class _ProfilePage extends StatelessWidget {
   /// manual dari pengaturan, bukan hanya cek otomatis.
   final VoidCallback onCheckUpdate;
 
+  /// Buka Mode Toko (kasir PoS) — layar penuh di atas Profil,
+  /// memakai node dompet yang sama.
+  final VoidCallback onOpenStoreMode;
+
   const _ProfilePage({
     required this.mnemonicWords,
     required this.legacyWallet,
@@ -1322,6 +1335,7 @@ class _ProfilePage extends StatelessWidget {
     required this.onRestoreWallet,
     required this.onShareLog,
     required this.onCheckUpdate,
+    required this.onOpenStoreMode,
   });
 
   /// Dialog pilih bahasa — dua opsi, yang aktif bertanda centang.
@@ -1638,6 +1652,58 @@ class _ProfilePage extends StatelessWidget {
                         const SizedBox(height: 3),
                         Text(
                           context.l10n.printerSubtitle,
+                          style: TextStyle(
+                              fontSize: 12, color: context.palette.muted),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right_rounded,
+                      color: context.palette.muted),
+                ],
+              ),
+            ),
+          ),
+          // Baris Mode Toko — buka kasir (PoS) untuk menerima
+          // pembayaran di toko: pesanan dari katalog/scan/keypad,
+          // kode bayar, struk. Node & channel yang sama dengan
+          // dompet; tidak ada dompet kedua.
+          GestureDetector(
+            onTap: onOpenStoreMode,
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: context.palette.card,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: context.palette.border),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      gradient: LinearGradient(colors: [
+                        const Color(0xFF10B981).withValues(alpha: 0.25),
+                        const Color(0xFF10B981).withValues(alpha: 0.08),
+                      ]),
+                    ),
+                    child: const Icon(Icons.storefront_rounded,
+                        color: Color(0xFF34D399), size: 20),
+                  ),
+                  const SizedBox(width: 13),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(context.l10n.storeMode,
+                            style: TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 3),
+                        Text(
+                          context.l10n.storeModeSubtitle,
                           style: TextStyle(
                               fontSize: 12, color: context.palette.muted),
                         ),

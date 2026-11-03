@@ -1267,6 +1267,258 @@ abstract class AppLocalizations {
   /// In id, this message translates to:
   /// **'Tidak dapat memeriksa pembaruan saat ini.'**
   String get updateCheckFailed;
+
+  /// No description provided for @storeMode.
+  ///
+  /// In id, this message translates to:
+  /// **'Mode Toko'**
+  String get storeMode;
+
+  /// No description provided for @storeModeSubtitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Kasir untuk menerima pembayaran di toko'**
+  String get storeModeSubtitle;
+
+  /// No description provided for @storeCreateCode.
+  ///
+  /// In id, this message translates to:
+  /// **'Buat Kode Bayar'**
+  String get storeCreateCode;
+
+  /// No description provided for @storeWaitingPayment.
+  ///
+  /// In id, this message translates to:
+  /// **'Menunggu pembayaran…'**
+  String get storeWaitingPayment;
+
+  /// No description provided for @storeCancelCode.
+  ///
+  /// In id, this message translates to:
+  /// **'Batalkan Kode'**
+  String get storeCancelCode;
+
+  /// No description provided for @storeIdleHint.
+  ///
+  /// In id, this message translates to:
+  /// **'Susun pesanan, lalu buat kode bayar dari totalnya — atau tampilkan kode bayar statis.'**
+  String get storeIdleHint;
+
+  /// No description provided for @storeFreeAmountLabel.
+  ///
+  /// In id, this message translates to:
+  /// **'Nominal Bebas (nusan)'**
+  String get storeFreeAmountLabel;
+
+  /// No description provided for @storeAddFreeItem.
+  ///
+  /// In id, this message translates to:
+  /// **'Tambah Item Bebas'**
+  String get storeAddFreeItem;
+
+  /// No description provided for @storeFreeItem.
+  ///
+  /// In id, this message translates to:
+  /// **'Item Bebas'**
+  String get storeFreeItem;
+
+  /// No description provided for @storeOrderTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Pesanan'**
+  String get storeOrderTitle;
+
+  /// No description provided for @storeOrderEmpty.
+  ///
+  /// In id, this message translates to:
+  /// **'Belum ada item — ketuk produk di katalog, pindai kode, atau tambah nominal bebas.'**
+  String get storeOrderEmpty;
+
+  /// No description provided for @storeSubtotal.
+  ///
+  /// In id, this message translates to:
+  /// **'Subtotal'**
+  String get storeSubtotal;
+
+  /// No description provided for @storeTotalDiscount.
+  ///
+  /// In id, this message translates to:
+  /// **'Total Diskon'**
+  String get storeTotalDiscount;
+
+  /// No description provided for @storeGrandTotal.
+  ///
+  /// In id, this message translates to:
+  /// **'Total'**
+  String get storeGrandTotal;
+
+  /// No description provided for @storeOrderDiscount.
+  ///
+  /// In id, this message translates to:
+  /// **'Diskon Order'**
+  String get storeOrderDiscount;
+
+  /// No description provided for @storeDiscount.
+  ///
+  /// In id, this message translates to:
+  /// **'Diskon'**
+  String get storeDiscount;
+
+  /// No description provided for @storeSetDiscount.
+  ///
+  /// In id, this message translates to:
+  /// **'Atur Diskon'**
+  String get storeSetDiscount;
+
+  /// No description provided for @storeApplyDiscount.
+  ///
+  /// In id, this message translates to:
+  /// **'Terapkan'**
+  String get storeApplyDiscount;
+
+  /// No description provided for @storeRemoveDiscount.
+  ///
+  /// In id, this message translates to:
+  /// **'Hapus Diskon'**
+  String get storeRemoveDiscount;
+
+  /// No description provided for @storeDiscountPercent.
+  ///
+  /// In id, this message translates to:
+  /// **'Persen (%)'**
+  String get storeDiscountPercent;
+
+  /// No description provided for @storeDiscountFixed.
+  ///
+  /// In id, this message translates to:
+  /// **'Nominal (nusan)'**
+  String get storeDiscountFixed;
+
+  /// No description provided for @storeDiscountValue.
+  ///
+  /// In id, this message translates to:
+  /// **'Nilai Diskon'**
+  String get storeDiscountValue;
+
+  /// No description provided for @storeZeroTotalHint.
+  ///
+  /// In id, this message translates to:
+  /// **'Total 0 tidak bisa dibuatkan kode bayar — kurangi diskon atau tambah item.'**
+  String get storeZeroTotalHint;
+
+  /// No description provided for @storeSessionTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Sesi Ini'**
+  String get storeSessionTitle;
+
+  /// No description provided for @storeSessionSales.
+  ///
+  /// In id, this message translates to:
+  /// **'{count} transaksi • {total} nusan'**
+  String storeSessionSales(int count, String total);
+
+  /// No description provided for @storePrintReceipt.
+  ///
+  /// In id, this message translates to:
+  /// **'Cetak Struk'**
+  String get storePrintReceipt;
+
+  /// No description provided for @storeScanCode.
+  ///
+  /// In id, this message translates to:
+  /// **'Pindai Kode'**
+  String get storeScanCode;
+
+  /// No description provided for @storeCatalogTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Katalog Produk'**
+  String get storeCatalogTitle;
+
+  /// No description provided for @storeManageCatalog.
+  ///
+  /// In id, this message translates to:
+  /// **'Kelola'**
+  String get storeManageCatalog;
+
+  /// No description provided for @storeCatalogEmpty.
+  ///
+  /// In id, this message translates to:
+  /// **'Katalog masih kosong — tambahkan produk pertama lewat tombol Kelola.'**
+  String get storeCatalogEmpty;
+
+  /// No description provided for @storeCodeNotRegistered.
+  ///
+  /// In id, this message translates to:
+  /// **'Kode ini belum terdaftar di katalog.'**
+  String get storeCodeNotRegistered;
+
+  /// No description provided for @storeRegisterNow.
+  ///
+  /// In id, this message translates to:
+  /// **'Daftarkan Sekarang'**
+  String get storeRegisterNow;
+
+  /// No description provided for @storeProductCode.
+  ///
+  /// In id, this message translates to:
+  /// **'Kode Produk'**
+  String get storeProductCode;
+
+  /// No description provided for @storeProductName.
+  ///
+  /// In id, this message translates to:
+  /// **'Nama Produk'**
+  String get storeProductName;
+
+  /// No description provided for @storeProductPrice.
+  ///
+  /// In id, this message translates to:
+  /// **'Harga (nusan)'**
+  String get storeProductPrice;
+
+  /// No description provided for @storeProductDiscount.
+  ///
+  /// In id, this message translates to:
+  /// **'Diskon Bawaan (opsional)'**
+  String get storeProductDiscount;
+
+  /// No description provided for @storeSaveProduct.
+  ///
+  /// In id, this message translates to:
+  /// **'Simpan Produk'**
+  String get storeSaveProduct;
+
+  /// No description provided for @storeProductSaved.
+  ///
+  /// In id, this message translates to:
+  /// **'Produk tersimpan: {name}'**
+  String storeProductSaved(String name);
+
+  /// No description provided for @storeProductAdded.
+  ///
+  /// In id, this message translates to:
+  /// **'Ditambahkan: {name}'**
+  String storeProductAdded(String name);
+
+  /// No description provided for @storeReceiptDiscountNote.
+  ///
+  /// In id, this message translates to:
+  /// **'Total diskon penjualan ini: {amount} nusan'**
+  String storeReceiptDiscountNote(String amount);
+
+  /// No description provided for @storeClearKeypad.
+  ///
+  /// In id, this message translates to:
+  /// **'Bersih'**
+  String get storeClearKeypad;
+
+  /// No description provided for @storeProductFormError.
+  ///
+  /// In id, this message translates to:
+  /// **'Periksa lagi: kode, nama, dan harga (di atas 0) wajib diisi.'**
+  String get storeProductFormError;
 }
 
 class _AppLocalizationsDelegate

@@ -654,4 +654,143 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get updateCheckFailed => 'Tidak dapat memeriksa pembaruan saat ini.';
+
+  @override
+  String get storeMode => 'Mode Toko';
+
+  @override
+  String get storeModeSubtitle => 'Kasir untuk menerima pembayaran di toko';
+
+  @override
+  String get storeCreateCode => 'Buat Kode Bayar';
+
+  @override
+  String get storeWaitingPayment => 'Menunggu pembayaran…';
+
+  @override
+  String get storeCancelCode => 'Batalkan Kode';
+
+  @override
+  String get storeIdleHint =>
+      'Susun pesanan, lalu buat kode bayar dari totalnya — atau tampilkan kode bayar statis.';
+
+  @override
+  String get storeFreeAmountLabel => 'Nominal Bebas (nusan)';
+
+  @override
+  String get storeAddFreeItem => 'Tambah Item Bebas';
+
+  @override
+  String get storeFreeItem => 'Item Bebas';
+
+  @override
+  String get storeOrderTitle => 'Pesanan';
+
+  @override
+  String get storeOrderEmpty =>
+      'Belum ada item — ketuk produk di katalog, pindai kode, atau tambah nominal bebas.';
+
+  @override
+  String get storeSubtotal => 'Subtotal';
+
+  @override
+  String get storeTotalDiscount => 'Total Diskon';
+
+  @override
+  String get storeGrandTotal => 'Total';
+
+  @override
+  String get storeOrderDiscount => 'Diskon Order';
+
+  @override
+  String get storeDiscount => 'Diskon';
+
+  @override
+  String get storeSetDiscount => 'Atur Diskon';
+
+  @override
+  String get storeApplyDiscount => 'Terapkan';
+
+  @override
+  String get storeRemoveDiscount => 'Hapus Diskon';
+
+  @override
+  String get storeDiscountPercent => 'Persen (%)';
+
+  @override
+  String get storeDiscountFixed => 'Nominal (nusan)';
+
+  @override
+  String get storeDiscountValue => 'Nilai Diskon';
+
+  @override
+  String get storeZeroTotalHint =>
+      'Total 0 tidak bisa dibuatkan kode bayar — kurangi diskon atau tambah item.';
+
+  @override
+  String get storeSessionTitle => 'Sesi Ini';
+
+  @override
+  String storeSessionSales(int count, String total) {
+    return '$count transaksi • $total nusan';
+  }
+
+  @override
+  String get storePrintReceipt => 'Cetak Struk';
+
+  @override
+  String get storeScanCode => 'Pindai Kode';
+
+  @override
+  String get storeCatalogTitle => 'Katalog Produk';
+
+  @override
+  String get storeManageCatalog => 'Kelola';
+
+  @override
+  String get storeCatalogEmpty =>
+      'Katalog masih kosong — tambahkan produk pertama lewat tombol Kelola.';
+
+  @override
+  String get storeCodeNotRegistered => 'Kode ini belum terdaftar di katalog.';
+
+  @override
+  String get storeRegisterNow => 'Daftarkan Sekarang';
+
+  @override
+  String get storeProductCode => 'Kode Produk';
+
+  @override
+  String get storeProductName => 'Nama Produk';
+
+  @override
+  String get storeProductPrice => 'Harga (nusan)';
+
+  @override
+  String get storeProductDiscount => 'Diskon Bawaan (opsional)';
+
+  @override
+  String get storeSaveProduct => 'Simpan Produk';
+
+  @override
+  String storeProductSaved(String name) {
+    return 'Produk tersimpan: $name';
+  }
+
+  @override
+  String storeProductAdded(String name) {
+    return 'Ditambahkan: $name';
+  }
+
+  @override
+  String storeReceiptDiscountNote(String amount) {
+    return 'Total diskon penjualan ini: $amount nusan';
+  }
+
+  @override
+  String get storeClearKeypad => 'Bersih';
+
+  @override
+  String get storeProductFormError =>
+      'Periksa lagi: kode, nama, dan harga (di atas 0) wajib diisi.';
 }

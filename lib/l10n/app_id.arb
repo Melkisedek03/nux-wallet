@@ -273,5 +273,78 @@
   "updateCheckTitle": "Periksa Pembaruan",
   "updateCheckSubtitle": "Lihat apakah ada versi ELNUX yang lebih baru",
   "updateUpToDate": "ELNUX sudah versi terbaru.",
-  "updateCheckFailed": "Tidak dapat memeriksa pembaruan saat ini."
+  "updateCheckFailed": "Tidak dapat memeriksa pembaruan saat ini.",
+  "storeMode": "Mode Toko",
+  "storeModeSubtitle": "Kasir untuk menerima pembayaran di toko",
+  "storeCreateCode": "Buat Kode Bayar",
+  "storeWaitingPayment": "Menunggu pembayaran…",
+  "storeCancelCode": "Batalkan Kode",
+  "storeIdleHint": "Susun pesanan, lalu buat kode bayar dari totalnya — atau tampilkan kode bayar statis.",
+  "storeFreeAmountLabel": "Nominal Bebas (nusan)",
+  "storeAddFreeItem": "Tambah Item Bebas",
+  "storeFreeItem": "Item Bebas",
+  "storeOrderTitle": "Pesanan",
+  "storeOrderEmpty": "Belum ada item — ketuk produk di katalog, pindai kode, atau tambah nominal bebas.",
+  "storeSubtotal": "Subtotal",
+  "storeTotalDiscount": "Total Diskon",
+  "storeGrandTotal": "Total",
+  "storeOrderDiscount": "Diskon Order",
+  "storeDiscount": "Diskon",
+  "storeSetDiscount": "Atur Diskon",
+  "storeApplyDiscount": "Terapkan",
+  "storeRemoveDiscount": "Hapus Diskon",
+  "storeDiscountPercent": "Persen (%)",
+  "storeDiscountFixed": "Nominal (nusan)",
+  "storeDiscountValue": "Nilai Diskon",
+  "storeZeroTotalHint": "Total 0 tidak bisa dibuatkan kode bayar — kurangi diskon atau tambah item.",
+  "storeSessionTitle": "Sesi Ini",
+  "storeSessionSales": "{count} transaksi • {total} nusan",
+  "@storeSessionSales": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "storePrintReceipt": "Cetak Struk",
+  "storeScanCode": "Pindai Kode",
+  "storeCatalogTitle": "Katalog Produk",
+  "storeManageCatalog": "Kelola",
+  "storeCatalogEmpty": "Katalog masih kosong — tambahkan produk pertama lewat tombol Kelola.",
+  "storeCodeNotRegistered": "Kode ini belum terdaftar di katalog.",
+  "storeRegisterNow": "Daftarkan Sekarang",
+  "storeProductCode": "Kode Produk",
+  "storeProductName": "Nama Produk",
+  "storeProductPrice": "Harga (nusan)",
+  "storeProductDiscount": "Diskon Bawaan (opsional)",
+  "storeSaveProduct": "Simpan Produk",
+  "storeProductSaved": "Produk tersimpan: {name}",
+  "@storeProductSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "storeProductAdded": "Ditambahkan: {name}",
+  "@storeProductAdded": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "storeReceiptDiscountNote": "Total diskon penjualan ini: {amount} nusan",
+  "@storeReceiptDiscountNote": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "storeClearKeypad": "Bersih",
+  "storeProductFormError": "Periksa lagi: kode, nama, dan harga (di atas 0) wajib diisi."
 }
