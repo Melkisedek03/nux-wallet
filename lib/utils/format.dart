@@ -26,6 +26,23 @@ String formatNusan(BigInt msat) {
   return buf.toString();
 }
 
+/// Format nominal rupiah bulat untuk Mode Toko v2: pemisah
+/// ribuan gaya id_ID ('.'), tanpa desimal (rupiah di Mode Toko
+/// selalu bulat — tidak ada sen). Dipakai semua permukaan kasir
+/// (katalog, keypad, struk, laporan) supaya satu angka selalu
+/// tampil dengan cara yang sama.
+String formatRupiah(int rp) {
+  final negative = rp < 0;
+  final digits = rp.abs().toString();
+  final buf = StringBuffer();
+  if (negative) buf.write('-');
+  for (var i = 0; i < digits.length; i++) {
+    if (i > 0 && (digits.length - i) % 3 == 0) buf.write('.');
+    buf.write(digits[i]);
+  }
+  return buf.toString();
+}
+
 /// Format waktu transaksi untuk daftar aktivitas/riwayat.
 ///
 /// Hari ini → jam 'HH.mm'; kemarin → 'Kemarin'/'Yesterday';

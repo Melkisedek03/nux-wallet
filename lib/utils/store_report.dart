@@ -1,4 +1,4 @@
-/// Agregasi + pembangun teks laporan penjualan Mode Toko,
+/// Agregasi + pembangun teks laporan penjualan Mode Toko v2,
 /// mengikuti format contoh PoS NUX (3 Nov 2026): dua dokumen
 /// teks monospace 32 kolom (selebar kertas 58mm) — Dokumen 1
 /// ringkasan ("SELECTED REPORT") dan Dokumen 2 rincian per item
@@ -7,8 +7,13 @@
 /// Semua fungsi di sini murni: laporan hanya disusun dari record
 /// tersimpan (StoreOrderHistoryStore) untuk satu jendela waktu —
 /// jendela shift (buka→tutup) atau satu hari kalender lokal.
-/// Angka yang tidak ada di record tidak dikarang: pesanan sebelum
-/// fitur VOID ada terbaca lunas, sesuai simpanan mereka.
+///
+/// ERA: hanya record era RUPIAH ('rp') yang terhitung. Record
+/// era nusan (v1) adalah arsip dan tidak pernah dicampur ke
+/// angka rupiah. Angka uang selalu rupiah; poin tampil dalam
+/// satuannya sendiri pada blok poin yang terpisah (pedoman
+/// miniPOS §7: omzet rupiah, diskon poin dalam Rp, poin
+/// diterbitkan/ditukar dalam poin).
 library;
 
 import '../services/store_order_history.dart';
@@ -29,10 +34,24 @@ class ShiftReportLabels {
   final String subTotal;
   final String discount;
   final String orderDiscount;
+
+  /// Label baris diskon POIN pada blok diskon (nilai rupiah dari
+  /// penukaran poin terverifikasi).
+  final String pointsDiscount;
   final String totalOrder;
   final String totalOrderInfo;
   final String invoicesLabel;
   final String invUnit;
+
+  /// Label tender tunai & QRIS (metode pembayaran rupiah).
+  final String cashLabel;
+  final String qrisLabel;
+
+  /// Label blok poin: poin diterbitkan (sudah terkirim),
+  /// poin tertunda (belum diterbitkan), poin ditukar.
+  final String pointsIssued;
+  final String pointsPending;
+  final String pointsRedeemed;
   final String voidInfo;
   final String voidItemQty;
   final String voidSubTotal;
@@ -53,10 +72,16 @@ class ShiftReportLabels {
     required this.subTotal,
     required this.discount,
     required this.orderDiscount,
+    required this.pointsDiscount,
     required this.totalOrder,
     required this.totalOrderInfo,
     required this.invoicesLabel,
     required this.invUnit,
+    required this.cashLabel,
+    required this.qrisLabel,
+    required this.pointsIssued,
+    required this.pointsPending,
+    required this.pointsRedeemed,
     required this.voidInfo,
     required this.voidItemQty,
     required this.voidSubTotal,
@@ -81,32 +106,32 @@ class CategorySales {
   final int itemQty;
 
   /// Σ harga × qty sebelum diskon baris ("Sub Total" kategori).
-  final int grossNusan;
+  final int grossRp;
 
-  /// Σ diskon baris kategori ini saja (diskon order tidak
-  /// dialokasikan per kategori — ia potongan tingkat pesanan).
-  final int lineDiscountNusan;
+  /// Σ diskon baris kategori ini saja (diskon order & poin tidak
+  /// dialokasikan per kategori — keduanya potongan tingkat
+  /// pesanan).
+  final int lineDiscountRp;
 
   const CategorySales({
     required this.category,
     required this.itemQty,
-    required this.grossNusan,
-    required this.lineDiscountNusan,
+    required this.grossRp,
+    required this.lineDiscountRp,
   });
 
-  int get totalNusan => grossNusan - lineDiscountNusan;
+  int get totalRp => grossRp - lineDiscountRp;
 
   @override
   bool operator ==(Object other) =>
       other is CategorySales &&
       other.category == category &&
       other.itemQty == itemQty &&
-      other.grossNusan == grossNusan &&
-      other.lineDiscountNusan == lineDiscountNusan;
+      other.grossRp == grossRp &&
+      other.lineDiscountRp == lineDiscountRp;
 
   @override
-  int get hashCode =>
-      Object.hash(category, itemQty, grossNusan, lineDiscountNusan);
+  int get hashCode => Object.hash(category, itemQty, grossRp, lineDiscountRp);
 }
 
 /// Rekap pesanan batal (VOID) dalam jendela laporan.
@@ -115,29 +140,29 @@ class VoidSalesSummary {
   final int itemQty;
 
   /// Σ harga × qty baris pesanan batal sebelum diskon.
-  final int grossNusan;
+  final int grossRp;
 
   /// Σ seluruh diskon pesanan batal (baris + order), supaya
   /// Sub Total − Discount = Total ORDER rekonsiliasi di blok VOID.
-  final int discountNusan;
+  final int discountRp;
 
   /// Σ total akhir pesanan batal (yang tidak jadi dibayar).
-  final int totalNusan;
+  final int totalRp;
 
   const VoidSalesSummary({
     required this.count,
     required this.itemQty,
-    required this.grossNusan,
-    required this.discountNusan,
-    required this.totalNusan,
+    required this.grossRp,
+    required this.discountRp,
+    required this.totalRp,
   });
 
   static const empty = VoidSalesSummary(
     count: 0,
     itemQty: 0,
-    grossNusan: 0,
-    discountNusan: 0,
-    totalNusan: 0,
+    grossRp: 0,
+    discountRp: 0,
+    totalRp: 0,
   );
 
   @override
@@ -145,37 +170,63 @@ class VoidSalesSummary {
       other is VoidSalesSummary &&
       other.count == count &&
       other.itemQty == itemQty &&
-      other.grossNusan == grossNusan &&
-      other.discountNusan == discountNusan &&
-      other.totalNusan == totalNusan;
+      other.grossRp == grossRp &&
+      other.discountRp == discountRp &&
+      other.totalRp == totalRp;
 
   @override
-  int get hashCode =>
-      Object.hash(count, itemQty, grossNusan, discountNusan, totalNusan);
+  int get hashCode => Object.hash(count, itemQty, grossRp, discountRp, totalRp);
 }
 
 /// Semua angka Dokumen 1 untuk satu jendela.
 ///
-/// Rekonsiliasi yang dijamin: [grossNusan] (Sub Total) −
-/// [lineDiscountNusan] − [orderDiscountNusan] = [totalNusan]
-/// (Total ORDER) — diskon order ditampilkan terpisah dan tidak
-/// dialokasikan per item/kategori.
+/// Rekonsiliasi yang dijamin: [grossRp] (Sub Total) −
+/// [lineDiscountRp] − [orderDiscountRp] − [pointsDiscountRp] =
+/// [totalRp] (Total ORDER) — diskon order dan diskon poin
+/// ditampilkan terpisah dan tidak dialokasikan per
+/// item/kategori.
 class ShiftSalesSummary {
-  /// Jumlah pesanan lunas (invoice terbayar) dalam jendela.
+  /// Jumlah pesanan lunas dalam jendela (termasuk promosi Rp0).
   final int invoiceCount;
   final int itemQty;
 
-  /// Σ harga × qty sebelum diskon apa pun.
-  final int grossNusan;
+  /// Σ harga × qty sebelum diskon apa pun (rupiah).
+  final int grossRp;
 
   /// Σ diskon baris.
-  final int lineDiscountNusan;
+  final int lineDiscountRp;
 
-  /// Σ diskon order yang sungguh terpakai.
-  final int orderDiscountNusan;
+  /// Σ diskon order yang sungguh terpakai (tidak termasuk
+  /// diskon poin — ia terpisah di [pointsDiscountRp]).
+  final int orderDiscountRp;
 
-  /// Σ total akhir yang sungguh dibayar.
-  final int totalNusan;
+  /// Σ nilai rupiah potongan dari penukaran poin terverifikasi.
+  final int pointsDiscountRp;
+
+  /// Σ total akhir yang sungguh dibayar rupiah.
+  final int totalRp;
+
+  /// Tender tunai: jumlah transaksi & Σ total akhirnya.
+  final int cashCount;
+  final int cashTotalRp;
+
+  /// Tender QRIS: jumlah transaksi & Σ total akhirnya.
+  final int qrisCount;
+  final int qrisTotalRp;
+
+  /// Transaksi promosi penuh (total bayar Rp0, tanpa metode).
+  final int promoCount;
+
+  /// Σ poin yang diterbitkan & sudah terkirim ke pelanggan.
+  final int pointsIssued;
+
+  /// Σ poin yang diperoleh tetapi BELUM diterbitkan (antre
+  /// tertunda, termasuk yang dilewati kasir).
+  final int pointsPending;
+
+  /// Σ poin yang ditukar pelanggan (satuannya poin, bukan Rp —
+  /// nilai rupiahnya di [pointsDiscountRp]).
+  final int pointsRedeemed;
 
   /// Per kategori: bernama dulu (abjad), tanpa kategori terakhir.
   final List<CategorySales> categories;
@@ -184,10 +235,19 @@ class ShiftSalesSummary {
   const ShiftSalesSummary({
     required this.invoiceCount,
     required this.itemQty,
-    required this.grossNusan,
-    required this.lineDiscountNusan,
-    required this.orderDiscountNusan,
-    required this.totalNusan,
+    required this.grossRp,
+    required this.lineDiscountRp,
+    required this.orderDiscountRp,
+    required this.pointsDiscountRp,
+    required this.totalRp,
+    required this.cashCount,
+    required this.cashTotalRp,
+    required this.qrisCount,
+    required this.qrisTotalRp,
+    required this.promoCount,
+    required this.pointsIssued,
+    required this.pointsPending,
+    required this.pointsRedeemed,
     required this.categories,
     required this.voids,
   });
@@ -199,8 +259,8 @@ int _compareCategoryNames(String a, String b) {
 }
 
 /// Agregasi murni record pesanan untuk jendela [from] inklusif
-/// sampai [to] eksklusif. Pesanan lunas masuk angka penjualan;
-/// pesanan VOID hanya masuk blok VOID.
+/// sampai [to] eksklusif. HANYA record era rupiah: pesanan lunas
+/// masuk angka penjualan; pesanan VOID hanya masuk blok VOID.
 ShiftSalesSummary aggregateShiftSales(
   List<CompletedOrder> orders, {
   required DateTime from,
@@ -211,7 +271,16 @@ ShiftSalesSummary aggregateShiftSales(
   var gross = 0;
   var lineDiscount = 0;
   var orderDiscount = 0;
+  var pointsDiscount = 0;
   var total = 0;
+  var cashCount = 0;
+  var cashTotal = 0;
+  var qrisCount = 0;
+  var qrisTotal = 0;
+  var promoCount = 0;
+  var pointsIssued = 0;
+  var pointsPending = 0;
+  var pointsRedeemed = 0;
   final catQty = <String, int>{};
   final catGross = <String, int>{};
   final catDiscount = <String, int>{};
@@ -222,34 +291,55 @@ ShiftSalesSummary aggregateShiftSales(
   var vTotal = 0;
 
   for (final order in orders) {
+    if (!order.isRupiahEra) continue;
     if (order.time.isBefore(from) || !order.time.isBefore(to)) continue;
     var oQty = 0;
     var oGross = 0;
     for (final line in order.lines) {
       oQty += line.qty;
-      oGross += line.lineGrossNusan;
+      oGross += line.lineGrossRp;
     }
     if (order.isVoid) {
       vCount++;
       vQty += oQty;
       vGross += oGross;
-      vDiscount += order.totalDiscountNusan;
-      vTotal += order.grandTotalNusan;
+      vDiscount += order.totalDiscountRp;
+      vTotal += order.grandTotalRp;
       continue;
     }
     invoiceCount++;
     itemQty += oQty;
     gross += oGross;
-    lineDiscount += order.lines.fold(0, (s, l) => s + l.lineDiscountNusan);
-    // Diskon order yang sungguh terpakai = subtotal − total akhir.
-    orderDiscount += order.subtotalNusan - order.grandTotalNusan;
-    total += order.grandTotalNusan;
+    lineDiscount += order.lines.fold(0, (s, l) => s + l.lineDiscountRp);
+    // Diskon order yang sungguh terpakai = subtotal − diskon
+    // poin − total akhir (record menyimpan ketiganya; sisanya
+    // adalah bagian diskon order).
+    final orderDisc = order.subtotalRp - order.pointsDiscountRp - order.grandTotalRp;
+    orderDiscount += orderDisc < 0 ? 0 : orderDisc;
+    pointsDiscount += order.pointsDiscountRp;
+    total += order.grandTotalRp;
+    switch (order.payMethod) {
+      case payMethodCash:
+        cashCount++;
+        cashTotal += order.grandTotalRp;
+      case payMethodQris:
+        qrisCount++;
+        qrisTotal += order.grandTotalRp;
+      default:
+        // Tanpa metode & tidak batal = promosi penuh Rp0.
+        promoCount++;
+    }
+    pointsRedeemed += order.pointsRedeemed;
+    if (order.pointsIssueStatus == issueStatusIssued) {
+      pointsIssued += order.pointsEarned;
+    } else if (order.pointsIssueStatus == issueStatusPending) {
+      pointsPending += order.pointsEarned;
+    }
     for (final line in order.lines) {
       catQty[line.category] = (catQty[line.category] ?? 0) + line.qty;
-      catGross[line.category] =
-          (catGross[line.category] ?? 0) + line.lineGrossNusan;
+      catGross[line.category] = (catGross[line.category] ?? 0) + line.lineGrossRp;
       catDiscount[line.category] =
-          (catDiscount[line.category] ?? 0) + line.lineDiscountNusan;
+          (catDiscount[line.category] ?? 0) + line.lineDiscountRp;
     }
   }
 
@@ -259,8 +349,8 @@ ShiftSalesSummary aggregateShiftSales(
             (c) => CategorySales(
               category: c,
               itemQty: catQty[c]!,
-              grossNusan: catGross[c]!,
-              lineDiscountNusan: catDiscount[c]!,
+              grossRp: catGross[c]!,
+              lineDiscountRp: catDiscount[c]!,
             ),
           )
           .toList()
@@ -269,17 +359,26 @@ ShiftSalesSummary aggregateShiftSales(
   return ShiftSalesSummary(
     invoiceCount: invoiceCount,
     itemQty: itemQty,
-    grossNusan: gross,
-    lineDiscountNusan: lineDiscount,
-    orderDiscountNusan: orderDiscount,
-    totalNusan: total,
+    grossRp: gross,
+    lineDiscountRp: lineDiscount,
+    orderDiscountRp: orderDiscount,
+    pointsDiscountRp: pointsDiscount,
+    totalRp: total,
+    cashCount: cashCount,
+    cashTotalRp: cashTotal,
+    qrisCount: qrisCount,
+    qrisTotalRp: qrisTotal,
+    promoCount: promoCount,
+    pointsIssued: pointsIssued,
+    pointsPending: pointsPending,
+    pointsRedeemed: pointsRedeemed,
     categories: categories,
     voids: VoidSalesSummary(
       count: vCount,
       itemQty: vQty,
-      grossNusan: vGross,
-      discountNusan: vDiscount,
-      totalNusan: vTotal,
+      grossRp: vGross,
+      discountRp: vDiscount,
+      totalRp: vTotal,
     ),
   );
 }
@@ -290,17 +389,17 @@ ShiftSalesSummary aggregateShiftSales(
 
 /// Rincian diskon persen pada sebagian/semua unit satu entri
 /// rincian: [units] unit terdiskon [percent]%, potongan per unit
-/// [perUnitNusan] = floor(harga × persen / 100) — konsisten
-/// dengan aturan diskon Mode Toko.
+/// [perUnitRp] = floor(harga × persen / 100) — konsisten dengan
+/// aturan diskon Mode Toko.
 class PercentDiscountPart {
   final int percent;
   final int units;
-  final int perUnitNusan;
+  final int perUnitRp;
 
   const PercentDiscountPart({
     required this.percent,
     required this.units,
-    required this.perUnitNusan,
+    required this.perUnitRp,
   });
 
   @override
@@ -308,10 +407,10 @@ class PercentDiscountPart {
       other is PercentDiscountPart &&
       other.percent == percent &&
       other.units == units &&
-      other.perUnitNusan == perUnitNusan;
+      other.perUnitRp == perUnitRp;
 
   @override
-  int get hashCode => Object.hash(percent, units, perUnitNusan);
+  int get hashCode => Object.hash(percent, units, perUnitRp);
 }
 
 /// Satu entri Dokumen 2: semua baris lunas dengan (kategori,
@@ -321,26 +420,26 @@ class PercentDiscountPart {
 class MenuSalesEntry {
   final String category;
   final String label;
-  final int unitPriceNusan;
+  final int unitPriceRp;
   final int qty;
-  final int grossNusan;
+  final int grossRp;
 
   /// Σ diskon baris (persen + nominal) entri ini — angka dari
   /// record, bukan hitungan ulang.
-  final int discountNusan;
+  final int discountRp;
   final List<PercentDiscountPart> percentParts;
 
   const MenuSalesEntry({
     required this.category,
     required this.label,
-    required this.unitPriceNusan,
+    required this.unitPriceRp,
     required this.qty,
-    required this.grossNusan,
-    required this.discountNusan,
+    required this.grossRp,
+    required this.discountRp,
     required this.percentParts,
   });
 
-  int get netNusan => grossNusan - discountNusan;
+  int get netRp => grossRp - discountRp;
 }
 
 /// Rincian satu kategori: daftar entri urut label lalu harga.
@@ -352,7 +451,8 @@ class MenuSalesGroup {
 }
 
 /// Agregasi murni rincian per item untuk jendela [from, to).
-/// Hanya pesanan LUNAS; baris VOID tidak masuk rincian penjualan.
+/// Hanya pesanan LUNAS era rupiah; baris VOID & era nusan tidak
+/// masuk rincian penjualan.
 List<MenuSalesGroup> aggregateMenuDetails(
   List<CompletedOrder> orders, {
   required DateTime from,
@@ -366,15 +466,16 @@ List<MenuSalesGroup> aggregateMenuDetails(
   final meta = <String, (String, String, int)>{};
 
   for (final order in orders) {
+    if (!order.isRupiahEra) continue;
     if (order.isVoid) continue;
     if (order.time.isBefore(from) || !order.time.isBefore(to)) continue;
     for (final line in order.lines) {
       final key =
-          '${line.category}\u0000${line.label}\u0000${line.unitPriceNusan}';
-      meta[key] = (line.category, line.label, line.unitPriceNusan);
+          '${line.category}\u0000${line.label}\u0000${line.unitPriceRp}';
+      meta[key] = (line.category, line.label, line.unitPriceRp);
       accQty[key] = (accQty[key] ?? 0) + line.qty;
-      accGross[key] = (accGross[key] ?? 0) + line.lineGrossNusan;
-      accDiscount[key] = (accDiscount[key] ?? 0) + line.lineDiscountNusan;
+      accGross[key] = (accGross[key] ?? 0) + line.lineGrossRp;
+      accDiscount[key] = (accDiscount[key] ?? 0) + line.lineDiscountRp;
       final d = line.discount;
       if (d != null && d.kind == DiscountKind.percent && d.value > 0) {
         final parts = accParts.putIfAbsent(key, () => {});
@@ -392,7 +493,7 @@ List<MenuSalesGroup> aggregateMenuDetails(
               (e) => PercentDiscountPart(
                 percent: e.key,
                 units: e.value,
-                perUnitNusan: (price * e.key) ~/ 100,
+                perUnitRp: (price * e.key) ~/ 100,
               ),
             )
             .toList()
@@ -403,29 +504,26 @@ List<MenuSalesGroup> aggregateMenuDetails(
           MenuSalesEntry(
             category: category,
             label: label,
-            unitPriceNusan: price,
+            unitPriceRp: price,
             qty: accQty[key]!,
-            grossNusan: accGross[key]!,
-            discountNusan: accDiscount[key]!,
+            grossRp: accGross[key]!,
+            discountRp: accDiscount[key]!,
             percentParts: parts,
           ),
         );
   }
 
-  final categories = byCategory.keys.toList()
-    ..sort(_compareCategoryNames);
+  final categories = byCategory.keys.toList()..sort(_compareCategoryNames);
   return [
     for (final category in categories)
       MenuSalesGroup(
         category: category,
         entries: byCategory[category]!
           ..sort((a, b) {
-            final byLabel = a.label.toLowerCase().compareTo(
-              b.label.toLowerCase(),
-            );
+            final byLabel = a.label.toLowerCase().compareTo(b.label.toLowerCase());
             return byLabel != 0
                 ? byLabel
-                : a.unitPriceNusan.compareTo(b.unitPriceNusan);
+                : a.unitPriceRp.compareTo(b.unitPriceRp);
           }),
       ),
   ];
@@ -536,7 +634,9 @@ class ShiftReportDocuments {
   const ShiftReportDocuments({required this.summary, required this.details});
 }
 
-String _fmt(int nusan) => formatNusan(BigInt.from(nusan) * BigInt.from(1000));
+/// Format angka dokumen: rupiah & jumlah poin sama-sama bilangan
+/// bulat berpemisah ribuan (satuan mengikuti label barisnya).
+String _fmt(int value) => formatRupiah(value);
 
 String get _hr => '-' * reportWidth;
 String get _eq => '=' * reportWidth;
@@ -567,11 +667,9 @@ String _tender(String label, String value) {
   return '$l=${value.padLeft(reportWidth - labelWidth - 1)}';
 }
 
-String get _shortRule =>
-    '${' ' * (reportWidth - 16)}${'-' * 16}';
+String get _shortRule => '${' ' * (reportWidth - 16)}${'-' * 16}';
 
-String _rightOnly(String value) =>
-    value.padLeft(reportWidth);
+String _rightOnly(String value) => value.padLeft(reportWidth);
 
 /// Baris jumlah rincian: teks kiri bebas + jumlah rata kanan.
 String _amountLine(String left, String right) {
@@ -641,29 +739,43 @@ ShiftReportDocuments buildShiftReportDocuments({
   }
   s.add(_hr);
   s.add(_row(labels.itemQty, _fmt(summary.itemQty)));
-  s.add(_row(labels.subTotal, _fmt(summary.grossNusan)));
-  s.add(_row(labels.discount, '-${_fmt(summary.lineDiscountNusan)}'));
-  if (summary.orderDiscountNusan != 0) {
-    s.add(_row(labels.orderDiscount, '-${_fmt(summary.orderDiscountNusan)}'));
+  s.add(_row(labels.subTotal, _fmt(summary.grossRp)));
+  s.add(_row(labels.discount, '-${_fmt(summary.lineDiscountRp)}'));
+  if (summary.orderDiscountRp != 0) {
+    s.add(_row(labels.orderDiscount, '-${_fmt(summary.orderDiscountRp)}'));
+  }
+  if (summary.pointsDiscountRp != 0) {
+    s.add(_row(labels.pointsDiscount, '-${_fmt(summary.pointsDiscountRp)}'));
   }
   s.add(_shortRule);
-  s.add(_row('*${labels.totalOrder}', _fmt(summary.totalNusan)));
+  s.add(_row('*${labels.totalOrder}', _fmt(summary.totalRp)));
   s.add(_hr);
-  s.add(_tender('LIGHTNING', _fmt(summary.totalNusan)));
+  s.add(_tender(labels.cashLabel, _fmt(summary.cashTotalRp)));
+  s.add(_tender(labels.qrisLabel, _fmt(summary.qrisTotalRp)));
   s.add(
     _tender(labels.invoicesLabel, '${summary.invoiceCount} ${labels.invUnit}'),
   );
   s.add(_tender('**VOID', '${summary.voids.count} ${labels.invUnit}'));
+  if (summary.pointsIssued > 0 ||
+      summary.pointsRedeemed > 0 ||
+      summary.pointsPending > 0) {
+    s.add(_hr);
+    s.add(_row(labels.pointsIssued, _fmt(summary.pointsIssued)));
+    s.add(_row(labels.pointsRedeemed, _fmt(summary.pointsRedeemed)));
+    if (summary.pointsPending > 0) {
+      s.add(_row(labels.pointsPending, _fmt(summary.pointsPending)));
+    }
+  }
   s.add(_hr);
-  s.add(_row('*${labels.totalOrderInfo}', _fmt(summary.totalNusan)));
+  s.add(_row('*${labels.totalOrderInfo}', _fmt(summary.totalRp)));
   for (final cat in summary.categories) {
     final name = _categoryDisplay(labels, cat.category);
     s.add(name.length > reportWidth ? name.substring(0, reportWidth) : name);
     s.add(_row('  ${labels.qtyLabel}', _fmt(cat.itemQty)));
-    s.add(_row('  ${labels.subTotal}', _fmt(cat.grossNusan)));
-    if (cat.lineDiscountNusan > 0) {
-      s.add(_row('  ${labels.discount}', '-${_fmt(cat.lineDiscountNusan)}'));
-      s.add(_rightOnly(_fmt(cat.totalNusan)));
+    s.add(_row('  ${labels.subTotal}', _fmt(cat.grossRp)));
+    if (cat.lineDiscountRp > 0) {
+      s.add(_row('  ${labels.discount}', '-${_fmt(cat.lineDiscountRp)}'));
+      s.add(_rightOnly(_fmt(cat.totalRp)));
     }
   }
   if (summary.voids.count > 0) {
@@ -671,10 +783,10 @@ ShiftReportDocuments buildShiftReportDocuments({
     s.add(_hr);
     s.add(_row('**${labels.voidInfo}', '(${v.count} ${labels.invUnit})'));
     s.add(_row(labels.voidItemQty, _fmt(v.itemQty)));
-    s.add(_row(labels.voidSubTotal, _fmt(v.grossNusan)));
-    s.add(_row(labels.voidDiscount, '-${_fmt(v.discountNusan)}'));
+    s.add(_row(labels.voidSubTotal, _fmt(v.grossRp)));
+    s.add(_row(labels.voidDiscount, '-${_fmt(v.discountRp)}'));
     s.add(_shortRule);
-    s.add(_row(labels.voidTotalOrder, _fmt(v.totalNusan)));
+    s.add(_row(labels.voidTotalOrder, _fmt(v.totalRp)));
   }
   s.add(_eq);
   s.add(footer);
@@ -699,20 +811,20 @@ ShiftReportDocuments buildShiftReportDocuments({
       d.add(
         _amountLine(
           '${entry.qty.toString().padLeft(5)} x '
-          '${_fmt(entry.unitPriceNusan).padLeft(7)} =',
-          _fmt(entry.grossNusan),
+          '${_fmt(entry.unitPriceRp).padLeft(7)} =',
+          _fmt(entry.grossRp),
         ),
       );
-      if (entry.discountNusan > 0) {
+      if (entry.discountRp > 0) {
         d.add(
           _amountLine(
-            '  (Disc)${'-${_fmt(entry.discountNusan)}'.padLeft(10)} =',
-            _fmt(entry.netNusan),
+            '  (Disc)${'-${_fmt(entry.discountRp)}'.padLeft(10)} =',
+            _fmt(entry.netRp),
           ),
         );
         for (final part in entry.percentParts) {
           d.add(
-            '   (${part.percent}%) ${part.units} x -${_fmt(part.perUnitNusan)}',
+            '   (${part.percent}%) ${part.units} x -${_fmt(part.perUnitRp)}',
           );
         }
       }

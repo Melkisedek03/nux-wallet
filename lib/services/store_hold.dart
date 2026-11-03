@@ -11,7 +11,7 @@ import 'store_order_history.dart';
 /// (diskon baris + catatan ikut), diskon order, dan waktu tahan.
 /// Ia BUKAN penjualan: belum dibayar, tidak masuk riwayat
 /// pesanan, tidak masuk laporan shift — ia baru menjadi penjualan
-/// bila dilanjutkan lalu kode bayarnya lunas.
+/// bila dilanjutkan lalu pembayaran rupiahnya lunas.
 ///
 /// Pesanan ditahan tidak terikat shift: menutup shift TIDAK
 /// menghapusnya (layar hanya memperingatkan kasir saat Tutup
@@ -33,9 +33,9 @@ class HeldOrder {
     required this.orderDiscount,
   });
 
-  /// Total akhir pesanan ini bila dibuat kode bayar sekarang —
+  /// Total akhir pesanan ini bila diselesaikan sekarang —
   /// dihitung dengan fungsi yang sama dengan layar kasir.
-  int get grandTotalNusan => orderGrandTotalNusan(lines, orderDiscount);
+  int get grandTotalRp => orderGrandTotalRp(lines, orderDiscount);
 
   /// Jumlah item keseluruhan (Σ qty semua baris) — bahan
   /// ringkasan entri di daftar tahan.
@@ -132,7 +132,7 @@ List<HeldOrder> decodeHeldOrders(String? raw) {
 /// atas kebutuhan satu toko, dan entri tertua yang terbuang oleh
 /// batas ini adalah yang paling lama tidak dilanjutkan.
 class HeldOrderStore {
-  static const String storageKey = 'store_held_orders_v1';
+  static const String storageKey = 'store_held_orders_v2';
   static const int maxRecords = 50;
 
   Future<List<HeldOrder>> load() async {

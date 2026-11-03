@@ -8,14 +8,14 @@ import '../utils/store_mode_logic.dart';
 ///
 /// [code] adalah isi barcode/QR produk apa adanya (EAN, UPC,
 /// Code128, QR — pemindai aplikasi tidak membatasi format), [name]
-/// nama tampil untuk kasir, [priceNusan] harga satuan dalam nusan
-/// bulat. [defaultDiscount] diskon bawaan produk (persen atau
+/// nama tampil untuk kasir, [priceRp] harga satuan dalam rupiah
+/// bulat (v2: seluruh harga Mode Toko berdenominasi rupiah). [defaultDiscount] diskon bawaan produk (persen atau
 /// nominal, boleh null): otomatis terisi ke baris pesanan saat
 /// produk ditambahkan, dan kasir tetap bisa mengubahnya di baris.
 class CatalogItem {
   final String code;
   final String name;
-  final int priceNusan;
+  final int priceRp;
   final Discount? defaultDiscount;
 
   /// Kategori produk untuk pengelompokan laporan penjualan
@@ -27,7 +27,7 @@ class CatalogItem {
   const CatalogItem({
     required this.code,
     required this.name,
-    required this.priceNusan,
+    required this.priceRp,
     this.defaultDiscount,
     this.category = '',
   });
@@ -35,7 +35,7 @@ class CatalogItem {
   Map<String, Object?> toJson() => {
     'code': code,
     'name': name,
-    'priceNusan': priceNusan,
+    'priceRp': priceRp,
     if (category.isNotEmpty) 'category': category,
     if (defaultDiscount != null) ...{
       'discountKind': defaultDiscount!.kind.name,
@@ -51,7 +51,9 @@ class CatalogItem {
     if (raw is! Map) return null;
     final code = raw['code'];
     final name = raw['name'];
-    final price = raw['priceNusan'];
+    // Kunci v2 'priceRp'; 'priceNusan' hanya cadangan baca untuk
+    // simpanan uji lama — store produksi v2 adalah kunci baru.
+    final price = raw['priceRp'] ?? raw['priceNusan'];
     if (code is! String || code.trim().isEmpty) return null;
     if (name is! String || name.trim().isEmpty) return null;
     if (price is! num || price < 0 || price != price.roundToDouble()) {
@@ -71,7 +73,7 @@ class CatalogItem {
     return CatalogItem(
       code: code.trim(),
       name: name.trim(),
-      priceNusan: price.toInt(),
+      priceRp: price.toInt(),
       defaultDiscount: discount,
       category: category is String ? category.trim() : '',
     );
@@ -82,13 +84,13 @@ class CatalogItem {
       other is CatalogItem &&
       other.code == code &&
       other.name == name &&
-      other.priceNusan == priceNusan &&
+      other.priceRp == priceRp &&
       other.defaultDiscount == defaultDiscount &&
       other.category == category;
 
   @override
   int get hashCode =>
-      Object.hash(code, name, priceNusan, defaultDiscount, category);
+      Object.hash(code, name, priceRp, defaultDiscount, category);
 }
 
 /// Serialkan katalog ke string JSON untuk simpanan lokal.
@@ -171,7 +173,7 @@ List<CatalogItem> filterCatalogItems(List<CatalogItem> items, String query) {
 /// ditelan — katalog adalah data kasir yang bisa dibangun ulang,
 /// bukan sumber kebenaran dana.
 class StoreCatalogStore {
-  static const String storageKey = 'store_catalog_items_v1';
+  static const String storageKey = 'store_catalog_items_v2';
 
   Future<List<CatalogItem>> load() async {
     try {

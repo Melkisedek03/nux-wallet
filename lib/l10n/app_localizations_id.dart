@@ -674,23 +674,15 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeMode => 'Mode Toko';
 
   @override
-  String get storeModeSubtitle => 'Kasir untuk menerima pembayaran di toko';
-
-  @override
-  String get storeCreateCode => 'Buat Kode Bayar';
-
-  @override
-  String get storeWaitingPayment => 'Menunggu pembayaran…';
-
-  @override
-  String get storeCancelCode => 'Batalkan Kode';
+  String get storeModeSubtitle =>
+      'Kasir toko — penjualan rupiah & program poin nusan';
 
   @override
   String get storeIdleHint =>
-      'Susun pesanan, lalu buat kode bayar dari totalnya — atau tampilkan kode bayar statis.';
+      'Susun pesanan, lalu selesaikan pembayaran dalam rupiah. Poin nusan diperoleh pelanggan sesudah penjualan lunas.';
 
   @override
-  String get storeFreeAmountLabel => 'Nominal Bebas (nusan)';
+  String get storeFreeAmountLabel => 'Nominal Bebas (Rp)';
 
   @override
   String get storeAddFreeItem => 'Tambah Item Bebas';
@@ -738,10 +730,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeHoldOrder => 'Tahan Pesanan';
 
   @override
-  String get storeHoldBlocked =>
-      'Selesaikan atau batalkan dulu kode bayar yang sedang menunggu sebelum menahan pesanan.';
-
-  @override
   String get storeHeldSaved =>
       'Pesanan ditahan — bisa dilanjutkan kapan saja dari daftar Ditahan.';
 
@@ -758,7 +746,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String storeHeldEntryMeta(String time, int count, String total) {
-    return '$time • $count item • $total nusan';
+    return '$time • $count item • $total';
   }
 
   @override
@@ -829,21 +817,17 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeDiscountPercent => 'Persen (%)';
 
   @override
-  String get storeDiscountFixed => 'Nominal (nusan)';
+  String get storeDiscountFixed => 'Nominal (Rp)';
 
   @override
   String get storeDiscountValue => 'Nilai Diskon';
-
-  @override
-  String get storeZeroTotalHint =>
-      'Total 0 tidak bisa dibuatkan kode bayar — kurangi diskon atau tambah item.';
 
   @override
   String get storeSessionTitle => 'Sesi Ini';
 
   @override
   String storeSessionSales(int count, String total) {
-    return '$count transaksi • $total nusan';
+    return '$count transaksi • Rp$total';
   }
 
   @override
@@ -875,7 +859,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeProductName => 'Nama Produk';
 
   @override
-  String get storeProductPrice => 'Harga (nusan)';
+  String get storeProductPrice => 'Harga (Rp)';
 
   @override
   String get storeProductDiscount => 'Diskon Bawaan (opsional)';
@@ -891,11 +875,6 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String storeProductAdded(String name) {
     return 'Ditambahkan: $name';
-  }
-
-  @override
-  String storeReceiptDiscountNote(String amount) {
-    return 'Total diskon penjualan ini: $amount nusan';
   }
 
   @override
@@ -916,7 +895,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get storeShiftOpenHint =>
-      'Buka shift dulu untuk menyusun pesanan, membuat kode bayar, dan menerima pembayaran di Mode Toko.';
+      'Buka shift dulu untuk menyusun pesanan dan menerima pembayaran rupiah di Mode Toko.';
 
   @override
   String get storeShiftOpen => 'Buka Shift';
@@ -934,7 +913,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get storeCloseShiftBlocked =>
-      'Tidak bisa menutup shift: masih ada kode bayar yang menunggu pembayaran atau penerimaan yang sedang dirayakan. Selesaikan atau batalkan dulu.';
+      'Tidak bisa menutup shift: masih ada penerbitan poin yang sedang berjalan. Selesaikan dulu penerbitan poinnya.';
 
   @override
   String get storeCloseShiftConfirmTitle => 'Tutup Shift Ini?';
@@ -948,7 +927,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String storeCloseShiftHeldBody(int count, String total) {
-    return 'Ada $count pesanan ditahan (total $total nusan) yang belum dibayar. Pesanan ditahan tetap tersimpan dan bisa dilanjutkan pada shift berikutnya.';
+    return 'Ada $count pesanan ditahan (total $total) yang belum dibayar. Pesanan ditahan tetap tersimpan dan bisa dilanjutkan pada shift berikutnya.';
   }
 
   @override
@@ -993,10 +972,6 @@ class AppLocalizationsId extends AppLocalizations {
       'Belum ada penjualan tercatat pada periode ini.';
 
   @override
-  String get storeInvoiceExpiredVoid =>
-      'Kode bayar kedaluwarsa — pesanan dicatat sebagai VOID.';
-
-  @override
   String get storeReportSummaryTitle => 'LAPORAN SHIFT';
 
   @override
@@ -1012,10 +987,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeReportTotalOrderInfo => 'Info Total ORDER';
 
   @override
-  String get storeReportInvoices => '#Invoice';
+  String get storeReportInvoices => '#Transaksi';
 
   @override
-  String get storeReportInvUnit => 'inv.';
+  String get storeReportInvUnit => 'trx';
 
   @override
   String get storeReportVoidInfo => 'Info VOID';
@@ -1050,4 +1025,352 @@ class AppLocalizationsId extends AppLocalizations {
   String storeReportShiftsNote(int count) {
     return 'Meliputi $count shift';
   }
+
+  @override
+  String get storeCatalogManagerTitle => 'Kelola Katalog';
+
+  @override
+  String get storeAddProduct => 'Tambah Produk';
+
+  @override
+  String get storeEditProduct => 'Ubah Produk';
+
+  @override
+  String get storeNoDiscount => 'Tanpa Diskon';
+
+  @override
+  String get storeCheckout => 'Selesaikan Pembayaran';
+
+  @override
+  String get storePayTitle => 'Penyelesaian Pembayaran';
+
+  @override
+  String get storePayTotalLabel => 'Total Belanja';
+
+  @override
+  String get storeCash => 'Tunai';
+
+  @override
+  String get storeQris => 'QRIS';
+
+  @override
+  String get storeQrisNote =>
+      'Pelanggan membayar lewat QRIS seperti biasa di toko ini. Aplikasi hanya mencatat metode pembayarannya — tekan tombol di bawah sesudah pembayaran QRIS diterima.';
+
+  @override
+  String get storeCashReceived => 'Uang Diterima';
+
+  @override
+  String get storeCashExact => 'Uang Pas';
+
+  @override
+  String get storeChange => 'Kembalian';
+
+  @override
+  String storeCashShort(String amount) {
+    return 'Kurang Rp$amount';
+  }
+
+  @override
+  String get storeSettle => 'Lunas — Selesaikan';
+
+  @override
+  String get storeSettleQris => 'QRIS Diterima — Selesaikan';
+
+  @override
+  String get storeSettlePromo => 'Selesaikan Tanpa Pembayaran';
+
+  @override
+  String get storePromoNote =>
+      'Total belanja Rp0 (promosi) — tidak ada pembayaran yang diterima; penjualan tetap dicatat.';
+
+  @override
+  String get storeCancelOrder => 'Batalkan Pesanan';
+
+  @override
+  String get storeVoidConfirmTitle => 'Batalkan Pesanan Ini?';
+
+  @override
+  String get storeVoidConfirmBody =>
+      'Pesanan dibatalkan dan dicatat sebagai VOID di laporan. Tindakan ini tidak bisa dibatalkan.';
+
+  @override
+  String get storeVoidRecorded => 'Pesanan dibatalkan — tercatat sebagai VOID.';
+
+  @override
+  String get storeCancelBlockedRedeem =>
+      'Penukaran poin sudah terverifikasi — pesanan tidak bisa dibatalkan; selesaikan pembayarannya.';
+
+  @override
+  String get storeRedeemTitle => 'Tukar Poin Nusan';
+
+  @override
+  String get storeRedeemHint =>
+      'Pelanggan menukar poin nusan sebagai potongan belanja. Masukkan jumlah poin, buat kode penukaran, dan minta pelanggan membayarnya dari aplikasi ELNUX miliknya. Potongan berlaku sesudah pembayaran poin terverifikasi.';
+
+  @override
+  String get storeRedeemPointsLabel => 'Jumlah Poin';
+
+  @override
+  String storeRedeemMaxNote(int max) {
+    return 'Maksimal $max poin untuk belanja ini.';
+  }
+
+  @override
+  String storeRedeemClamped(int max) {
+    return 'Jumlah poin melebihi batas — dipakai $max poin.';
+  }
+
+  @override
+  String get storeRedeemCreate => 'Buat Kode Tukar';
+
+  @override
+  String get storeRedeemWaiting => 'Menunggu pembayaran poin dari pelanggan…';
+
+  @override
+  String storeRedeemVerified(int points, String amount) {
+    return 'Penukaran terverifikasi: $points poin = potongan Rp$amount.';
+  }
+
+  @override
+  String get storeRedeemFailed =>
+      'Penukaran poin gagal atau kedaluwarsa — tidak ada potongan. Pesanan tetap bisa dibayar rupiah.';
+
+  @override
+  String get storeRedeemCancel => 'Batalkan Penukaran';
+
+  @override
+  String get storeRedeemCancelWarn =>
+      'Kode penukaran ini dibatalkan. Bila pelanggan terlanjur membayar sesudah ini, poinnya tetap masuk ke dompet toko tetapi potongan tidak berlaku — selesaikan belanja ini dalam rupiah penuh.';
+
+  @override
+  String get storeRedeemLeaveBody =>
+      'Penukaran poin masih berjalan. Meninggalkan halaman ini membatalkan penukaran — pesanan kembali ke kasir tanpa potongan poin.';
+
+  @override
+  String get storeRedeemDesc => 'Penukaran poin nusan';
+
+  @override
+  String get storeRedeemMinChannel =>
+      'Jumlah poin ini di bawah minimum pembuatan jalur terima baru (1.000 poin). Naikkan jumlah poin, atau lewati penukaran kali ini.';
+
+  @override
+  String get storeRedeemInvalidPoints =>
+      'Jumlah poin tidak sah atau melebihi potongan yang mungkin untuk belanja ini.';
+
+  @override
+  String get storeSaleCompleted => 'Penjualan Selesai';
+
+  @override
+  String storePointsEarnedLine(int points) {
+    return 'Poin nusan diperoleh: $points poin';
+  }
+
+  @override
+  String get storePointsIssueButton => 'Pindai & Terbitkan';
+
+  @override
+  String get storePointsSkip => 'Lewati';
+
+  @override
+  String get storePointsIssuedOk =>
+      'Poin nusan sudah diterbitkan ke pelanggan.';
+
+  @override
+  String get storeIssueInvalidCode =>
+      'Kode tidak terbaca sebagai invoice atau kode bayar ELNUX — pindai ulang kode pelanggan.';
+
+  @override
+  String get storeIssueAmountMismatch =>
+      'Nominal kode tidak sama dengan poin yang harus diterbitkan — minta pelanggan membuat kode sejumlah poin yang diperoleh.';
+
+  @override
+  String get storeIssueFailed =>
+      'Penerbitan poin gagal — poin tetap tertunda dan bisa diterbitkan dari daftar Poin Tertunda.';
+
+  @override
+  String get storeIssueStillPending =>
+      'Pembayaran poin masih berjalan — statusnya tetap tertunda; cek lagi dari daftar Poin Tertunda.';
+
+  @override
+  String get storeDoneButton => 'Selesai';
+
+  @override
+  String storePendingBadge(int count) {
+    return 'Poin Tertunda ($count)';
+  }
+
+  @override
+  String get storePendingTitle => 'Poin Tertunda';
+
+  @override
+  String get storePendingEmpty => 'Tidak ada poin yang tertunda.';
+
+  @override
+  String storePendingEntryMeta(String time, String total) {
+    return '$time • $total';
+  }
+
+  @override
+  String get storePendingIssue => 'Terbitkan';
+
+  @override
+  String get storePendingWaive => 'Batal Terbit';
+
+  @override
+  String get storePendingWaiveTitle => 'Batalkan Penerbitan Poin?';
+
+  @override
+  String storePendingWaiveBody(String total, String time) {
+    return 'Poin dari penjualan $time (total $total) TIDAK jadi diterbitkan ke pelanggan. Catatan penjualannya tetap tersimpan.';
+  }
+
+  @override
+  String get storePendingWaived => 'Penerbitan poin dibatalkan.';
+
+  @override
+  String get storeReceiptTotalPay => 'TOTAL BAYAR';
+
+  @override
+  String storeReceiptPointsDiscount(int points, String amount) {
+    return 'Penukaran poin ($points poin) -Rp$amount';
+  }
+
+  @override
+  String storeReceiptPointsEarned(int points) {
+    return 'Poin nusan diperoleh: +$points poin';
+  }
+
+  @override
+  String storeReceiptPointsPending(int points) {
+    return 'Poin nusan diperoleh: +$points poin (belum diterbitkan)';
+  }
+
+  @override
+  String storeReceiptPointsRule(String rate) {
+    return '1 poin nusan = potongan Rp$rate (ketentuan toko)';
+  }
+
+  @override
+  String get storeReceiptPromo => 'Tanpa pembayaran (promosi)';
+
+  @override
+  String get storeSettingsTitle => 'Pengaturan Toko';
+
+  @override
+  String get storeSettingsStoreName => 'Nama Toko';
+
+  @override
+  String get storeSettingsPointsEnabled => 'Program Poin Nusan Aktif';
+
+  @override
+  String get storeSettingsPointsHint =>
+      'Poin adalah bonus promosi dari belanja rupiah — bukan alat pembayaran. Poin hanya ditukar sebagai potongan belanja di toko ini.';
+
+  @override
+  String get storeSettingsEarnStep => 'Kelipatan Rupiah Perolehan';
+
+  @override
+  String get storeSettingsEarnPoints => 'Poin per Kelipatan';
+
+  @override
+  String get storeSettingsRedeemRate => 'Nilai Potongan per Poin (Rp)';
+
+  @override
+  String get storeSettingsMaxRedeem =>
+      'Batas Maks. Potongan Poin (% dari total)';
+
+  @override
+  String get storeSettingsMaxRedeemHint =>
+      'Boleh kosong = tanpa batas selain sisa total belanja.';
+
+  @override
+  String storeSettingsEarnPreview(String step, int points) {
+    return 'Contoh: belanja Rp$step memperoleh $points poin.';
+  }
+
+  @override
+  String get storeSettingsSave => 'Simpan Pengaturan';
+
+  @override
+  String get storeSettingsSaved => 'Pengaturan toko tersimpan.';
+
+  @override
+  String get storeSettingsInvalid =>
+      'Periksa lagi: kelipatan dan nilai potongan harus di atas 0; batas maks 1–100 bila diisi.';
+
+  @override
+  String get storeRulesTitle => 'Aturan Program Poin';
+
+  @override
+  String get storeRulesHeading => 'Poin Nusan — Bonus Promosi Toko';
+
+  @override
+  String get storeRulesP1 =>
+      'Poin nusan adalah bonus promosi dari toko, bukan uang dan bukan alat pembayaran. Pembayaran belanja di toko ini selalu dalam rupiah (tunai atau QRIS).';
+
+  @override
+  String get storeRulesP2 =>
+      'Poin hanya diperoleh dari belanja rupiah yang sudah lunas, sesuai ketentuan perolehan yang berlaku di toko ini.';
+
+  @override
+  String get storeRulesP3 =>
+      'Poin hanya dapat ditukar sebagai potongan harga belanja di toko ini, sesuai nilai potongan per poin yang ditetapkan toko.';
+
+  @override
+  String get storeRulesP4 =>
+      'Poin tidak dapat diuangkan, dijual, dibeli, atau ditukar menjadi uang tunai dalam bentuk apa pun.';
+
+  @override
+  String get storeRulesP5 =>
+      'Nilai potongan per poin dan ketentuan program dapat berubah dengan pemberitahuan sebelumnya di toko ini.';
+
+  @override
+  String get storeRulesP6 =>
+      'Untuk menerima dan menukar poin, pelanggan memakai aplikasi ELNUX miliknya sendiri.';
+
+  @override
+  String get storeRulesP7 =>
+      'Saat pertama kali menerima poin, dompet pelanggan mungkin dikenai biaya pembuatan jalur penerimaan sebesar 0,5% dari jumlah yang diterima (ketentuan jaringan, sekali saja saat jalur dibuat).';
+
+  @override
+  String get storeRulesFooter =>
+      'Ketentuan ini mengikuti pedoman program poin toko. Simpan struk belanja sebagai bukti perolehan dan penukaran poin.';
+
+  @override
+  String get storeMigrationTitle => 'Mode Toko Diperbarui';
+
+  @override
+  String get storeMigrationShiftClosed =>
+      'Shift lama (harga nusan) yang masih terbuka sudah ditutup dan ditandai sebagai data lama. Penjualan mulai sekarang dicatat dalam rupiah.';
+
+  @override
+  String storeMigrationHeldDropped(int count) {
+    return '$count pesanan ditahan versi lama (harga nusan) gugur dan tidak diteruskan.';
+  }
+
+  @override
+  String get storeMigrationCatalog =>
+      'Katalog lama berharga nusan tidak dipakai lagi. Isi ulang katalog dengan harga rupiah lewat tombol Kelola.';
+
+  @override
+  String get storeMigrationOk => 'Mengerti';
+
+  @override
+  String get storeReportCash => 'TUNAI';
+
+  @override
+  String get storeReportQris => 'QRIS';
+
+  @override
+  String get storeReportPointsDiscount => 'Diskon Poin';
+
+  @override
+  String get storeReportPointsIssued => 'Poin Diterbitkan';
+
+  @override
+  String get storeReportPointsPending => 'Poin Tertunda';
+
+  @override
+  String get storeReportPointsRedeemed => 'Poin Ditukar';
 }

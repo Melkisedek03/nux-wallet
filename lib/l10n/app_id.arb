@@ -280,12 +280,9 @@
   "communityTelegramGroup": "Grup Telegram",
   "communityOpenFailed": "Tidak dapat membuka tautan.",
   "storeMode": "Mode Toko",
-  "storeModeSubtitle": "Kasir untuk menerima pembayaran di toko",
-  "storeCreateCode": "Buat Kode Bayar",
-  "storeWaitingPayment": "Menunggu pembayaran…",
-  "storeCancelCode": "Batalkan Kode",
-  "storeIdleHint": "Susun pesanan, lalu buat kode bayar dari totalnya — atau tampilkan kode bayar statis.",
-  "storeFreeAmountLabel": "Nominal Bebas (nusan)",
+  "storeModeSubtitle": "Kasir toko — penjualan rupiah & program poin nusan",
+  "storeIdleHint": "Susun pesanan, lalu selesaikan pembayaran dalam rupiah. Poin nusan diperoleh pelanggan sesudah penjualan lunas.",
+  "storeFreeAmountLabel": "Nominal Bebas (Rp)",
   "storeAddFreeItem": "Tambah Item Bebas",
   "storeFreeItem": "Item Bebas",
   "storeFreeTitleLabel": "Nama Item (opsional)",
@@ -307,7 +304,6 @@
   "storeClearNote": "Hapus Catatan",
   "storeSaveNote": "Simpan",
   "storeHoldOrder": "Tahan Pesanan",
-  "storeHoldBlocked": "Selesaikan atau batalkan dulu kode bayar yang sedang menunggu sebelum menahan pesanan.",
   "storeHeldSaved": "Pesanan ditahan — bisa dilanjutkan kapan saja dari daftar Ditahan.",
   "storeHeldTitle": "Pesanan Ditahan",
   "storeHeldBadge": "Ditahan ({count})",
@@ -319,7 +315,7 @@
     }
   },
   "storeHeldEmpty": "Belum ada pesanan yang ditahan.",
-  "storeHeldEntryMeta": "{time} • {count} item • {total} nusan",
+  "storeHeldEntryMeta": "{time} • {count} item • {total}",
   "@storeHeldEntryMeta": {
     "placeholders": {
       "time": {
@@ -370,11 +366,10 @@
   "storeApplyDiscount": "Terapkan",
   "storeRemoveDiscount": "Hapus Diskon",
   "storeDiscountPercent": "Persen (%)",
-  "storeDiscountFixed": "Nominal (nusan)",
+  "storeDiscountFixed": "Nominal (Rp)",
   "storeDiscountValue": "Nilai Diskon",
-  "storeZeroTotalHint": "Total 0 tidak bisa dibuatkan kode bayar — kurangi diskon atau tambah item.",
   "storeSessionTitle": "Sesi Ini",
-  "storeSessionSales": "{count} transaksi • {total} nusan",
+  "storeSessionSales": "{count} transaksi • Rp{total}",
   "@storeSessionSales": {
     "placeholders": {
       "count": {
@@ -394,7 +389,7 @@
   "storeRegisterNow": "Daftarkan Sekarang",
   "storeProductCode": "Kode Produk",
   "storeProductName": "Nama Produk",
-  "storeProductPrice": "Harga (nusan)",
+  "storeProductPrice": "Harga (Rp)",
   "storeProductDiscount": "Diskon Bawaan (opsional)",
   "storeSaveProduct": "Simpan Produk",
   "storeProductSaved": "Produk tersimpan: {name}",
@@ -413,20 +408,12 @@
       }
     }
   },
-  "storeReceiptDiscountNote": "Total diskon penjualan ini: {amount} nusan",
-  "@storeReceiptDiscountNote": {
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
   "storeClearKeypad": "Bersih",
   "storeProductFormError": "Periksa lagi: kode, nama, dan harga (di atas 0) wajib diisi.",
   "storeProductCategory": "Kategori (opsional)",
   "storeShiftTitle": "Shift Kasir",
   "storeShiftNotOpen": "Shift Belum Dibuka",
-  "storeShiftOpenHint": "Buka shift dulu untuk menyusun pesanan, membuat kode bayar, dan menerima pembayaran di Mode Toko.",
+  "storeShiftOpenHint": "Buka shift dulu untuk menyusun pesanan dan menerima pembayaran rupiah di Mode Toko.",
   "storeShiftOpen": "Buka Shift",
   "storeShiftClose": "Tutup Shift",
   "storeShiftOpenedAt": "Dibuka {time}",
@@ -438,11 +425,11 @@
     }
   },
   "storeShiftStillOpen": "Masih Berjalan",
-  "storeCloseShiftBlocked": "Tidak bisa menutup shift: masih ada kode bayar yang menunggu pembayaran atau penerimaan yang sedang dirayakan. Selesaikan atau batalkan dulu.",
+  "storeCloseShiftBlocked": "Tidak bisa menutup shift: masih ada penerbitan poin yang sedang berjalan. Selesaikan dulu penerbitan poinnya.",
   "storeCloseShiftConfirmTitle": "Tutup Shift Ini?",
   "storeCloseShiftConfirmBody": "Sesudah ditutup, penjualan berikutnya masuk ke shift baru.",
   "storeCloseShiftHeldTitle": "Masih Ada Pesanan Ditahan",
-  "storeCloseShiftHeldBody": "Ada {count} pesanan ditahan (total {total} nusan) yang belum dibayar. Pesanan ditahan tetap tersimpan dan bisa dilanjutkan pada shift berikutnya.",
+  "storeCloseShiftHeldBody": "Ada {count} pesanan ditahan (total {total}) yang belum dibayar. Pesanan ditahan tetap tersimpan dan bisa dilanjutkan pada shift berikutnya.",
   "@storeCloseShiftHeldBody": {
     "placeholders": {
       "count": {
@@ -466,14 +453,13 @@
   "storeReportPrint": "Cetak Laporan",
   "storeReportSharePdf": "Bagikan PDF",
   "storeReportEmpty": "Belum ada penjualan tercatat pada periode ini.",
-  "storeInvoiceExpiredVoid": "Kode bayar kedaluwarsa — pesanan dicatat sebagai VOID.",
   "storeReportSummaryTitle": "LAPORAN SHIFT",
   "storeReportDetailsTitle": "RINCIAN PENJUALAN",
   "storeReportItemQty": "Qty Item",
   "storeReportTotalOrder": "Total ORDER",
   "storeReportTotalOrderInfo": "Info Total ORDER",
-  "storeReportInvoices": "#Invoice",
-  "storeReportInvUnit": "inv.",
+  "storeReportInvoices": "#Transaksi",
+  "storeReportInvUnit": "trx",
   "storeReportVoidInfo": "Info VOID",
   "storeReportVoidItemQty": "Qty Item VOID",
   "storeReportVoidSubTotal": "Sub Total VOID",
@@ -497,5 +483,215 @@
         "type": "int"
       }
     }
-  }
+  },
+  "storeCatalogManagerTitle": "Kelola Katalog",
+  "storeAddProduct": "Tambah Produk",
+  "storeEditProduct": "Ubah Produk",
+  "storeNoDiscount": "Tanpa Diskon",
+  "storeCheckout": "Selesaikan Pembayaran",
+  "storePayTitle": "Penyelesaian Pembayaran",
+  "storePayTotalLabel": "Total Belanja",
+  "storeCash": "Tunai",
+  "storeQris": "QRIS",
+  "storeQrisNote": "Pelanggan membayar lewat QRIS seperti biasa di toko ini. Aplikasi hanya mencatat metode pembayarannya — tekan tombol di bawah sesudah pembayaran QRIS diterima.",
+  "storeCashReceived": "Uang Diterima",
+  "storeCashExact": "Uang Pas",
+  "storeChange": "Kembalian",
+  "storeCashShort": "Kurang Rp{amount}",
+  "@storeCashShort": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "storeSettle": "Lunas — Selesaikan",
+  "storeSettleQris": "QRIS Diterima — Selesaikan",
+  "storeSettlePromo": "Selesaikan Tanpa Pembayaran",
+  "storePromoNote": "Total belanja Rp0 (promosi) — tidak ada pembayaran yang diterima; penjualan tetap dicatat.",
+  "storeCancelOrder": "Batalkan Pesanan",
+  "storeVoidConfirmTitle": "Batalkan Pesanan Ini?",
+  "storeVoidConfirmBody": "Pesanan dibatalkan dan dicatat sebagai VOID di laporan. Tindakan ini tidak bisa dibatalkan.",
+  "storeVoidRecorded": "Pesanan dibatalkan — tercatat sebagai VOID.",
+  "storeCancelBlockedRedeem": "Penukaran poin sudah terverifikasi — pesanan tidak bisa dibatalkan; selesaikan pembayarannya.",
+  "storeRedeemTitle": "Tukar Poin Nusan",
+  "storeRedeemHint": "Pelanggan menukar poin nusan sebagai potongan belanja. Masukkan jumlah poin, buat kode penukaran, dan minta pelanggan membayarnya dari aplikasi ELNUX miliknya. Potongan berlaku sesudah pembayaran poin terverifikasi.",
+  "storeRedeemPointsLabel": "Jumlah Poin",
+  "storeRedeemMaxNote": "Maksimal {max} poin untuk belanja ini.",
+  "@storeRedeemMaxNote": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "storeRedeemClamped": "Jumlah poin melebihi batas — dipakai {max} poin.",
+  "@storeRedeemClamped": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "storeRedeemCreate": "Buat Kode Tukar",
+  "storeRedeemWaiting": "Menunggu pembayaran poin dari pelanggan…",
+  "storeRedeemVerified": "Penukaran terverifikasi: {points} poin = potongan Rp{amount}.",
+  "@storeRedeemVerified": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "storeRedeemFailed": "Penukaran poin gagal atau kedaluwarsa — tidak ada potongan. Pesanan tetap bisa dibayar rupiah.",
+  "storeRedeemCancel": "Batalkan Penukaran",
+  "storeRedeemCancelWarn": "Kode penukaran ini dibatalkan. Bila pelanggan terlanjur membayar sesudah ini, poinnya tetap masuk ke dompet toko tetapi potongan tidak berlaku — selesaikan belanja ini dalam rupiah penuh.",
+  "storeRedeemLeaveBody": "Penukaran poin masih berjalan. Meninggalkan halaman ini membatalkan penukaran — pesanan kembali ke kasir tanpa potongan poin.",
+  "storeRedeemDesc": "Penukaran poin nusan",
+  "storeRedeemMinChannel": "Jumlah poin ini di bawah minimum pembuatan jalur terima baru (1.000 poin). Naikkan jumlah poin, atau lewati penukaran kali ini.",
+  "storeRedeemInvalidPoints": "Jumlah poin tidak sah atau melebihi potongan yang mungkin untuk belanja ini.",
+  "storeSaleCompleted": "Penjualan Selesai",
+  "storePointsEarnedLine": "Poin nusan diperoleh: {points} poin",
+  "@storePointsEarnedLine": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "storePointsIssueButton": "Pindai & Terbitkan",
+  "storePointsSkip": "Lewati",
+  "storePointsIssuedOk": "Poin nusan sudah diterbitkan ke pelanggan.",
+  "storeIssueInvalidCode": "Kode tidak terbaca sebagai invoice atau kode bayar ELNUX — pindai ulang kode pelanggan.",
+  "storeIssueAmountMismatch": "Nominal kode tidak sama dengan poin yang harus diterbitkan — minta pelanggan membuat kode sejumlah poin yang diperoleh.",
+  "storeIssueFailed": "Penerbitan poin gagal — poin tetap tertunda dan bisa diterbitkan dari daftar Poin Tertunda.",
+  "storeIssueStillPending": "Pembayaran poin masih berjalan — statusnya tetap tertunda; cek lagi dari daftar Poin Tertunda.",
+  "storeDoneButton": "Selesai",
+  "storePendingBadge": "Poin Tertunda ({count})",
+  "@storePendingBadge": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "storePendingTitle": "Poin Tertunda",
+  "storePendingEmpty": "Tidak ada poin yang tertunda.",
+  "storePendingEntryMeta": "{time} • {total}",
+  "@storePendingEntryMeta": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "storePendingIssue": "Terbitkan",
+  "storePendingWaive": "Batal Terbit",
+  "storePendingWaiveTitle": "Batalkan Penerbitan Poin?",
+  "storePendingWaiveBody": "Poin dari penjualan {time} (total {total}) TIDAK jadi diterbitkan ke pelanggan. Catatan penjualannya tetap tersimpan.",
+  "@storePendingWaiveBody": {
+    "placeholders": {
+      "total": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "storePendingWaived": "Penerbitan poin dibatalkan.",
+  "storeReceiptTotalPay": "TOTAL BAYAR",
+  "storeReceiptPointsDiscount": "Penukaran poin ({points} poin) -Rp{amount}",
+  "@storeReceiptPointsDiscount": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "storeReceiptPointsEarned": "Poin nusan diperoleh: +{points} poin",
+  "@storeReceiptPointsEarned": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "storeReceiptPointsPending": "Poin nusan diperoleh: +{points} poin (belum diterbitkan)",
+  "@storeReceiptPointsPending": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "storeReceiptPointsRule": "1 poin nusan = potongan Rp{rate} (ketentuan toko)",
+  "@storeReceiptPointsRule": {
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "storeReceiptPromo": "Tanpa pembayaran (promosi)",
+  "storeSettingsTitle": "Pengaturan Toko",
+  "storeSettingsStoreName": "Nama Toko",
+  "storeSettingsPointsEnabled": "Program Poin Nusan Aktif",
+  "storeSettingsPointsHint": "Poin adalah bonus promosi dari belanja rupiah — bukan alat pembayaran. Poin hanya ditukar sebagai potongan belanja di toko ini.",
+  "storeSettingsEarnStep": "Kelipatan Rupiah Perolehan",
+  "storeSettingsEarnPoints": "Poin per Kelipatan",
+  "storeSettingsRedeemRate": "Nilai Potongan per Poin (Rp)",
+  "storeSettingsMaxRedeem": "Batas Maks. Potongan Poin (% dari total)",
+  "storeSettingsMaxRedeemHint": "Boleh kosong = tanpa batas selain sisa total belanja.",
+  "storeSettingsEarnPreview": "Contoh: belanja Rp{step} memperoleh {points} poin.",
+  "@storeSettingsEarnPreview": {
+    "placeholders": {
+      "step": {
+        "type": "String"
+      },
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "storeSettingsSave": "Simpan Pengaturan",
+  "storeSettingsSaved": "Pengaturan toko tersimpan.",
+  "storeSettingsInvalid": "Periksa lagi: kelipatan dan nilai potongan harus di atas 0; batas maks 1–100 bila diisi.",
+  "storeRulesTitle": "Aturan Program Poin",
+  "storeRulesHeading": "Poin Nusan — Bonus Promosi Toko",
+  "storeRulesP1": "Poin nusan adalah bonus promosi dari toko, bukan uang dan bukan alat pembayaran. Pembayaran belanja di toko ini selalu dalam rupiah (tunai atau QRIS).",
+  "storeRulesP2": "Poin hanya diperoleh dari belanja rupiah yang sudah lunas, sesuai ketentuan perolehan yang berlaku di toko ini.",
+  "storeRulesP3": "Poin hanya dapat ditukar sebagai potongan harga belanja di toko ini, sesuai nilai potongan per poin yang ditetapkan toko.",
+  "storeRulesP4": "Poin tidak dapat diuangkan, dijual, dibeli, atau ditukar menjadi uang tunai dalam bentuk apa pun.",
+  "storeRulesP5": "Nilai potongan per poin dan ketentuan program dapat berubah dengan pemberitahuan sebelumnya di toko ini.",
+  "storeRulesP6": "Untuk menerima dan menukar poin, pelanggan memakai aplikasi ELNUX miliknya sendiri.",
+  "storeRulesP7": "Saat pertama kali menerima poin, dompet pelanggan mungkin dikenai biaya pembuatan jalur penerimaan sebesar 0,5% dari jumlah yang diterima (ketentuan jaringan, sekali saja saat jalur dibuat).",
+  "storeRulesFooter": "Ketentuan ini mengikuti pedoman program poin toko. Simpan struk belanja sebagai bukti perolehan dan penukaran poin.",
+  "storeMigrationTitle": "Mode Toko Diperbarui",
+  "storeMigrationShiftClosed": "Shift lama (harga nusan) yang masih terbuka sudah ditutup dan ditandai sebagai data lama. Penjualan mulai sekarang dicatat dalam rupiah.",
+  "storeMigrationHeldDropped": "{count} pesanan ditahan versi lama (harga nusan) gugur dan tidak diteruskan.",
+  "@storeMigrationHeldDropped": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "storeMigrationCatalog": "Katalog lama berharga nusan tidak dipakai lagi. Isi ulang katalog dengan harga rupiah lewat tombol Kelola.",
+  "storeMigrationOk": "Mengerti",
+  "storeReportCash": "TUNAI",
+  "storeReportQris": "QRIS",
+  "storeReportPointsDiscount": "Diskon Poin",
+  "storeReportPointsIssued": "Poin Diterbitkan",
+  "storeReportPointsPending": "Poin Tertunda",
+  "storeReportPointsRedeemed": "Poin Ditukar"
 }

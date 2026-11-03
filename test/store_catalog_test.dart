@@ -10,18 +10,18 @@ void main() {
         const CatalogItem(
           code: '8991001',
           name: 'Kopi Sachet',
-          priceNusan: 5000,
+          priceRp: 5000,
         ),
         const CatalogItem(
           code: '8991002',
           name: 'Teh Botol',
-          priceNusan: 4000,
+          priceRp: 4000,
           defaultDiscount: Discount.percent(10),
         ),
         const CatalogItem(
           code: 'QR-MANUAL-1',
           name: 'Gula 1kg',
-          priceNusan: 15000,
+          priceRp: 15000,
           defaultDiscount: Discount.fixed(1000),
         ),
       ];
@@ -38,18 +38,25 @@ void main() {
 
     test('entri tak sah dilewati, entri sah tetap terbaca', () {
       final raw = encodeCatalog([
-        const CatalogItem(code: 'A', name: 'Sah', priceNusan: 1000),
+        const CatalogItem(code: 'A', name: 'Sah', priceRp: 1000),
       ]);
       final tampered =
-          '${raw.substring(0, raw.length - 1)},{"code":"","name":"X","priceNusan":5},{"code":"B","name":"Harga Rusak","priceNusan":-3},42]';
+          '${raw.substring(0, raw.length - 1)},{"code":"","name":"X","priceRp":5},{"code":"B","name":"Harga Rusak","priceRp":-3},42]';
       final decoded = decodeCatalog(tampered);
       expect(decoded.length, 1);
       expect(decoded.single.code, 'A');
     });
 
+    test('JSON lama berkunci priceNusan tetap terbaca (fallback baca)', () {
+      final decoded = decodeCatalog(
+        '[{"code":"A","name":"Kopi","priceNusan":5000}]',
+      );
+      expect(decoded.single.priceRp, 5000);
+    });
+
     test('diskon bawaan rusak dibuang, item tetap sah', () {
       final decoded = decodeCatalog(
-        '[{"code":"A","name":"Kopi","priceNusan":5000,"discountKind":"aneh","discountValue":10}]',
+        '[{"code":"A","name":"Kopi","priceRp":5000,"discountKind":"aneh","discountValue":10}]',
       );
       expect(decoded.single.defaultDiscount, isNull);
     });
@@ -57,8 +64,8 @@ void main() {
 
   group('pencarian kode', () {
     final items = [
-      const CatalogItem(code: '8991001', name: 'Kopi', priceNusan: 5000),
-      const CatalogItem(code: 'ABC-123', name: 'Teh', priceNusan: 4000),
+      const CatalogItem(code: '8991001', name: 'Kopi', priceRp: 5000),
+      const CatalogItem(code: 'ABC-123', name: 'Teh', priceRp: 4000),
     ];
 
     test('ketemu persis, termasuk dengan spasi hasil scan', () {
@@ -75,9 +82,9 @@ void main() {
 
   group('saring katalog (kolom cari kasir)', () {
     final items = [
-      const CatalogItem(code: '8991001', name: 'Kopi Sachet', priceNusan: 5000),
-      const CatalogItem(code: '8991002', name: 'Teh Botol', priceNusan: 4000),
-      const CatalogItem(code: 'QR-GULA', name: 'Gula 1kg', priceNusan: 15000),
+      const CatalogItem(code: '8991001', name: 'Kopi Sachet', priceRp: 5000),
+      const CatalogItem(code: '8991002', name: 'Teh Botol', priceRp: 4000),
+      const CatalogItem(code: 'QR-GULA', name: 'Gula 1kg', priceRp: 15000),
     ];
 
     test('query kosong atau spasi saja mengembalikan seluruh katalog', () {
@@ -106,7 +113,7 @@ void main() {
     CatalogItem withCategory(String code, String category) => CatalogItem(
       code: code,
       name: 'Item $code',
-      priceNusan: 1000,
+      priceRp: 1000,
       category: category,
     );
 
@@ -127,7 +134,7 @@ void main() {
     test('katalog tanpa kategori menghasilkan daftar kosong', () {
       expect(
         catalogCategories([
-          const CatalogItem(code: 'A', name: 'Kopi', priceNusan: 5000),
+          const CatalogItem(code: 'A', name: 'Kopi', priceRp: 5000),
         ]),
         isEmpty,
       );
@@ -141,7 +148,7 @@ void main() {
       final store = StoreCatalogStore();
       expect(await store.load(), isEmpty);
       final items = [
-        const CatalogItem(code: 'A1', name: 'Kopi', priceNusan: 5000),
+        const CatalogItem(code: 'A1', name: 'Kopi', priceRp: 5000),
       ];
       await store.save(items);
       expect(await store.load(), items);

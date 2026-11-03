@@ -24,63 +24,57 @@ void main() {
 
     test('jumlah cepat menambah dan terpotong di plafon', () {
       expect(keypadQuickAdd(1000, 5000), 6000);
-      expect(
-        keypadQuickAdd(storeKeypadMaxNusan - 10, 50000),
-        storeKeypadMaxNusan,
-      );
+      expect(keypadQuickAdd(storeKeypadMaxRp - 10, 50000), storeKeypadMaxRp);
     });
 
-    test('digit melewati plafon 9 digit diabaikan', () {
-      expect(keypadPressDigit(99999999, 9), 999999999);
-      expect(keypadPressDigit(999999999, 9), 999999999);
-      expect(keypadPressDoubleZero(99999999), 99999999);
+    test('digit melewati plafon rupiah 8 digit diabaikan', () {
+      expect(keypadPressDigit(9999999, 9), 99999999);
+      expect(keypadPressDigit(99999999, 9), 99999999);
+      expect(keypadPressDoubleZero(9999999), 9999999);
     });
   });
 
   group('pesanan', () {
     OrderLine free(int amount, {int qty = 1}) =>
-        OrderLine(label: 'Item Bebas', unitPriceNusan: amount, qty: qty);
+        OrderLine(label: 'Item Bebas', unitPriceRp: amount, qty: qty);
 
     test('tambah produk berkode sama menggabung qty', () {
       var lines = orderAddProduct(
         const [],
         code: 'A1',
         label: 'Kopi',
-        unitPriceNusan: 5000,
+        unitPriceRp: 5000,
       );
       lines = orderAddProduct(
         lines,
         code: 'A1',
         label: 'Kopi',
-        unitPriceNusan: 5000,
+        unitPriceRp: 5000,
       );
       lines = orderAddProduct(
         lines,
         code: 'B2',
         label: 'Teh',
-        unitPriceNusan: 3000,
+        unitPriceRp: 3000,
       );
       expect(lines.length, 2);
       expect(lines[0].qty, 2);
-      expect(orderGrandTotalNusan(lines, null), 13000);
+      expect(orderGrandTotalRp(lines, null), 13000);
     });
 
     test('tambah bebas: nominal sama menggabung, beda jadi baris baru', () {
       var lines = orderAddFreeAmount(
         const [],
         label: 'Item Bebas',
-        amountNusan: 7000,
+        amountRp: 7000,
       );
-      lines = orderAddFreeAmount(lines, label: 'Item Bebas', amountNusan: 7000);
-      lines = orderAddFreeAmount(lines, label: 'Item Bebas', amountNusan: 2000);
+      lines = orderAddFreeAmount(lines, label: 'Item Bebas', amountRp: 7000);
+      lines = orderAddFreeAmount(lines, label: 'Item Bebas', amountRp: 2000);
       expect(lines.length, 2);
       expect(lines[0].qty, 2);
-      expect(orderGrandTotalNusan(lines, null), 16000);
+      expect(orderGrandTotalRp(lines, null), 16000);
       // Nominal 0 tidak menambah apa pun.
-      expect(
-        orderAddFreeAmount(lines, label: 'Item Bebas', amountNusan: 0),
-        lines,
-      );
+      expect(orderAddFreeAmount(lines, label: 'Item Bebas', amountRp: 0), lines);
       expect(free(1).qty, 1);
     });
 
@@ -89,7 +83,7 @@ void main() {
         const [],
         code: 'A1',
         label: 'Kopi',
-        unitPriceNusan: 5000,
+        unitPriceRp: 5000,
       );
       lines = orderChangeQty(lines, 0, 1);
       expect(lines.single.qty, 2);
@@ -123,17 +117,17 @@ void main() {
       var lines = orderAddFreeAmount(
         const [],
         label: resolveFreeItemLabel('Parkir', fallbackLabel: 'Item Bebas'),
-        amountNusan: 2000,
+        amountRp: 2000,
       );
       lines = orderAddFreeAmount(
         lines,
         label: resolveFreeItemLabel('Parkir', fallbackLabel: 'Item Bebas'),
-        amountNusan: 2000,
+        amountRp: 2000,
       );
       lines = orderAddFreeAmount(
         lines,
         label: resolveFreeItemLabel('', fallbackLabel: 'Item Bebas'),
-        amountNusan: 2000,
+        amountRp: 2000,
       );
       expect(lines.length, 2);
       expect(lines[0].label, 'Parkir');
@@ -143,7 +137,7 @@ void main() {
   });
 
   group('diskon', () {
-    test('persen dibulatkan ke bawah ke nusan bulat', () {
+    test('persen dibulatkan ke bawah ke rupiah bulat', () {
       // 10% dari 4.975 = 497,5 → 497.
       expect(discountAmountFor(4975, const Discount.percent(10)), 497);
       expect(discountAmountFor(5000, const Discount.percent(10)), 500);
@@ -164,20 +158,20 @@ void main() {
     test('diskon baris persen dan nominal masuk ke total baris', () {
       final pct = OrderLine(
         label: 'Kopi',
-        unitPriceNusan: 5000,
+        unitPriceRp: 5000,
         qty: 2,
         discount: const Discount.percent(10),
       );
-      expect(pct.lineGrossNusan, 10000);
-      expect(pct.lineDiscountNusan, 1000);
-      expect(pct.lineTotalNusan, 9000);
+      expect(pct.lineGrossRp, 10000);
+      expect(pct.lineDiscountRp, 1000);
+      expect(pct.lineTotalRp, 9000);
       final fix = OrderLine(
         label: 'Teh',
-        unitPriceNusan: 3000,
+        unitPriceRp: 3000,
         qty: 1,
         discount: const Discount.fixed(4500),
       );
-      expect(fix.lineTotalNusan, 0);
+      expect(fix.lineTotalRp, 0);
     });
 
     test('diskon bawaan katalog terisi ke baris dan bisa dihapus', () {
@@ -185,17 +179,17 @@ void main() {
         const [],
         code: 'A1',
         label: 'Kopi',
-        unitPriceNusan: 5000,
+        unitPriceRp: 5000,
         defaultDiscount: const Discount.percent(20),
       );
       expect(lines.single.discount, const Discount.percent(20));
-      expect(lines.single.lineTotalNusan, 4000);
+      expect(lines.single.lineTotalRp, 4000);
       // Tambah lagi: qty naik, diskon baris dipertahankan.
       lines = orderAddProduct(
         lines,
         code: 'A1',
         label: 'Kopi',
-        unitPriceNusan: 5000,
+        unitPriceRp: 5000,
         defaultDiscount: const Discount.percent(50),
       );
       expect(lines.single.qty, 2);
@@ -203,35 +197,202 @@ void main() {
       // Kasir menghapus diskon di baris.
       lines = orderSetLineDiscount(lines, 0, null);
       expect(lines.single.discount, isNull);
-      expect(lines.single.lineTotalNusan, 10000);
+      expect(lines.single.lineTotalRp, 10000);
     });
 
     test('susunan hitung: diskon baris → subtotal → diskon order', () {
       final lines = [
         const OrderLine(
           label: 'Kopi',
-          unitPriceNusan: 5000,
+          unitPriceRp: 5000,
           qty: 2,
           discount: Discount.percent(10), // −1.000
         ),
-        const OrderLine(label: 'Teh', unitPriceNusan: 3000, qty: 1),
+        const OrderLine(label: 'Teh', unitPriceRp: 3000, qty: 1),
       ];
-      expect(orderGrossNusan(lines), 13000);
-      expect(orderSubtotalNusan(lines), 12000);
+      expect(orderGrossRp(lines), 13000);
+      expect(orderSubtotalRp(lines), 12000);
       // Diskon order 25% dihitung dari subtotal 12.000 → 3.000.
-      expect(orderDiscountAmountNusan(lines, const Discount.percent(25)), 3000);
-      expect(orderTotalDiscountNusan(lines, const Discount.percent(25)), 4000);
-      expect(orderGrandTotalNusan(lines, const Discount.percent(25)), 9000);
+      expect(orderDiscountAmountRp(lines, const Discount.percent(25)), 3000);
+      expect(orderTotalDiscountRp(lines, const Discount.percent(25)), 4000);
+      expect(orderGrandTotalRp(lines, const Discount.percent(25)), 9000);
       // Diskon order nominal.
-      expect(orderGrandTotalNusan(lines, const Discount.fixed(2000)), 10000);
+      expect(orderGrandTotalRp(lines, const Discount.fixed(2000)), 10000);
     });
 
     test('total akhir berlantai 0 dan tidak pernah negatif', () {
-      final lines = [
-        const OrderLine(label: 'Teh', unitPriceNusan: 3000, qty: 1),
-      ];
-      expect(orderGrandTotalNusan(lines, const Discount.fixed(999999)), 0);
-      expect(orderGrandTotalNusan(lines, const Discount.percent(100)), 0);
+      final lines = [const OrderLine(label: 'Teh', unitPriceRp: 3000, qty: 1)];
+      expect(orderGrandTotalRp(lines, const Discount.fixed(999999)), 0);
+      expect(orderGrandTotalRp(lines, const Discount.percent(100)), 0);
+    });
+
+    test('diskon poin terverifikasi mengurangi total sesudah diskon biasa', () {
+      final lines = [const OrderLine(label: 'Teh', unitPriceRp: 9000, qty: 1)];
+      expect(orderGrandTotalRp(lines, null, pointsDiscountRp: 4000), 5000);
+      // Diskon poin melebihi sisa tetap berlantai 0.
+      expect(orderGrandTotalRp(lines, null, pointsDiscountRp: 99999), 0);
+    });
+  });
+
+  group('poin perolehan (model per kelipatan)', () {
+    test('floor per kelipatan kali poin per kelipatan', () {
+      expect(
+        pointsEarnedFor(paidRp: 2500, stepRp: 1000, pointsPerStep: 1000),
+        2000,
+      );
+      expect(
+        pointsEarnedFor(paidRp: 3000, stepRp: 1000, pointsPerStep: 1000),
+        3000,
+      );
+      expect(
+        pointsEarnedFor(paidRp: 999, stepRp: 1000, pointsPerStep: 1000),
+        0,
+      );
+      expect(
+        pointsEarnedFor(paidRp: 10500, stepRp: 5000, pointsPerStep: 250),
+        500,
+      );
+    });
+
+    test('transaksi Rp0 (promosi) memperoleh 0 poin', () {
+      expect(pointsEarnedFor(paidRp: 0, stepRp: 1000, pointsPerStep: 1000), 0);
+    });
+
+    test('parameter tak sah menghasilkan 0, bukan error', () {
+      expect(pointsEarnedFor(paidRp: 5000, stepRp: 0, pointsPerStep: 1000), 0);
+      expect(pointsEarnedFor(paidRp: 5000, stepRp: 1000, pointsPerStep: 0), 0);
+      expect(pointsEarnedFor(paidRp: -5, stepRp: 1000, pointsPerStep: 1000), 0);
+    });
+  });
+
+  group('poin penukaran (diskon rupiah)', () {
+    test('nilai potong = poin × nilai per poin', () {
+      expect(
+        pointsDiscountRpFor(
+          points: 500,
+          rateRpPerPoint: 1,
+          remainingRp: 10000,
+          totalRp: 10000,
+        ),
+        500,
+      );
+      expect(
+        pointsDiscountRpFor(
+          points: 100,
+          rateRpPerPoint: 5,
+          remainingRp: 10000,
+          totalRp: 10000,
+        ),
+        500,
+      );
+    });
+
+    test('dijepit sisa tagihan — tidak pernah melebihi yang harus dibayar', () {
+      expect(
+        pointsDiscountRpFor(
+          points: 20000,
+          rateRpPerPoint: 1,
+          remainingRp: 10000,
+          totalRp: 10000,
+        ),
+        10000,
+      );
+    });
+
+    test('batas maks persen dari total menjepit lebih dulu', () {
+      // Plafon 10% × 10.000 = 1.000 < sisa 10.000.
+      expect(
+        pointsDiscountRpFor(
+          points: 5000,
+          rateRpPerPoint: 1,
+          remainingRp: 10000,
+          totalRp: 10000,
+          maxPercent: 10,
+        ),
+        1000,
+      );
+    });
+
+    test('poin/nilai tak sah menghasilkan 0', () {
+      expect(
+        pointsDiscountRpFor(
+          points: 0,
+          rateRpPerPoint: 1,
+          remainingRp: 10000,
+          totalRp: 10000,
+        ),
+        0,
+      );
+      expect(
+        pointsDiscountRpFor(
+          points: 500,
+          rateRpPerPoint: 0,
+          remainingRp: 10000,
+          totalRp: 10000,
+        ),
+        0,
+      );
+      expect(
+        pointsDiscountRpFor(
+          points: 500,
+          rateRpPerPoint: 1,
+          remainingRp: 0,
+          totalRp: 10000,
+        ),
+        0,
+      );
+    });
+
+    test('poin maksimum yang berguna = floor plafon / nilai per poin', () {
+      expect(
+        maxRedeemablePoints(
+          remainingRp: 10000,
+          totalRp: 10000,
+          rateRpPerPoint: 1,
+        ),
+        10000,
+      );
+      expect(
+        maxRedeemablePoints(
+          remainingRp: 10000,
+          totalRp: 10000,
+          rateRpPerPoint: 3,
+        ),
+        3333,
+      );
+      expect(
+        maxRedeemablePoints(
+          remainingRp: 10000,
+          totalRp: 10000,
+          rateRpPerPoint: 1,
+          maxPercent: 10,
+        ),
+        1000,
+      );
+      expect(
+        maxRedeemablePoints(
+          remainingRp: 10000,
+          totalRp: 10000,
+          rateRpPerPoint: 0,
+        ),
+        0,
+      );
+    });
+  });
+
+  group('tunai', () {
+    test('kembalian = diterima − harus dibayar', () {
+      expect(cashChangeRp(receivedRp: 50000, dueRp: 47500), 2500);
+      expect(cashChangeRp(receivedRp: 47500, dueRp: 47500), 0);
+      // Kurang bayar = kembalian negatif (belum lunas).
+      expect(cashChangeRp(receivedRp: 40000, dueRp: 47500), -7500);
+    });
+
+    test('bisa lunas hanya bila diterima menutupi sisa', () {
+      expect(cashCanSettle(receivedRp: 47500, dueRp: 47500), isTrue);
+      expect(cashCanSettle(receivedRp: 50000, dueRp: 47500), isTrue);
+      expect(cashCanSettle(receivedRp: 47499, dueRp: 47500), isFalse);
+      expect(cashCanSettle(receivedRp: 0, dueRp: 0), isTrue);
     });
   });
 
@@ -266,7 +427,7 @@ void main() {
         const [],
         code: 'A1',
         label: 'Kopi',
-        unitPriceNusan: 5000,
+        unitPriceRp: 5000,
         qty: 2,
       );
       expect(lines.single.qty, 2);
@@ -274,18 +435,13 @@ void main() {
         lines,
         code: 'A1',
         label: 'Kopi',
-        unitPriceNusan: 5000,
+        unitPriceRp: 5000,
         qty: 3,
       );
       expect(lines.single.qty, 5);
-      expect(orderGrandTotalNusan(lines, null), 25000);
+      expect(orderGrandTotalRp(lines, null), 25000);
       // Tanpa parameter qty tetap 1 (perilaku lama).
-      lines = orderAddProduct(
-        lines,
-        code: 'B2',
-        label: 'Teh',
-        unitPriceNusan: 3000,
-      );
+      lines = orderAddProduct(lines, code: 'B2', label: 'Teh', unitPriceRp: 3000);
       expect(lines.last.qty, 1);
     });
   });
@@ -296,7 +452,7 @@ void main() {
         const [],
         code: 'A1',
         label: 'Kopi',
-        unitPriceNusan: 5000,
+        unitPriceRp: 5000,
       );
       lines = orderSetLineNote(lines, 0, '  tanpa gula  ');
       expect(lines.single.note, 'tanpa gula');
@@ -309,10 +465,10 @@ void main() {
     });
 
     test('catatan ikut equality baris', () {
-      const a = OrderLine(label: 'Kopi', unitPriceNusan: 5000, qty: 1);
+      const a = OrderLine(label: 'Kopi', unitPriceRp: 5000, qty: 1);
       const b = OrderLine(
         label: 'Kopi',
-        unitPriceNusan: 5000,
+        unitPriceRp: 5000,
         qty: 1,
         note: 'tanpa gula',
       );
@@ -325,14 +481,14 @@ void main() {
         const [
           OrderLine(
             label: 'Kopi',
-            unitPriceNusan: 5000,
+            unitPriceRp: 5000,
             qty: 2,
             discount: Discount.percent(10),
             note: 'tanpa gula',
           ),
-          OrderLine(label: 'Teh', unitPriceNusan: 3000, qty: 1),
+          OrderLine(label: 'Teh', unitPriceRp: 3000, qty: 1),
         ],
-        formatNusan: (n) => n.toString(),
+        formatRp: (n) => n.toString(),
         noteWord: 'Catatan',
       );
       expect(detail, [
@@ -347,12 +503,12 @@ void main() {
   });
 
   group('ringkasan sesi', () {
-    test('akumulator menjumlah transaksi dan msat', () {
+    test('akumulator menjumlah transaksi dan rupiah', () {
       var s = StoreSessionSummary.empty;
-      s = s.recordSale(BigInt.from(4975000));
-      s = s.recordSale(BigInt.from(3000000));
+      s = s.recordSale(4975);
+      s = s.recordSale(3000);
       expect(s.saleCount, 2);
-      expect(s.totalMsat, BigInt.from(7975000));
+      expect(s.totalRp, 7975);
     });
   });
 

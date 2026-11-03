@@ -1307,37 +1307,19 @@ abstract class AppLocalizations {
   /// No description provided for @storeModeSubtitle.
   ///
   /// In id, this message translates to:
-  /// **'Kasir untuk menerima pembayaran di toko'**
+  /// **'Kasir toko — penjualan rupiah & program poin nusan'**
   String get storeModeSubtitle;
-
-  /// No description provided for @storeCreateCode.
-  ///
-  /// In id, this message translates to:
-  /// **'Buat Kode Bayar'**
-  String get storeCreateCode;
-
-  /// No description provided for @storeWaitingPayment.
-  ///
-  /// In id, this message translates to:
-  /// **'Menunggu pembayaran…'**
-  String get storeWaitingPayment;
-
-  /// No description provided for @storeCancelCode.
-  ///
-  /// In id, this message translates to:
-  /// **'Batalkan Kode'**
-  String get storeCancelCode;
 
   /// No description provided for @storeIdleHint.
   ///
   /// In id, this message translates to:
-  /// **'Susun pesanan, lalu buat kode bayar dari totalnya — atau tampilkan kode bayar statis.'**
+  /// **'Susun pesanan, lalu selesaikan pembayaran dalam rupiah. Poin nusan diperoleh pelanggan sesudah penjualan lunas.'**
   String get storeIdleHint;
 
   /// No description provided for @storeFreeAmountLabel.
   ///
   /// In id, this message translates to:
-  /// **'Nominal Bebas (nusan)'**
+  /// **'Nominal Bebas (Rp)'**
   String get storeFreeAmountLabel;
 
   /// No description provided for @storeAddFreeItem.
@@ -1424,12 +1406,6 @@ abstract class AppLocalizations {
   /// **'Tahan Pesanan'**
   String get storeHoldOrder;
 
-  /// No description provided for @storeHoldBlocked.
-  ///
-  /// In id, this message translates to:
-  /// **'Selesaikan atau batalkan dulu kode bayar yang sedang menunggu sebelum menahan pesanan.'**
-  String get storeHoldBlocked;
-
   /// No description provided for @storeHeldSaved.
   ///
   /// In id, this message translates to:
@@ -1457,7 +1433,7 @@ abstract class AppLocalizations {
   /// No description provided for @storeHeldEntryMeta.
   ///
   /// In id, this message translates to:
-  /// **'{time} • {count} item • {total} nusan'**
+  /// **'{time} • {count} item • {total}'**
   String storeHeldEntryMeta(String time, int count, String total);
 
   /// No description provided for @storeHeldResumeBlocked.
@@ -1583,7 +1559,7 @@ abstract class AppLocalizations {
   /// No description provided for @storeDiscountFixed.
   ///
   /// In id, this message translates to:
-  /// **'Nominal (nusan)'**
+  /// **'Nominal (Rp)'**
   String get storeDiscountFixed;
 
   /// No description provided for @storeDiscountValue.
@@ -1591,12 +1567,6 @@ abstract class AppLocalizations {
   /// In id, this message translates to:
   /// **'Nilai Diskon'**
   String get storeDiscountValue;
-
-  /// No description provided for @storeZeroTotalHint.
-  ///
-  /// In id, this message translates to:
-  /// **'Total 0 tidak bisa dibuatkan kode bayar — kurangi diskon atau tambah item.'**
-  String get storeZeroTotalHint;
 
   /// No description provided for @storeSessionTitle.
   ///
@@ -1607,7 +1577,7 @@ abstract class AppLocalizations {
   /// No description provided for @storeSessionSales.
   ///
   /// In id, this message translates to:
-  /// **'{count} transaksi • {total} nusan'**
+  /// **'{count} transaksi • Rp{total}'**
   String storeSessionSales(int count, String total);
 
   /// No description provided for @storePrintReceipt.
@@ -1667,7 +1637,7 @@ abstract class AppLocalizations {
   /// No description provided for @storeProductPrice.
   ///
   /// In id, this message translates to:
-  /// **'Harga (nusan)'**
+  /// **'Harga (Rp)'**
   String get storeProductPrice;
 
   /// No description provided for @storeProductDiscount.
@@ -1693,12 +1663,6 @@ abstract class AppLocalizations {
   /// In id, this message translates to:
   /// **'Ditambahkan: {name}'**
   String storeProductAdded(String name);
-
-  /// No description provided for @storeReceiptDiscountNote.
-  ///
-  /// In id, this message translates to:
-  /// **'Total diskon penjualan ini: {amount} nusan'**
-  String storeReceiptDiscountNote(String amount);
 
   /// No description provided for @storeClearKeypad.
   ///
@@ -1733,7 +1697,7 @@ abstract class AppLocalizations {
   /// No description provided for @storeShiftOpenHint.
   ///
   /// In id, this message translates to:
-  /// **'Buka shift dulu untuk menyusun pesanan, membuat kode bayar, dan menerima pembayaran di Mode Toko.'**
+  /// **'Buka shift dulu untuk menyusun pesanan dan menerima pembayaran rupiah di Mode Toko.'**
   String get storeShiftOpenHint;
 
   /// No description provided for @storeShiftOpen.
@@ -1763,7 +1727,7 @@ abstract class AppLocalizations {
   /// No description provided for @storeCloseShiftBlocked.
   ///
   /// In id, this message translates to:
-  /// **'Tidak bisa menutup shift: masih ada kode bayar yang menunggu pembayaran atau penerimaan yang sedang dirayakan. Selesaikan atau batalkan dulu.'**
+  /// **'Tidak bisa menutup shift: masih ada penerbitan poin yang sedang berjalan. Selesaikan dulu penerbitan poinnya.'**
   String get storeCloseShiftBlocked;
 
   /// No description provided for @storeCloseShiftConfirmTitle.
@@ -1787,7 +1751,7 @@ abstract class AppLocalizations {
   /// No description provided for @storeCloseShiftHeldBody.
   ///
   /// In id, this message translates to:
-  /// **'Ada {count} pesanan ditahan (total {total} nusan) yang belum dibayar. Pesanan ditahan tetap tersimpan dan bisa dilanjutkan pada shift berikutnya.'**
+  /// **'Ada {count} pesanan ditahan (total {total}) yang belum dibayar. Pesanan ditahan tetap tersimpan dan bisa dilanjutkan pada shift berikutnya.'**
   String storeCloseShiftHeldBody(int count, String total);
 
   /// No description provided for @storeCloseShiftHeldConfirm.
@@ -1868,12 +1832,6 @@ abstract class AppLocalizations {
   /// **'Belum ada penjualan tercatat pada periode ini.'**
   String get storeReportEmpty;
 
-  /// No description provided for @storeInvoiceExpiredVoid.
-  ///
-  /// In id, this message translates to:
-  /// **'Kode bayar kedaluwarsa — pesanan dicatat sebagai VOID.'**
-  String get storeInvoiceExpiredVoid;
-
   /// No description provided for @storeReportSummaryTitle.
   ///
   /// In id, this message translates to:
@@ -1907,13 +1865,13 @@ abstract class AppLocalizations {
   /// No description provided for @storeReportInvoices.
   ///
   /// In id, this message translates to:
-  /// **'#Invoice'**
+  /// **'#Transaksi'**
   String get storeReportInvoices;
 
   /// No description provided for @storeReportInvUnit.
   ///
   /// In id, this message translates to:
-  /// **'inv.'**
+  /// **'trx'**
   String get storeReportInvUnit;
 
   /// No description provided for @storeReportVoidInfo.
@@ -1975,6 +1933,588 @@ abstract class AppLocalizations {
   /// In id, this message translates to:
   /// **'Meliputi {count} shift'**
   String storeReportShiftsNote(int count);
+
+  /// No description provided for @storeCatalogManagerTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Kelola Katalog'**
+  String get storeCatalogManagerTitle;
+
+  /// No description provided for @storeAddProduct.
+  ///
+  /// In id, this message translates to:
+  /// **'Tambah Produk'**
+  String get storeAddProduct;
+
+  /// No description provided for @storeEditProduct.
+  ///
+  /// In id, this message translates to:
+  /// **'Ubah Produk'**
+  String get storeEditProduct;
+
+  /// No description provided for @storeNoDiscount.
+  ///
+  /// In id, this message translates to:
+  /// **'Tanpa Diskon'**
+  String get storeNoDiscount;
+
+  /// No description provided for @storeCheckout.
+  ///
+  /// In id, this message translates to:
+  /// **'Selesaikan Pembayaran'**
+  String get storeCheckout;
+
+  /// No description provided for @storePayTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Penyelesaian Pembayaran'**
+  String get storePayTitle;
+
+  /// No description provided for @storePayTotalLabel.
+  ///
+  /// In id, this message translates to:
+  /// **'Total Belanja'**
+  String get storePayTotalLabel;
+
+  /// No description provided for @storeCash.
+  ///
+  /// In id, this message translates to:
+  /// **'Tunai'**
+  String get storeCash;
+
+  /// No description provided for @storeQris.
+  ///
+  /// In id, this message translates to:
+  /// **'QRIS'**
+  String get storeQris;
+
+  /// No description provided for @storeQrisNote.
+  ///
+  /// In id, this message translates to:
+  /// **'Pelanggan membayar lewat QRIS seperti biasa di toko ini. Aplikasi hanya mencatat metode pembayarannya — tekan tombol di bawah sesudah pembayaran QRIS diterima.'**
+  String get storeQrisNote;
+
+  /// No description provided for @storeCashReceived.
+  ///
+  /// In id, this message translates to:
+  /// **'Uang Diterima'**
+  String get storeCashReceived;
+
+  /// No description provided for @storeCashExact.
+  ///
+  /// In id, this message translates to:
+  /// **'Uang Pas'**
+  String get storeCashExact;
+
+  /// No description provided for @storeChange.
+  ///
+  /// In id, this message translates to:
+  /// **'Kembalian'**
+  String get storeChange;
+
+  /// No description provided for @storeCashShort.
+  ///
+  /// In id, this message translates to:
+  /// **'Kurang Rp{amount}'**
+  String storeCashShort(String amount);
+
+  /// No description provided for @storeSettle.
+  ///
+  /// In id, this message translates to:
+  /// **'Lunas — Selesaikan'**
+  String get storeSettle;
+
+  /// No description provided for @storeSettleQris.
+  ///
+  /// In id, this message translates to:
+  /// **'QRIS Diterima — Selesaikan'**
+  String get storeSettleQris;
+
+  /// No description provided for @storeSettlePromo.
+  ///
+  /// In id, this message translates to:
+  /// **'Selesaikan Tanpa Pembayaran'**
+  String get storeSettlePromo;
+
+  /// No description provided for @storePromoNote.
+  ///
+  /// In id, this message translates to:
+  /// **'Total belanja Rp0 (promosi) — tidak ada pembayaran yang diterima; penjualan tetap dicatat.'**
+  String get storePromoNote;
+
+  /// No description provided for @storeCancelOrder.
+  ///
+  /// In id, this message translates to:
+  /// **'Batalkan Pesanan'**
+  String get storeCancelOrder;
+
+  /// No description provided for @storeVoidConfirmTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Batalkan Pesanan Ini?'**
+  String get storeVoidConfirmTitle;
+
+  /// No description provided for @storeVoidConfirmBody.
+  ///
+  /// In id, this message translates to:
+  /// **'Pesanan dibatalkan dan dicatat sebagai VOID di laporan. Tindakan ini tidak bisa dibatalkan.'**
+  String get storeVoidConfirmBody;
+
+  /// No description provided for @storeVoidRecorded.
+  ///
+  /// In id, this message translates to:
+  /// **'Pesanan dibatalkan — tercatat sebagai VOID.'**
+  String get storeVoidRecorded;
+
+  /// No description provided for @storeCancelBlockedRedeem.
+  ///
+  /// In id, this message translates to:
+  /// **'Penukaran poin sudah terverifikasi — pesanan tidak bisa dibatalkan; selesaikan pembayarannya.'**
+  String get storeCancelBlockedRedeem;
+
+  /// No description provided for @storeRedeemTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Tukar Poin Nusan'**
+  String get storeRedeemTitle;
+
+  /// No description provided for @storeRedeemHint.
+  ///
+  /// In id, this message translates to:
+  /// **'Pelanggan menukar poin nusan sebagai potongan belanja. Masukkan jumlah poin, buat kode penukaran, dan minta pelanggan membayarnya dari aplikasi ELNUX miliknya. Potongan berlaku sesudah pembayaran poin terverifikasi.'**
+  String get storeRedeemHint;
+
+  /// No description provided for @storeRedeemPointsLabel.
+  ///
+  /// In id, this message translates to:
+  /// **'Jumlah Poin'**
+  String get storeRedeemPointsLabel;
+
+  /// No description provided for @storeRedeemMaxNote.
+  ///
+  /// In id, this message translates to:
+  /// **'Maksimal {max} poin untuk belanja ini.'**
+  String storeRedeemMaxNote(int max);
+
+  /// No description provided for @storeRedeemClamped.
+  ///
+  /// In id, this message translates to:
+  /// **'Jumlah poin melebihi batas — dipakai {max} poin.'**
+  String storeRedeemClamped(int max);
+
+  /// No description provided for @storeRedeemCreate.
+  ///
+  /// In id, this message translates to:
+  /// **'Buat Kode Tukar'**
+  String get storeRedeemCreate;
+
+  /// No description provided for @storeRedeemWaiting.
+  ///
+  /// In id, this message translates to:
+  /// **'Menunggu pembayaran poin dari pelanggan…'**
+  String get storeRedeemWaiting;
+
+  /// No description provided for @storeRedeemVerified.
+  ///
+  /// In id, this message translates to:
+  /// **'Penukaran terverifikasi: {points} poin = potongan Rp{amount}.'**
+  String storeRedeemVerified(int points, String amount);
+
+  /// No description provided for @storeRedeemFailed.
+  ///
+  /// In id, this message translates to:
+  /// **'Penukaran poin gagal atau kedaluwarsa — tidak ada potongan. Pesanan tetap bisa dibayar rupiah.'**
+  String get storeRedeemFailed;
+
+  /// No description provided for @storeRedeemCancel.
+  ///
+  /// In id, this message translates to:
+  /// **'Batalkan Penukaran'**
+  String get storeRedeemCancel;
+
+  /// No description provided for @storeRedeemCancelWarn.
+  ///
+  /// In id, this message translates to:
+  /// **'Kode penukaran ini dibatalkan. Bila pelanggan terlanjur membayar sesudah ini, poinnya tetap masuk ke dompet toko tetapi potongan tidak berlaku — selesaikan belanja ini dalam rupiah penuh.'**
+  String get storeRedeemCancelWarn;
+
+  /// No description provided for @storeRedeemLeaveBody.
+  ///
+  /// In id, this message translates to:
+  /// **'Penukaran poin masih berjalan. Meninggalkan halaman ini membatalkan penukaran — pesanan kembali ke kasir tanpa potongan poin.'**
+  String get storeRedeemLeaveBody;
+
+  /// No description provided for @storeRedeemDesc.
+  ///
+  /// In id, this message translates to:
+  /// **'Penukaran poin nusan'**
+  String get storeRedeemDesc;
+
+  /// No description provided for @storeRedeemMinChannel.
+  ///
+  /// In id, this message translates to:
+  /// **'Jumlah poin ini di bawah minimum pembuatan jalur terima baru (1.000 poin). Naikkan jumlah poin, atau lewati penukaran kali ini.'**
+  String get storeRedeemMinChannel;
+
+  /// No description provided for @storeRedeemInvalidPoints.
+  ///
+  /// In id, this message translates to:
+  /// **'Jumlah poin tidak sah atau melebihi potongan yang mungkin untuk belanja ini.'**
+  String get storeRedeemInvalidPoints;
+
+  /// No description provided for @storeSaleCompleted.
+  ///
+  /// In id, this message translates to:
+  /// **'Penjualan Selesai'**
+  String get storeSaleCompleted;
+
+  /// No description provided for @storePointsEarnedLine.
+  ///
+  /// In id, this message translates to:
+  /// **'Poin nusan diperoleh: {points} poin'**
+  String storePointsEarnedLine(int points);
+
+  /// No description provided for @storePointsIssueButton.
+  ///
+  /// In id, this message translates to:
+  /// **'Pindai & Terbitkan'**
+  String get storePointsIssueButton;
+
+  /// No description provided for @storePointsSkip.
+  ///
+  /// In id, this message translates to:
+  /// **'Lewati'**
+  String get storePointsSkip;
+
+  /// No description provided for @storePointsIssuedOk.
+  ///
+  /// In id, this message translates to:
+  /// **'Poin nusan sudah diterbitkan ke pelanggan.'**
+  String get storePointsIssuedOk;
+
+  /// No description provided for @storeIssueInvalidCode.
+  ///
+  /// In id, this message translates to:
+  /// **'Kode tidak terbaca sebagai invoice atau kode bayar ELNUX — pindai ulang kode pelanggan.'**
+  String get storeIssueInvalidCode;
+
+  /// No description provided for @storeIssueAmountMismatch.
+  ///
+  /// In id, this message translates to:
+  /// **'Nominal kode tidak sama dengan poin yang harus diterbitkan — minta pelanggan membuat kode sejumlah poin yang diperoleh.'**
+  String get storeIssueAmountMismatch;
+
+  /// No description provided for @storeIssueFailed.
+  ///
+  /// In id, this message translates to:
+  /// **'Penerbitan poin gagal — poin tetap tertunda dan bisa diterbitkan dari daftar Poin Tertunda.'**
+  String get storeIssueFailed;
+
+  /// No description provided for @storeIssueStillPending.
+  ///
+  /// In id, this message translates to:
+  /// **'Pembayaran poin masih berjalan — statusnya tetap tertunda; cek lagi dari daftar Poin Tertunda.'**
+  String get storeIssueStillPending;
+
+  /// No description provided for @storeDoneButton.
+  ///
+  /// In id, this message translates to:
+  /// **'Selesai'**
+  String get storeDoneButton;
+
+  /// No description provided for @storePendingBadge.
+  ///
+  /// In id, this message translates to:
+  /// **'Poin Tertunda ({count})'**
+  String storePendingBadge(int count);
+
+  /// No description provided for @storePendingTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Poin Tertunda'**
+  String get storePendingTitle;
+
+  /// No description provided for @storePendingEmpty.
+  ///
+  /// In id, this message translates to:
+  /// **'Tidak ada poin yang tertunda.'**
+  String get storePendingEmpty;
+
+  /// No description provided for @storePendingEntryMeta.
+  ///
+  /// In id, this message translates to:
+  /// **'{time} • {total}'**
+  String storePendingEntryMeta(String time, String total);
+
+  /// No description provided for @storePendingIssue.
+  ///
+  /// In id, this message translates to:
+  /// **'Terbitkan'**
+  String get storePendingIssue;
+
+  /// No description provided for @storePendingWaive.
+  ///
+  /// In id, this message translates to:
+  /// **'Batal Terbit'**
+  String get storePendingWaive;
+
+  /// No description provided for @storePendingWaiveTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Batalkan Penerbitan Poin?'**
+  String get storePendingWaiveTitle;
+
+  /// No description provided for @storePendingWaiveBody.
+  ///
+  /// In id, this message translates to:
+  /// **'Poin dari penjualan {time} (total {total}) TIDAK jadi diterbitkan ke pelanggan. Catatan penjualannya tetap tersimpan.'**
+  String storePendingWaiveBody(String total, String time);
+
+  /// No description provided for @storePendingWaived.
+  ///
+  /// In id, this message translates to:
+  /// **'Penerbitan poin dibatalkan.'**
+  String get storePendingWaived;
+
+  /// No description provided for @storeReceiptTotalPay.
+  ///
+  /// In id, this message translates to:
+  /// **'TOTAL BAYAR'**
+  String get storeReceiptTotalPay;
+
+  /// No description provided for @storeReceiptPointsDiscount.
+  ///
+  /// In id, this message translates to:
+  /// **'Penukaran poin ({points} poin) -Rp{amount}'**
+  String storeReceiptPointsDiscount(int points, String amount);
+
+  /// No description provided for @storeReceiptPointsEarned.
+  ///
+  /// In id, this message translates to:
+  /// **'Poin nusan diperoleh: +{points} poin'**
+  String storeReceiptPointsEarned(int points);
+
+  /// No description provided for @storeReceiptPointsPending.
+  ///
+  /// In id, this message translates to:
+  /// **'Poin nusan diperoleh: +{points} poin (belum diterbitkan)'**
+  String storeReceiptPointsPending(int points);
+
+  /// No description provided for @storeReceiptPointsRule.
+  ///
+  /// In id, this message translates to:
+  /// **'1 poin nusan = potongan Rp{rate} (ketentuan toko)'**
+  String storeReceiptPointsRule(String rate);
+
+  /// No description provided for @storeReceiptPromo.
+  ///
+  /// In id, this message translates to:
+  /// **'Tanpa pembayaran (promosi)'**
+  String get storeReceiptPromo;
+
+  /// No description provided for @storeSettingsTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Pengaturan Toko'**
+  String get storeSettingsTitle;
+
+  /// No description provided for @storeSettingsStoreName.
+  ///
+  /// In id, this message translates to:
+  /// **'Nama Toko'**
+  String get storeSettingsStoreName;
+
+  /// No description provided for @storeSettingsPointsEnabled.
+  ///
+  /// In id, this message translates to:
+  /// **'Program Poin Nusan Aktif'**
+  String get storeSettingsPointsEnabled;
+
+  /// No description provided for @storeSettingsPointsHint.
+  ///
+  /// In id, this message translates to:
+  /// **'Poin adalah bonus promosi dari belanja rupiah — bukan alat pembayaran. Poin hanya ditukar sebagai potongan belanja di toko ini.'**
+  String get storeSettingsPointsHint;
+
+  /// No description provided for @storeSettingsEarnStep.
+  ///
+  /// In id, this message translates to:
+  /// **'Kelipatan Rupiah Perolehan'**
+  String get storeSettingsEarnStep;
+
+  /// No description provided for @storeSettingsEarnPoints.
+  ///
+  /// In id, this message translates to:
+  /// **'Poin per Kelipatan'**
+  String get storeSettingsEarnPoints;
+
+  /// No description provided for @storeSettingsRedeemRate.
+  ///
+  /// In id, this message translates to:
+  /// **'Nilai Potongan per Poin (Rp)'**
+  String get storeSettingsRedeemRate;
+
+  /// No description provided for @storeSettingsMaxRedeem.
+  ///
+  /// In id, this message translates to:
+  /// **'Batas Maks. Potongan Poin (% dari total)'**
+  String get storeSettingsMaxRedeem;
+
+  /// No description provided for @storeSettingsMaxRedeemHint.
+  ///
+  /// In id, this message translates to:
+  /// **'Boleh kosong = tanpa batas selain sisa total belanja.'**
+  String get storeSettingsMaxRedeemHint;
+
+  /// No description provided for @storeSettingsEarnPreview.
+  ///
+  /// In id, this message translates to:
+  /// **'Contoh: belanja Rp{step} memperoleh {points} poin.'**
+  String storeSettingsEarnPreview(String step, int points);
+
+  /// No description provided for @storeSettingsSave.
+  ///
+  /// In id, this message translates to:
+  /// **'Simpan Pengaturan'**
+  String get storeSettingsSave;
+
+  /// No description provided for @storeSettingsSaved.
+  ///
+  /// In id, this message translates to:
+  /// **'Pengaturan toko tersimpan.'**
+  String get storeSettingsSaved;
+
+  /// No description provided for @storeSettingsInvalid.
+  ///
+  /// In id, this message translates to:
+  /// **'Periksa lagi: kelipatan dan nilai potongan harus di atas 0; batas maks 1–100 bila diisi.'**
+  String get storeSettingsInvalid;
+
+  /// No description provided for @storeRulesTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Aturan Program Poin'**
+  String get storeRulesTitle;
+
+  /// No description provided for @storeRulesHeading.
+  ///
+  /// In id, this message translates to:
+  /// **'Poin Nusan — Bonus Promosi Toko'**
+  String get storeRulesHeading;
+
+  /// No description provided for @storeRulesP1.
+  ///
+  /// In id, this message translates to:
+  /// **'Poin nusan adalah bonus promosi dari toko, bukan uang dan bukan alat pembayaran. Pembayaran belanja di toko ini selalu dalam rupiah (tunai atau QRIS).'**
+  String get storeRulesP1;
+
+  /// No description provided for @storeRulesP2.
+  ///
+  /// In id, this message translates to:
+  /// **'Poin hanya diperoleh dari belanja rupiah yang sudah lunas, sesuai ketentuan perolehan yang berlaku di toko ini.'**
+  String get storeRulesP2;
+
+  /// No description provided for @storeRulesP3.
+  ///
+  /// In id, this message translates to:
+  /// **'Poin hanya dapat ditukar sebagai potongan harga belanja di toko ini, sesuai nilai potongan per poin yang ditetapkan toko.'**
+  String get storeRulesP3;
+
+  /// No description provided for @storeRulesP4.
+  ///
+  /// In id, this message translates to:
+  /// **'Poin tidak dapat diuangkan, dijual, dibeli, atau ditukar menjadi uang tunai dalam bentuk apa pun.'**
+  String get storeRulesP4;
+
+  /// No description provided for @storeRulesP5.
+  ///
+  /// In id, this message translates to:
+  /// **'Nilai potongan per poin dan ketentuan program dapat berubah dengan pemberitahuan sebelumnya di toko ini.'**
+  String get storeRulesP5;
+
+  /// No description provided for @storeRulesP6.
+  ///
+  /// In id, this message translates to:
+  /// **'Untuk menerima dan menukar poin, pelanggan memakai aplikasi ELNUX miliknya sendiri.'**
+  String get storeRulesP6;
+
+  /// No description provided for @storeRulesP7.
+  ///
+  /// In id, this message translates to:
+  /// **'Saat pertama kali menerima poin, dompet pelanggan mungkin dikenai biaya pembuatan jalur penerimaan sebesar 0,5% dari jumlah yang diterima (ketentuan jaringan, sekali saja saat jalur dibuat).'**
+  String get storeRulesP7;
+
+  /// No description provided for @storeRulesFooter.
+  ///
+  /// In id, this message translates to:
+  /// **'Ketentuan ini mengikuti pedoman program poin toko. Simpan struk belanja sebagai bukti perolehan dan penukaran poin.'**
+  String get storeRulesFooter;
+
+  /// No description provided for @storeMigrationTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Mode Toko Diperbarui'**
+  String get storeMigrationTitle;
+
+  /// No description provided for @storeMigrationShiftClosed.
+  ///
+  /// In id, this message translates to:
+  /// **'Shift lama (harga nusan) yang masih terbuka sudah ditutup dan ditandai sebagai data lama. Penjualan mulai sekarang dicatat dalam rupiah.'**
+  String get storeMigrationShiftClosed;
+
+  /// No description provided for @storeMigrationHeldDropped.
+  ///
+  /// In id, this message translates to:
+  /// **'{count} pesanan ditahan versi lama (harga nusan) gugur dan tidak diteruskan.'**
+  String storeMigrationHeldDropped(int count);
+
+  /// No description provided for @storeMigrationCatalog.
+  ///
+  /// In id, this message translates to:
+  /// **'Katalog lama berharga nusan tidak dipakai lagi. Isi ulang katalog dengan harga rupiah lewat tombol Kelola.'**
+  String get storeMigrationCatalog;
+
+  /// No description provided for @storeMigrationOk.
+  ///
+  /// In id, this message translates to:
+  /// **'Mengerti'**
+  String get storeMigrationOk;
+
+  /// No description provided for @storeReportCash.
+  ///
+  /// In id, this message translates to:
+  /// **'TUNAI'**
+  String get storeReportCash;
+
+  /// No description provided for @storeReportQris.
+  ///
+  /// In id, this message translates to:
+  /// **'QRIS'**
+  String get storeReportQris;
+
+  /// No description provided for @storeReportPointsDiscount.
+  ///
+  /// In id, this message translates to:
+  /// **'Diskon Poin'**
+  String get storeReportPointsDiscount;
+
+  /// No description provided for @storeReportPointsIssued.
+  ///
+  /// In id, this message translates to:
+  /// **'Poin Diterbitkan'**
+  String get storeReportPointsIssued;
+
+  /// No description provided for @storeReportPointsPending.
+  ///
+  /// In id, this message translates to:
+  /// **'Poin Tertunda'**
+  String get storeReportPointsPending;
+
+  /// No description provided for @storeReportPointsRedeemed.
+  ///
+  /// In id, this message translates to:
+  /// **'Poin Ditukar'**
+  String get storeReportPointsRedeemed;
 }
 
 class _AppLocalizationsDelegate

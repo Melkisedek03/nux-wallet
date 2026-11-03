@@ -63,7 +63,7 @@ void main() {
       final order = buildCompletedOrder(
         time: DateTime(2026, 11, 3, 1, 15),
         lines: const [
-          OrderLine(label: 'Kopi', unitPriceNusan: 5000, qty: 1),
+          OrderLine(label: 'Kopi', unitPriceRp: 5000, qty: 1),
         ],
         orderDiscount: null,
         paymentHashHex: 'ab',
@@ -115,7 +115,7 @@ void main() {
           OrderLine(
             code: 'K1',
             label: 'Klip',
-            unitPriceNusan: 1500,
+            unitPriceRp: 1500,
             qty: 3,
             category: 'MENTARI',
           ),
@@ -143,12 +143,24 @@ void main() {
         CatalogItem(
           code: 'A1',
           name: 'Kopi',
-          priceNusan: 5000,
+          priceRp: 5000,
           category: 'MENTARI',
         ),
-        CatalogItem(code: 'B2', name: 'Teh', priceNusan: 4000),
+        CatalogItem(code: 'B2', name: 'Teh', priceRp: 4000),
       ];
       expect(decodeCatalog(encodeCatalog(items)), items);
+    });
+  });
+  group('era shift', () {
+    test('era rp roundtrip; shift lama tanpa era terbaca nusan', () {
+      final rp = StoreShift(openedAt: DateTime(2026, 11, 3, 8), era: 'rp');
+      expect(rp.era, 'rp');
+      expect(decodeShifts(encodeShifts([rp])), [rp]);
+      final legacy = StoreShift.fromJson({'openedAtMs': 1793865600000});
+      expect(legacy, isNotNull);
+      expect(legacy!.era, 'nusan');
+      // close() mempertahankan era.
+      expect(rp.close(DateTime(2026, 11, 3, 20)).era, 'rp');
     });
   });
 }

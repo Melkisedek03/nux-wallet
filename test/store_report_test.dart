@@ -12,10 +12,16 @@ ShiftReportLabels exampleLabels() => ShiftReportLabels(
   subTotal: 'Sub Total',
   discount: 'Discount',
   orderDiscount: 'Order Discount',
+  pointsDiscount: 'Points Discount',
   totalOrder: 'Total ORDER',
   totalOrderInfo: 'Total ORDER Info',
   invoicesLabel: '#Invoices',
   invUnit: 'inv.',
+  cashLabel: 'CASH',
+  qrisLabel: 'QRIS',
+  pointsIssued: 'Points Issued',
+  pointsPending: 'Points Pending',
+  pointsRedeemed: 'Points Redeemed',
   voidInfo: 'VOID Info',
   voidItemQty: 'VOID Item Qty',
   voidSubTotal: 'VOID Sub Total',
@@ -27,26 +33,27 @@ ShiftReportLabels exampleLabels() => ShiftReportLabels(
   menusText: (count) => '$count menu(s)',
 );
 
-/// Tiga pesanan contoh: dua lunas (satu berdiskon order), satu VOID.
+/// Tiga pesanan contoh: dua lunas (order1 TUNAI, order2 QRIS
+/// berdiskon order), satu VOID.
 List<CompletedOrder> fixture() => [
   buildCompletedOrder(
     time: DateTime(2026, 11, 2, 23, 10),
     lines: const [
       OrderLine(
         label: 'Amplop Grandia',
-        unitPriceNusan: 11000,
+        unitPriceRp: 11000,
         qty: 1,
         category: 'MENTARI',
       ),
       OrderLine(
         label: 'Fotocopy (Hitam Putih)',
-        unitPriceNusan: 300,
+        unitPriceRp: 300,
         qty: 723,
         category: 'MENTARI',
       ),
       OrderLine(
         label: 'Fotocopy (Hitam Putih)',
-        unitPriceNusan: 300,
+        unitPriceRp: 300,
         qty: 76,
         category: 'MENTARI',
         discount: Discount.percent(14),
@@ -54,40 +61,42 @@ List<CompletedOrder> fixture() => [
     ],
     orderDiscount: null,
     paymentHashHex: 'aa',
+    payMethod: payMethodCash,
   ),
   buildCompletedOrder(
     time: DateTime(2026, 11, 3, 6, 40),
     lines: const [
       OrderLine(
         label: 'Jasa Jilid',
-        unitPriceNusan: 1000,
+        unitPriceRp: 1000,
         qty: 1,
         category: 'MENTARI',
       ),
       OrderLine(
         label: 'Jasa Jilid',
-        unitPriceNusan: 3000,
+        unitPriceRp: 3000,
         qty: 1,
         category: 'MENTARI',
       ),
       OrderLine(
         label: 'Jasa Jilid',
-        unitPriceNusan: 3000,
+        unitPriceRp: 3000,
         qty: 4,
         category: 'MENTARI',
         discount: Discount.percent(14),
       ),
-      OrderLine(label: 'Item Bebas', unitPriceNusan: 50000, qty: 1),
+      OrderLine(label: 'Item Bebas', unitPriceRp: 50000, qty: 1),
     ],
     orderDiscount: const Discount.fixed(2000),
     paymentHashHex: 'bb',
+    payMethod: payMethodQris,
   ),
   buildCompletedOrder(
     time: DateTime(2026, 11, 3, 7, 0),
     lines: const [
       OrderLine(
         label: 'Klip',
-        unitPriceNusan: 1500,
+        unitPriceRp: 1500,
         qty: 3,
         category: 'MENTARI',
       ),
@@ -107,16 +116,26 @@ void main() {
       final s = aggregateShiftSales(fixture(), from: _from, to: _to);
       expect(s.invoiceCount, 2);
       expect(s.itemQty, 807);
-      expect(s.grossNusan, 316700);
-      expect(s.lineDiscountNusan, 4872);
-      expect(s.orderDiscountNusan, 2000);
-      expect(s.totalNusan, 309828);
+      expect(s.grossRp, 316700);
+      expect(s.lineDiscountRp, 4872);
+      expect(s.orderDiscountRp, 2000);
+      expect(s.pointsDiscountRp, 0);
+      expect(s.totalRp, 309828);
       // Rekonsiliasi jujur: Sub Total − Diskon Baris − Diskon
-      // Order = Total ORDER.
+      // Order − Diskon Poin = Total ORDER.
       expect(
-        s.grossNusan - s.lineDiscountNusan - s.orderDiscountNusan,
-        s.totalNusan,
+        s.grossRp - s.lineDiscountRp - s.orderDiscountRp - s.pointsDiscountRp,
+        s.totalRp,
       );
+    });
+
+    test('tender terpisah TUNAI & QRIS dari metode record', () {
+      final s = aggregateShiftSales(fixture(), from: _from, to: _to);
+      expect(s.cashCount, 1);
+      expect(s.cashTotalRp, 247508);
+      expect(s.qrisCount, 1);
+      expect(s.qrisTotalRp, 62320);
+      expect(s.promoCount, 0);
     });
 
     test('per kategori: bernama dulu, tanpa kategori terakhir', () {
@@ -125,31 +144,96 @@ void main() {
       final mentari = s.categories.first;
       expect(mentari.category, 'MENTARI');
       expect(mentari.itemQty, 806);
-      expect(mentari.grossNusan, 266700);
-      expect(mentari.lineDiscountNusan, 4872);
-      expect(mentari.totalNusan, 261828);
+      expect(mentari.grossRp, 266700);
+      expect(mentari.lineDiscountRp, 4872);
+      expect(mentari.totalRp, 261828);
       final other = s.categories.last;
       expect(other.category, '');
       expect(other.itemQty, 1);
-      expect(other.grossNusan, 50000);
-      expect(other.lineDiscountNusan, 0);
+      expect(other.grossRp, 50000);
+      expect(other.lineDiscountRp, 0);
     });
 
     test('blok VOID terpisah dari angka penjualan', () {
       final s = aggregateShiftSales(fixture(), from: _from, to: _to);
       expect(s.voids.count, 1);
       expect(s.voids.itemQty, 3);
-      expect(s.voids.grossNusan, 4500);
-      expect(s.voids.discountNusan, 0);
-      expect(s.voids.totalNusan, 4500);
+      expect(s.voids.grossRp, 4500);
+      expect(s.voids.discountRp, 0);
+      expect(s.voids.totalRp, 4500);
     });
 
-    test('aggregateSales (v1) melompati record VOID', () {
+    test('aggregateSales melompati record VOID', () {
       final r = aggregateSales(fixture(), from: _from, to: _to);
       expect(r.transactionCount, 2);
-      expect(r.grossNusan, 316700);
-      expect(r.discountNusan, 3192 + 3680);
-      expect(r.netNusan, 309828);
+      expect(r.grossRp, 316700);
+      expect(r.discountRp, 3192 + 3680);
+      expect(r.netRp, 309828);
+    });
+
+    test('agregat poin: terbit, tertunda, ditukar — terpisah dari rupiah', () {
+      final orders = [
+        buildCompletedOrder(
+          time: DateTime(2026, 11, 3, 9, 0),
+          lines: const [OrderLine(label: 'Kopi', unitPriceRp: 10000, qty: 1)],
+          orderDiscount: null,
+          paymentHashHex: 'p1',
+          payMethod: payMethodCash,
+          pointsRedeemed: 2000,
+          pointsDiscountRp: 2000,
+          pointsEarned: 3000,
+          pointsIssueStatus: issueStatusIssued,
+        ),
+        buildCompletedOrder(
+          time: DateTime(2026, 11, 3, 10, 0),
+          lines: const [OrderLine(label: 'Teh', unitPriceRp: 5000, qty: 1)],
+          orderDiscount: null,
+          paymentHashHex: null,
+          payMethod: payMethodQris,
+          pointsEarned: 1500,
+          pointsIssueStatus: issueStatusPending,
+        ),
+      ];
+      final s = aggregateShiftSales(
+        orders,
+        from: DateTime(2026, 11, 3),
+        to: DateTime(2026, 11, 4),
+      );
+      expect(s.pointsDiscountRp, 2000);
+      // Diskon poin TIDAK tercampur ke diskon order.
+      expect(s.orderDiscountRp, 0);
+      expect(s.totalRp, 13000);
+      expect(
+        s.grossRp - s.lineDiscountRp - s.orderDiscountRp - s.pointsDiscountRp,
+        s.totalRp,
+      );
+      expect(s.pointsIssued, 3000);
+      expect(s.pointsPending, 1500);
+      expect(s.pointsRedeemed, 2000);
+      expect(s.cashTotalRp, 8000);
+      expect(s.qrisTotalRp, 5000);
+
+      // Dokumen memuat baris diskon poin + blok poin.
+      final docs = buildShiftReportDocuments(
+        labels: exampleLabels(),
+        periodLine: 'Tue, 3 Nov 2026',
+        summary: s,
+        details: aggregateMenuDetails(
+          orders,
+          from: DateTime(2026, 11, 3),
+          to: DateTime(2026, 11, 4),
+        ),
+        generatedAt: DateTime(2026, 11, 3, 21, 0),
+        locale: 'en',
+      );
+      expect(docs.summary, contains('Points Discount'));
+      expect(docs.summary, contains('-2.000'));
+      expect(docs.summary, contains('Points Issued'));
+      expect(docs.summary, contains('Points Redeemed'));
+      expect(docs.summary, contains('Points Pending'));
+      for (final line in docs.summary.split('\n')) {
+        expect(line.length, lessThanOrEqualTo(32), reason: line);
+      }
     });
   });
 
@@ -167,21 +251,21 @@ void main() {
       final fotocopy = mentari.entries[1];
       expect(fotocopy.label, 'Fotocopy (Hitam Putih)');
       expect(fotocopy.qty, 799);
-      expect(fotocopy.grossNusan, 239700);
-      expect(fotocopy.discountNusan, 3192);
-      expect(fotocopy.netNusan, 236508);
+      expect(fotocopy.grossRp, 239700);
+      expect(fotocopy.discountRp, 3192);
+      expect(fotocopy.netRp, 236508);
       expect(fotocopy.percentParts, const [
-        PercentDiscountPart(percent: 14, units: 76, perUnitNusan: 42),
+        PercentDiscountPart(percent: 14, units: 76, perUnitRp: 42),
       ]);
 
       // Item sama pada harga berbeda = entri terpisah, urut harga.
       final jilid = mentari.entries.where((e) => e.label == 'Jasa Jilid');
-      expect(jilid.map((e) => e.unitPriceNusan), [1000, 3000]);
+      expect(jilid.map((e) => e.unitPriceRp), [1000, 3000]);
       final jilid3000 = jilid.last;
       expect(jilid3000.qty, 5);
-      expect(jilid3000.discountNusan, 1680);
+      expect(jilid3000.discountRp, 1680);
       expect(jilid3000.percentParts, const [
-        PercentDiscountPart(percent: 14, units: 4, perUnitNusan: 420),
+        PercentDiscountPart(percent: 14, units: 4, perUnitRp: 420),
       ]);
 
       // Item VOID tidak masuk rincian penjualan.
@@ -197,17 +281,13 @@ void main() {
       final orders = [
         buildCompletedOrder(
           time: DateTime(2026, 11, 3, 23, 59, 59),
-          lines: const [
-            OrderLine(label: 'Kopi', unitPriceNusan: 5000, qty: 1),
-          ],
+          lines: const [OrderLine(label: 'Kopi', unitPriceRp: 5000, qty: 1)],
           orderDiscount: null,
           paymentHashHex: 'a',
         ),
         buildCompletedOrder(
           time: DateTime(2026, 11, 4, 0, 0, 0),
-          lines: const [
-            OrderLine(label: 'Kopi', unitPriceNusan: 5000, qty: 2),
-          ],
+          lines: const [OrderLine(label: 'Kopi', unitPriceRp: 5000, qty: 2)],
           orderDiscount: null,
           paymentHashHex: 'b',
         ),
@@ -323,7 +403,8 @@ void main() {
         '                ----------------',
         '*Total ORDER             309.828',
         '--------------------------------',
-        'LIGHTNING      =         309.828',
+        'CASH           =         247.508',
+        'QRIS           =          62.320',
         '#Invoices      =          2 inv.',
         '**VOID         =          1 inv.',
         '--------------------------------',

@@ -5,20 +5,27 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Satu shift kasir Mode Toko: dibuka kasir dengan tombol Buka
 /// Shift, ditutup dengan Tutup Shift. Semua record pesanan toko
 /// (lunas maupun VOID) dicatat di dalam jendela shift yang sedang
-/// terbuka — layar Mode Toko menghalangi pembuatan kode bayar di
-/// luar shift dan menghalangi penutupan selama masih ada invoice
-/// menunggu, jadi secara konstruksi tidak ada record pesanan
-/// "di luar shift".
+/// terbuka — layar Mode Toko menghalangi penyelesaian pesanan di
+/// luar shift dan menghalangi penutupan selama masih ada lembar
+/// pembayaran yang terbuka, jadi secara konstruksi tidak ada
+/// record pesanan "di luar shift".
 class StoreShift {
   final DateTime openedAt;
   final DateTime? closedAt;
 
-  const StoreShift({required this.openedAt, this.closedAt});
+  /// Era shift: 'nusan' untuk shift yang dibuka Mode Toko v1,
+  /// 'rp' untuk v2 (kasir rupiah). Simpanan lama tanpa field ini
+  /// terbaca 'nusan'. Migrasi v2 menutup paksa shift 'nusan'
+  /// yang masih terbuka; shift baru selalu dibuat ber-era 'rp'.
+  final String era;
+
+  const StoreShift({required this.openedAt, this.closedAt, this.era = 'nusan'});
 
   bool get isOpen => closedAt == null;
 
   /// Salinan shift ini dalam keadaan tertutup pada [at].
-  StoreShift close(DateTime at) => StoreShift(openedAt: openedAt, closedAt: at);
+  StoreShift close(DateTime at) =>
+      StoreShift(openedAt: openedAt, closedAt: at, era: era);
 
   /// Ujung jendela laporan shift ini: waktu tutup, atau [now]
   /// bila shift masih berjalan.
@@ -36,6 +43,7 @@ class StoreShift {
   Map<String, Object?> toJson() => {
     'openedAtMs': openedAt.millisecondsSinceEpoch,
     'closedAtMs': closedAt?.millisecondsSinceEpoch,
+    if (era != 'nusan') 'era': era,
   };
 
   /// Baca satu shift; null bila bentuknya tidak sah (waktu buka
@@ -52,7 +60,11 @@ class StoreShift {
       closedAt = DateTime.fromMillisecondsSinceEpoch(closed.toInt());
       if (closedAt.isBefore(openedAt)) return null;
     }
-    return StoreShift(openedAt: openedAt, closedAt: closedAt);
+    return StoreShift(
+      openedAt: openedAt,
+      closedAt: closedAt,
+      era: raw['era'] == 'rp' ? 'rp' : 'nusan',
+    );
   }
 
   @override
@@ -61,12 +73,14 @@ class StoreShift {
       other.openedAt.millisecondsSinceEpoch ==
           openedAt.millisecondsSinceEpoch &&
       other.closedAt?.millisecondsSinceEpoch ==
-          closedAt?.millisecondsSinceEpoch;
+          closedAt?.millisecondsSinceEpoch &&
+      other.era == era;
 
   @override
   int get hashCode => Object.hash(
     openedAt.millisecondsSinceEpoch,
     closedAt?.millisecondsSinceEpoch,
+    era,
   );
 }
 

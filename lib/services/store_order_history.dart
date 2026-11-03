@@ -4,71 +4,200 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../utils/store_mode_logic.dart';
 
+/// Status penerbitan poin pada record penjualan v2.
+const issueStatusNone = 'none';
+
+/// Poin sudah terkirim ke dompet pelanggan (hash tercatat).
+const issueStatusIssued = 'issued';
+
+/// Poin belum terkirim — menunggu diterbitkan dari antre
+/// "Poin Tertunda" (termasuk yang dilewati kasir saat lunas).
+const issueStatusPending = 'pending';
+
+/// Kasir memutuskan poin TIDAK jadi diterbitkan (ditandai dari
+/// antre tertunda). Record penjualan tetap sah; hanya status
+/// penerbitan poinnya yang dibatalkan.
+const issueStatusWaived = 'waived';
+
+/// Metode pembayaran rupiah pada record v2.
+const payMethodCash = 'cash';
+const payMethodQris = 'qris';
+
 /// Satu pesanan Mode Toko yang SELESAI — lunas ATAU batal (VOID) —
 /// tersimpan lengkap sebagai bahan laporan penjualan per shift
 /// (print 58mm + PDF). Lihat `lib/utils/store_report.dart` untuk
 /// agregasi + renderingnya.
 ///
-/// Yang disimpan adalah FAKTA penjualan saat terjadi: baris-baris
-/// apa adanya (label, harga satuan, qty, kategori snapshot, diskon
-/// baris, catatan baris), diskon order, dan tiga angka hasil hitung (subtotal,
-/// total diskon, total akhir) — supaya laporan tidak perlu menebak
-/// ulang dari keadaan katalog yang mungkin sudah berubah.
+/// DUA ERA berbagi satu simpanan:
+/// - era 'nusan' (v1): record kasir nusan lama. Tetap terbaca
+///   sebagai arsip, tetapi agregasi & laporan v2 MELOMPATINYA —
+///   angka dua era tidak pernah dicampur.
+/// - era 'rp' (v2): record kasir rupiah. Membawa fakta pembayaran
+///   rupiah (metode, uang diterima, kembalian) dan fakta program
+///   poin (poin ditukar + nilai potongannya, poin diperoleh +
+///   status penerbitannya).
 ///
-/// Hanya penjualan BERPESANAN yang tercatat di sini (invoice toko
-/// terbayar, atau invoice toko yang dibatalkan/kedaluwarsa —
-/// VOID). Pembayaran kode statis tanpa pesanan berjalan bukan
-/// pesanan — tidak punya baris — jadi tidak masuk riwayat ini
-/// (ia tetap terhitung di ringkasan sesi layar).
+/// Yang disimpan adalah FAKTA penjualan saat terjadi: baris-baris
+/// apa adanya (label, harga satuan, qty, kategori snapshot,
+/// diskon baris, catatan baris), diskon order, dan angka hasil
+/// hitung — supaya laporan tidak perlu menebak ulang dari
+/// keadaan katalog yang mungkin sudah berubah.
 class CompletedOrder {
+  /// Id unik record ('' untuk record era lama). Dipakai untuk
+  /// memperbarui status penerbitan poin pada record yang sama.
+  final String id;
   final DateTime time;
   final List<OrderLine> lines;
   final Discount? orderDiscount;
-  final int subtotalNusan;
-  final int totalDiscountNusan;
-  final int grandTotalNusan;
 
-  /// Hash pembayaran (hex) bila diketahui dari invoice toko.
+  /// Era record: [storeEraRupiah] ('rp') atau [storeEraNusan]
+  /// ('nusan'). Simpanan lama tanpa penanda era = 'nusan'.
+  final String era;
+
+  /// Subtotal (Σ baris sesudah diskon baris), dalam satuan era
+  /// record (rupiah untuk era 'rp').
+  final int subtotalRp;
+
+  /// Total SELURUH diskon: baris + order + poin (era 'rp').
+  final int totalDiscountRp;
+
+  /// Total akhir yang sungguh dibayar rupiah (era 'rp'; untuk
+  /// record promosi penuh nilainya 0).
+  final int grandTotalRp;
+
+  /// Hash pembayaran Lightning yang terkait record ini. Era
+  /// 'nusan': hash invoice penjualan. Era 'rp': hash invoice
+  /// PENUKARAN poin (null bila tidak ada penukaran) — satu-satunya
+  /// perpindahan Lightning pada penjualan rupiah.
   final String? paymentHashHex;
 
-  /// True = pesanan BATAL (VOID): invoicenya dibatalkan kasir atau
-  /// kedaluwarsa tak terbayar. Record simpanan lama tanpa field
+  /// True = pesanan BATAL (VOID): dibatalkan kasir dari lembar
+  /// pembayaran sebelum lunas. Record simpanan lama tanpa field
   /// status terbaca sebagai lunas (kompatibel mundur).
   final bool isVoid;
 
+  /// Metode pembayaran rupiah: [payMethodCash] / [payMethodQris];
+  /// null untuk VOID, promosi Rp0, dan record era lama.
+  final String? payMethod;
+
+  /// Uang tunai yang diterima kasir (hanya metode tunai).
+  final int cashReceivedRp;
+
+  /// Kembalian tunai = diterima − total akhir (hanya tunai).
+  final int changeRp;
+
+  /// Poin nusan yang DITUKAR pelanggan pada transaksi ini
+  /// (terverifikasi dari node sebelum diskon diterapkan).
+  final int pointsRedeemed;
+
+  /// Nilai potongan rupiah dari penukaran poin di atas.
+  final int pointsDiscountRp;
+
+  /// Poin nusan yang DIPEROLEH dari transaksi ini (dihitung dari
+  /// rupiah yang benar-benar dibayar; 0 untuk VOID & promosi).
+  final int pointsEarned;
+
+  /// Status penerbitan [pointsEarned]: 'none' (tidak ada poin /
+  /// program mati), 'issued', 'pending', 'waived'.
+  final String pointsIssueStatus;
+
+  /// Id pembayaran (hex) pengiriman poin saat berstatus 'issued'.
+  final String? pointsIssueHashHex;
+
   const CompletedOrder({
+    this.id = '',
     required this.time,
     required this.lines,
     required this.orderDiscount,
-    required this.subtotalNusan,
-    required this.totalDiscountNusan,
-    required this.grandTotalNusan,
+    this.era = storeEraNusan,
+    required this.subtotalRp,
+    required this.totalDiscountRp,
+    required this.grandTotalRp,
     required this.paymentHashHex,
     this.isVoid = false,
+    this.payMethod,
+    this.cashReceivedRp = 0,
+    this.changeRp = 0,
+    this.pointsRedeemed = 0,
+    this.pointsDiscountRp = 0,
+    this.pointsEarned = 0,
+    this.pointsIssueStatus = issueStatusNone,
+    this.pointsIssueHashHex,
   });
 
+  bool get isRupiahEra => era == storeEraRupiah;
+
+  /// Salinan record dengan status penerbitan poin diperbarui —
+  /// dipakai saat poin tertunda diterbitkan/dibatalkan dari
+  /// antre, tanpa mengubah fakta penjualan apa pun.
+  CompletedOrder withIssueStatus(String status, {String? issueHashHex}) {
+    return CompletedOrder(
+      id: id,
+      time: time,
+      lines: lines,
+      orderDiscount: orderDiscount,
+      era: era,
+      subtotalRp: subtotalRp,
+      totalDiscountRp: totalDiscountRp,
+      grandTotalRp: grandTotalRp,
+      paymentHashHex: paymentHashHex,
+      isVoid: isVoid,
+      payMethod: payMethod,
+      cashReceivedRp: cashReceivedRp,
+      changeRp: changeRp,
+      pointsRedeemed: pointsRedeemed,
+      pointsDiscountRp: pointsDiscountRp,
+      pointsEarned: pointsEarned,
+      pointsIssueStatus: status,
+      pointsIssueHashHex: issueHashHex ?? pointsIssueHashHex,
+    );
+  }
+
   Map<String, Object?> toJson() => {
+    if (id.isNotEmpty) 'id': id,
     'timeMs': time.millisecondsSinceEpoch,
     'lines': lines.map(_lineToJson).toList(),
     'orderDiscount': _discountToJson(orderDiscount),
-    'subtotalNusan': subtotalNusan,
-    'totalDiscountNusan': totalDiscountNusan,
-    'grandTotalNusan': grandTotalNusan,
+    'era': era,
+    'subtotalRp': subtotalRp,
+    'totalDiscountRp': totalDiscountRp,
+    'grandTotalRp': grandTotalRp,
     'paymentHashHex': paymentHashHex,
     'status': isVoid ? 'void' : 'paid',
+    if (payMethod != null) 'payMethod': payMethod,
+    if (cashReceivedRp != 0) 'cashReceivedRp': cashReceivedRp,
+    if (changeRp != 0) 'changeRp': changeRp,
+    if (pointsRedeemed != 0) 'pointsRedeemed': pointsRedeemed,
+    if (pointsDiscountRp != 0) 'pointsDiscountRp': pointsDiscountRp,
+    if (pointsEarned != 0) 'pointsEarned': pointsEarned,
+    if (pointsIssueStatus != issueStatusNone)
+      'pointsIssueStatus': pointsIssueStatus,
+    if (pointsIssueHashHex != null) 'pointsIssueHashHex': pointsIssueHashHex,
   };
 
   /// Baca satu record; null bila bentuknya tidak sah (waktu/baris/
   /// angka hasil tidak utuh). Angka hasil WAJIB ada di simpanan —
   /// record tanpa itu bukan fakta penjualan yang bisa dilaporkan.
+  /// Angka dibaca dari kunci era record: 'rp' → kunci Rp; tanpa
+  /// penanda era → kunci nusan v1 (yang nilainya lalu diperlakukan
+  /// sebagai arsip era lama, bukan rupiah).
   static CompletedOrder? fromJson(Object? raw) {
     if (raw is! Map) return null;
     final timeMs = raw['timeMs'];
     final rawLines = raw['lines'];
-    final subtotal = raw['subtotalNusan'];
-    final totalDiscount = raw['totalDiscountNusan'];
-    final grandTotal = raw['grandTotalNusan'];
     if (timeMs is! num || rawLines is! List || rawLines.isEmpty) return null;
+    final era = raw['era'] == storeEraRupiah
+        ? storeEraRupiah
+        : storeEraNusan;
+    // Record v2 menulis kunci Rp; record v1 hanya kunci nusan.
+    // Kehadiran kunci Rp yang memutuskan sumber angka, supaya
+    // record era lama yang ditulis ulang tetap terbaca utuh.
+    final rp = raw.containsKey('subtotalRp');
+    final subtotal = rp ? raw['subtotalRp'] : raw['subtotalNusan'];
+    final totalDiscount = rp
+        ? raw['totalDiscountRp']
+        : raw['totalDiscountNusan'];
+    final grandTotal = rp ? raw['grandTotalRp'] : raw['grandTotalNusan'];
     if (subtotal is! num || totalDiscount is! num || grandTotal is! num) {
       return null;
     }
@@ -79,39 +208,83 @@ class CompletedOrder {
       lines.add(line);
     }
     final hash = raw['paymentHashHex'];
+    final id = raw['id'];
+    final method = raw['payMethod'];
+    final issueStatus = raw['pointsIssueStatus'];
+    final issueHash = raw['pointsIssueHashHex'];
+    int intOr0(Object? v) => v is num ? v.toInt() : 0;
     return CompletedOrder(
+      id: id is String ? id : '',
       time: DateTime.fromMillisecondsSinceEpoch(timeMs.toInt()),
       lines: lines,
       orderDiscount: _discountFromJson(raw['orderDiscount']),
-      subtotalNusan: subtotal.toInt(),
-      totalDiscountNusan: totalDiscount.toInt(),
-      grandTotalNusan: grandTotal.toInt(),
+      era: era,
+      subtotalRp: subtotal.toInt(),
+      totalDiscountRp: totalDiscount.toInt(),
+      grandTotalRp: grandTotal.toInt(),
       paymentHashHex: hash is String && hash.isNotEmpty ? hash : null,
       isVoid: raw['status'] == 'void',
+      payMethod: method == payMethodCash || method == payMethodQris
+          ? method as String
+          : null,
+      cashReceivedRp: intOr0(raw['cashReceivedRp']),
+      changeRp: intOr0(raw['changeRp']),
+      pointsRedeemed: intOr0(raw['pointsRedeemed']),
+      pointsDiscountRp: intOr0(raw['pointsDiscountRp']),
+      pointsEarned: intOr0(raw['pointsEarned']),
+      pointsIssueStatus:
+          issueStatus == issueStatusIssued ||
+              issueStatus == issueStatusPending ||
+              issueStatus == issueStatusWaived
+          ? issueStatus as String
+          : issueStatusNone,
+      pointsIssueHashHex: issueHash is String && issueHash.isNotEmpty
+          ? issueHash
+          : null,
     );
   }
 
   @override
   bool operator ==(Object other) =>
       other is CompletedOrder &&
+      other.id == id &&
       other.time.millisecondsSinceEpoch == time.millisecondsSinceEpoch &&
       other.orderDiscount == orderDiscount &&
-      other.subtotalNusan == subtotalNusan &&
-      other.totalDiscountNusan == totalDiscountNusan &&
-      other.grandTotalNusan == grandTotalNusan &&
+      other.era == era &&
+      other.subtotalRp == subtotalRp &&
+      other.totalDiscountRp == totalDiscountRp &&
+      other.grandTotalRp == grandTotalRp &&
       other.paymentHashHex == paymentHashHex &&
       other.isVoid == isVoid &&
+      other.payMethod == payMethod &&
+      other.cashReceivedRp == cashReceivedRp &&
+      other.changeRp == changeRp &&
+      other.pointsRedeemed == pointsRedeemed &&
+      other.pointsDiscountRp == pointsDiscountRp &&
+      other.pointsEarned == pointsEarned &&
+      other.pointsIssueStatus == pointsIssueStatus &&
+      other.pointsIssueHashHex == pointsIssueHashHex &&
       _linesEqual(other.lines, lines);
 
   @override
   int get hashCode => Object.hash(
+    id,
     time.millisecondsSinceEpoch,
     orderDiscount,
-    subtotalNusan,
-    totalDiscountNusan,
-    grandTotalNusan,
+    era,
+    subtotalRp,
+    totalDiscountRp,
+    grandTotalRp,
     paymentHashHex,
     isVoid,
+    payMethod,
+    cashReceivedRp,
+    changeRp,
+    pointsRedeemed,
+    pointsDiscountRp,
+    pointsEarned,
+    pointsIssueStatus,
+    pointsIssueHashHex,
     Object.hashAll(lines),
   );
 }
@@ -143,7 +316,7 @@ Discount? _discountFromJson(Object? raw) {
 Map<String, Object?> _lineToJson(OrderLine l) => {
   'code': l.code,
   'label': l.label,
-  'unitPriceNusan': l.unitPriceNusan,
+  'unitPriceRp': l.unitPriceRp,
   'qty': l.qty,
   'category': l.category,
   'discount': _discountToJson(l.discount),
@@ -153,7 +326,8 @@ Map<String, Object?> _lineToJson(OrderLine l) => {
 OrderLine? _lineFromJson(Object? raw) {
   if (raw is! Map) return null;
   final label = raw['label'];
-  final price = raw['unitPriceNusan'];
+  // Baris v2 menulis 'unitPriceRp'; baris v1 'unitPriceNusan'.
+  final price = raw['unitPriceRp'] ?? raw['unitPriceNusan'];
   final qty = raw['qty'];
   if (label is! String || label.isEmpty) return null;
   if (price is! num || price < 0 || qty is! num || qty <= 0) return null;
@@ -163,7 +337,7 @@ OrderLine? _lineFromJson(Object? raw) {
   return OrderLine(
     code: code is String && code.isNotEmpty ? code : null,
     label: label,
-    unitPriceNusan: price.toInt(),
+    unitPriceRp: price.toInt(),
     qty: qty.toInt(),
     category: category is String ? category : '',
     discount: _discountFromJson(raw['discount']),
@@ -189,28 +363,61 @@ Map<String, Object?> discountToJson(Discount? discount) =>
 /// Baca satu diskon dari JSON bersama; null = tanpa diskon.
 Discount? discountFromJson(Object? raw) => _discountFromJson(raw);
 
-/// Susun record penjualan dari keadaan pesanan saat pembayaran
-/// lunas — angka hasil dihitung dengan fungsi murni yang sama
-/// dengan yang menampilkan total ke kasir, jadi yang tersimpan
-/// persis yang dilihat kasir. Dengan [isVoid] true, record yang
-/// sama disusun untuk invoice yang dibatalkan/kedaluwarsa
-/// (angkanya tetap fakta pesanan saat itu, hanya statusnya batal).
+/// Susun record penjualan v2 dari keadaan pesanan saat
+/// pembayaran rupiah tercatat lunas — angka hasil dihitung
+/// dengan fungsi murni yang sama dengan yang menampilkan total
+/// ke kasir, jadi yang tersimpan persis yang dilihat kasir.
+///
+/// [pointsDiscountRp] adalah potongan penukaran poin yang SUDAH
+/// terverifikasi (0 bila tidak ada penukaran); [pointsEarned]
+/// dihitung pemanggil dari total akhir (rupiah benar-benar
+/// dibayar) dengan parameter toko. Dengan [isVoid] true, record
+/// yang sama disusun untuk pesanan yang dibatalkan kasir dari
+/// lembar pembayaran (angkanya tetap fakta pesanan saat itu,
+/// hanya statusnya batal, dan semua fakta pembayaran/poin nol
+/// kecuali yang diteruskan pemanggil).
 CompletedOrder buildCompletedOrder({
+  String id = '',
   required DateTime time,
   required List<OrderLine> lines,
   required Discount? orderDiscount,
   required String? paymentHashHex,
   bool isVoid = false,
+  String? payMethod,
+  int cashReceivedRp = 0,
+  int pointsRedeemed = 0,
+  int pointsDiscountRp = 0,
+  int pointsEarned = 0,
+  String pointsIssueStatus = issueStatusNone,
 }) {
+  final subtotal = orderSubtotalRp(lines);
+  final orderDisc = orderDiscountAmountRp(lines, orderDiscount);
+  final grand = orderGrandTotalRp(
+    lines,
+    orderDiscount,
+    pointsDiscountRp: pointsDiscountRp,
+  );
+  final lineDisc = lines.fold(0, (s, l) => s + l.lineDiscountRp);
   return CompletedOrder(
+    id: id,
     time: time,
     lines: List.unmodifiable(lines),
     orderDiscount: orderDiscount,
-    subtotalNusan: orderSubtotalNusan(lines),
-    totalDiscountNusan: orderTotalDiscountNusan(lines, orderDiscount),
-    grandTotalNusan: orderGrandTotalNusan(lines, orderDiscount),
+    era: storeEraRupiah,
+    subtotalRp: subtotal,
+    totalDiscountRp: lineDisc + orderDisc + pointsDiscountRp,
+    grandTotalRp: grand,
     paymentHashHex: paymentHashHex,
     isVoid: isVoid,
+    payMethod: payMethod,
+    cashReceivedRp: cashReceivedRp,
+    changeRp: payMethod == payMethodCash
+        ? cashChangeRp(receivedRp: cashReceivedRp, dueRp: grand)
+        : 0,
+    pointsRedeemed: pointsRedeemed,
+    pointsDiscountRp: pointsDiscountRp,
+    pointsEarned: pointsEarned,
+    pointsIssueStatus: pointsIssueStatus,
   );
 }
 
@@ -271,6 +478,20 @@ class StoreOrderHistoryStore {
     final current = await load();
     await save([...current, order]);
   }
+
+  /// Perbarui record ber-id sama (status penerbitan poin) tanpa
+  /// mengubah fakta penjualannya. Record tak ber-id atau tidak
+  /// ditemukan → tidak ada perubahan (bukan record v2 yang bisa
+  /// diperbarui).
+  Future<void> replace(CompletedOrder updated) async {
+    if (updated.id.isEmpty) return;
+    final current = await load();
+    final idx = current.indexWhere((o) => o.id == updated.id);
+    if (idx < 0) return;
+    final next = [...current];
+    next[idx] = updated;
+    await save(next);
+  }
 }
 
 /// Penjualan satu label item dalam satu rentang laporan.
@@ -279,40 +500,38 @@ class ItemSales {
   final int qty;
 
   /// Nilai bersih baris label ini (sesudah diskon baris; diskon
-  /// order tidak dialokasikan per item — ia potongan tingkat
-  /// pesanan, terlihat di total laporan, bukan di baris item).
-  final int netNusan;
+  /// order & poin tidak dialokasikan per item — keduanya potongan
+  /// tingkat pesanan, terlihat di total laporan, bukan di baris
+  /// item).
+  final int netRp;
 
-  const ItemSales({
-    required this.label,
-    required this.qty,
-    required this.netNusan,
-  });
+  const ItemSales({required this.label, required this.qty, required this.netRp});
 
   @override
   bool operator ==(Object other) =>
       other is ItemSales &&
       other.label == label &&
       other.qty == qty &&
-      other.netNusan == netNusan;
+      other.netRp == netRp;
 
   @override
-  int get hashCode => Object.hash(label, qty, netNusan);
+  int get hashCode => Object.hash(label, qty, netRp);
 }
 
 /// Rekap penjualan satu rentang waktu — bahan mentah laporan
-/// (rendering print/PDF menyusul; bentuk angka di sini final).
+/// (rendering print/PDF di store_report.dart). Hanya record era
+/// rupiah ('rp') yang terhitung; record era nusan adalah arsip.
 class SalesReport {
   final int transactionCount;
 
-  /// Σ (harga × qty) sebelum diskon apa pun.
-  final int grossNusan;
+  /// Σ (harga × qty) sebelum diskon apa pun (rupiah).
+  final int grossRp;
 
-  /// Σ seluruh diskon (baris + order).
-  final int discountNusan;
+  /// Σ seluruh diskon (baris + order + poin).
+  final int discountRp;
 
   /// Σ total akhir yang sungguh dibayar.
-  final int netNusan;
+  final int netRp;
 
   /// Per label item, urut nilai bersih menurun (yang terbesar
   /// duluan — urutan alami laporan penjualan).
@@ -320,17 +539,20 @@ class SalesReport {
 
   const SalesReport({
     required this.transactionCount,
-    required this.grossNusan,
-    required this.discountNusan,
-    required this.netNusan,
+    required this.grossRp,
+    required this.discountRp,
+    required this.netRp,
     required this.perItem,
   });
 }
 
 /// Agregasi murni riwayat pesanan untuk rentang [from] (inklusif)
 /// sampai [to] (eksklusif) — mis. satu hari kalender penuh.
-/// Baris bebas teragregasi di bawah labelnya sendiri (label yang
-/// sama dari banyak pesanan menjadi satu baris laporan).
+/// Hanya record era RUPIAH dan LUNAS yang terhitung (VOID &
+/// record era nusan dilewati — rekonsiliasi VOID dan rincian
+/// shift dihitung oleh agregasi laporan shift di
+/// store_report.dart). Baris bebas teragregasi di bawah labelnya
+/// sendiri.
 SalesReport aggregateSales(
   List<CompletedOrder> orders, {
   required DateTime from,
@@ -342,31 +564,29 @@ SalesReport aggregateSales(
   var net = 0;
   final byLabel = <String, ItemSales>{};
   for (final order in orders) {
+    if (!order.isRupiahEra) continue;
     if (order.time.isBefore(from) || !order.time.isBefore(to)) continue;
-    // Pesanan batal (VOID) bukan penjualan — agregasi penjualan
-    // melompati mereka; rekap VOID dihitung terpisah oleh
-    // agregasi laporan shift (store_report.dart).
     if (order.isVoid) continue;
     txCount++;
-    discount += order.totalDiscountNusan;
-    net += order.grandTotalNusan;
+    discount += order.totalDiscountRp;
+    net += order.grandTotalRp;
     for (final line in order.lines) {
-      gross += line.lineGrossNusan;
+      gross += line.lineGrossRp;
       final prev = byLabel[line.label];
       byLabel[line.label] = ItemSales(
         label: line.label,
         qty: (prev?.qty ?? 0) + line.qty,
-        netNusan: (prev?.netNusan ?? 0) + line.lineTotalNusan,
+        netRp: (prev?.netRp ?? 0) + line.lineTotalRp,
       );
     }
   }
   final perItem = byLabel.values.toList()
-    ..sort((a, b) => b.netNusan.compareTo(a.netNusan));
+    ..sort((a, b) => b.netRp.compareTo(a.netRp));
   return SalesReport(
     transactionCount: txCount,
-    grossNusan: gross,
-    discountNusan: discount,
-    netNusan: net,
+    grossRp: gross,
+    discountRp: discount,
+    netRp: net,
     perItem: perItem,
   );
 }

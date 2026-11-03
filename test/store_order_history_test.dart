@@ -17,11 +17,11 @@ CompletedOrder sample({
           OrderLine(
             code: 'A1',
             label: 'Kopi',
-            unitPriceNusan: 5000,
+            unitPriceRp: 5000,
             qty: 2,
             discount: Discount.percent(10),
           ),
-          OrderLine(label: 'Item Bebas', unitPriceNusan: 2000, qty: 1),
+          OrderLine(label: 'Item Bebas', unitPriceRp: 2000, qty: 1),
         ],
     orderDiscount: orderDiscount,
     paymentHashHex: hash,
@@ -36,10 +36,10 @@ void main() {
         orderDiscount: const Discount.fixed(1000),
       );
       // Baris: Kopi 10.000 −10% = 9.000; Bebas 2.000. Subtotal 11.000.
-      expect(order.subtotalNusan, 11000);
+      expect(order.subtotalRp, 11000);
       // Total diskon: baris 1.000 + order 1.000.
-      expect(order.totalDiscountNusan, 2000);
-      expect(order.grandTotalNusan, 10000);
+      expect(order.totalDiscountRp, 2000);
+      expect(order.grandTotalRp, 10000);
     });
 
     test('roundtrip JSON utuh', () {
@@ -70,7 +70,7 @@ void main() {
           OrderLine(
             code: 'A1',
             label: 'Kopi',
-            unitPriceNusan: 5000,
+            unitPriceRp: 5000,
             qty: 1,
             note: 'tanpa gula',
           ),
@@ -89,7 +89,7 @@ void main() {
       final decoded = decodeOrderHistory(legacy);
       expect(decoded.length, 1);
       expect(decoded.single.lines.single.note, '');
-      expect(decoded.single.grandTotalNusan, 10000);
+      expect(decoded.single.grandTotalRp, 10000);
     });
 
     test('store append + load lewat SharedPreferences', () async {
@@ -99,7 +99,7 @@ void main() {
       await store.append(sample(time: DateTime(2026, 11, 3, 10)));
       final loaded = await store.load();
       expect(loaded.length, 2);
-      expect(loaded.first.grandTotalNusan, 11000);
+      expect(loaded.first.grandTotalRp, 11000);
     });
   });
 
@@ -112,8 +112,8 @@ void main() {
       sample(
         time: DateTime(2026, 11, 3, 13, 40),
         lines: const [
-          OrderLine(code: 'A1', label: 'Kopi', unitPriceNusan: 5000, qty: 1),
-          OrderLine(label: 'Item Bebas', unitPriceNusan: 3000, qty: 2),
+          OrderLine(code: 'A1', label: 'Kopi', unitPriceRp: 5000, qty: 1),
+          OrderLine(label: 'Item Bebas', unitPriceRp: 3000, qty: 2),
         ],
         orderDiscount: const Discount.fixed(1000),
       ), // kotor 11.000, subtotal 11.000, grand 10.000
@@ -127,10 +127,10 @@ void main() {
         to: day.add(const Duration(days: 1)),
       );
       expect(report.transactionCount, 2);
-      expect(report.grossNusan, 12000 + 11000);
+      expect(report.grossRp, 12000 + 11000);
       // Diskon: order1 baris 1.000; order2 order 1.000.
-      expect(report.discountNusan, 2000);
-      expect(report.netNusan, 11000 + 10000);
+      expect(report.discountRp, 2000);
+      expect(report.netRp, 11000 + 10000);
     });
 
     test('per item teragregasi per label, nilai sesudah diskon baris', () {
@@ -142,10 +142,10 @@ void main() {
       final kopi = report.perItem.firstWhere((i) => i.label == 'Kopi');
       expect(kopi.qty, 3);
       // 9.000 (sesudah diskon baris 10%) + 5.000.
-      expect(kopi.netNusan, 14000);
+      expect(kopi.netRp, 14000);
       final bebas = report.perItem.firstWhere((i) => i.label == 'Item Bebas');
       expect(bebas.qty, 3);
-      expect(bebas.netNusan, 2000 + 6000);
+      expect(bebas.netRp, 2000 + 6000);
       // Urut nilai menurun: Kopi duluan.
       expect(report.perItem.first.label, 'Kopi');
     });
@@ -157,7 +157,7 @@ void main() {
           lines: const [
             OrderLine(
               label: 'Kopi',
-              unitPriceNusan: 5000,
+              unitPriceRp: 5000,
               qty: 1,
               note: 'tanpa gula',
             ),
@@ -168,7 +168,7 @@ void main() {
           lines: const [
             OrderLine(
               label: 'Kopi',
-              unitPriceNusan: 5000,
+              unitPriceRp: 5000,
               qty: 2,
               note: 'gula sedikit',
             ),
@@ -183,7 +183,7 @@ void main() {
       // Satu entri 'Kopi' walau catatannya berbeda-beda.
       expect(report.perItem.length, 1);
       expect(report.perItem.single.qty, 3);
-      expect(report.perItem.single.netNusan, 15000);
+      expect(report.perItem.single.netRp, 15000);
     });
 
     test('rentang kosong menghasilkan nol semua', () {
@@ -193,8 +193,8 @@ void main() {
         to: DateTime(2026, 12, 2),
       );
       expect(report.transactionCount, 0);
-      expect(report.grossNusan, 0);
-      expect(report.netNusan, 0);
+      expect(report.grossRp, 0);
+      expect(report.netRp, 0);
       expect(report.perItem, isEmpty);
     });
 
@@ -209,6 +209,73 @@ void main() {
         to: DateTime(2026, 11, 4),
       );
       expect(report.transactionCount, 1);
+    });
+  });
+  group('record v2: poin, metode bayar, era', () {
+    test('roundtrip field poin/metode/tunai utuh', () {
+      final order = buildCompletedOrder(
+        id: 'r1',
+        time: DateTime(2026, 11, 3, 11, 0),
+        lines: const [OrderLine(label: 'Kopi', unitPriceRp: 5000, qty: 1)],
+        orderDiscount: null,
+        paymentHashHex: 'ff00',
+        payMethod: payMethodCash,
+        cashReceivedRp: 50000,
+        pointsRedeemed: 2000,
+        pointsDiscountRp: 2000,
+        pointsEarned: 3000,
+        pointsIssueStatus: issueStatusPending,
+      );
+      // Total: 5.000 − diskon poin 2.000 = 3.000; kembalian 47.000.
+      expect(order.grandTotalRp, 3000);
+      expect(order.changeRp, 47000);
+      expect(order.era, storeEraRupiah);
+      expect(order.isRupiahEra, isTrue);
+      expect(decodeOrderHistory(encodeOrderHistory([order])), [order]);
+    });
+
+    test('replace menukar status penerbitan record ber-id sama', () async {
+      SharedPreferences.setMockInitialValues({});
+      final store = StoreOrderHistoryStore();
+      final order = buildCompletedOrder(
+        id: 'r9',
+        time: DateTime(2026, 11, 3, 12, 0),
+        lines: const [OrderLine(label: 'Teh', unitPriceRp: 3000, qty: 1)],
+        orderDiscount: null,
+        paymentHashHex: null,
+        pointsEarned: 1000,
+        pointsIssueStatus: issueStatusPending,
+      );
+      await store.append(order);
+      await store.replace(
+        order.withIssueStatus(issueStatusIssued, issueHashHex: 'beef'),
+      );
+      final loaded = await store.load();
+      expect(loaded.length, 1);
+      expect(loaded.single.pointsIssueStatus, issueStatusIssued);
+      expect(loaded.single.pointsIssueHashHex, 'beef');
+    });
+
+    test('agregasi v2 mengecualikan record era nusan', () {
+      const legacy =
+          '[{"timeMs":1793865600000,"lines":[{"code":"A1","label":"Kopi","unitPriceNusan":5000,"qty":2,"category":"","discount":{"kind":null,"value":null}}],"orderDiscount":{"kind":null,"value":null},"subtotalNusan":10000,"totalDiscountNusan":0,"grandTotalNusan":10000,"paymentHashHex":"ab12","status":"paid"}]';
+      final legacyOrders = decodeOrderHistory(legacy);
+      expect(legacyOrders.single.era, storeEraNusan);
+      expect(legacyOrders.single.isRupiahEra, isFalse);
+      // Nilai rupiah record lama tetap terbaca lewat fallback kunci.
+      expect(legacyOrders.single.grandTotalRp, 10000);
+      final mixed = [
+        ...legacyOrders,
+        sample(time: DateTime(2026, 11, 3, 9, 30)),
+      ];
+      final report = aggregateSales(
+        mixed,
+        from: DateTime(2026, 1, 1),
+        to: DateTime(2027, 1, 1),
+      );
+      // Hanya record era rupiah yang dihitung agregasi v2.
+      expect(report.transactionCount, 1);
+      expect(report.netRp, 11000);
     });
   });
 }

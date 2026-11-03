@@ -675,23 +675,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get storeModeSubtitle =>
-      'Cashier mode for accepting payments in your store';
-
-  @override
-  String get storeCreateCode => 'Create Payment Code';
-
-  @override
-  String get storeWaitingPayment => 'Waiting for payment…';
-
-  @override
-  String get storeCancelCode => 'Cancel Code';
+      'Store cashier — rupiah sales & nusan points program';
 
   @override
   String get storeIdleHint =>
-      'Build an order, then create a payment code for its total — or show the static payment code.';
+      'Build an order, then settle the payment in rupiah. Customers earn nusan points after a settled sale.';
 
   @override
-  String get storeFreeAmountLabel => 'Custom Amount (nusan)';
+  String get storeFreeAmountLabel => 'Custom Amount (Rp)';
 
   @override
   String get storeAddFreeItem => 'Add Custom Item';
@@ -738,10 +729,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeHoldOrder => 'Hold Order';
 
   @override
-  String get storeHoldBlocked =>
-      'Finish or cancel the pending payment code first before holding the order.';
-
-  @override
   String get storeHeldSaved =>
       'Order held — resume it any time from the Held list.';
 
@@ -758,7 +745,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String storeHeldEntryMeta(String time, int count, String total) {
-    return '$time • $count item(s) • $total nusan';
+    return '$time • $count item(s) • $total';
   }
 
   @override
@@ -829,21 +816,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeDiscountPercent => 'Percent (%)';
 
   @override
-  String get storeDiscountFixed => 'Fixed (nusan)';
+  String get storeDiscountFixed => 'Fixed (Rp)';
 
   @override
   String get storeDiscountValue => 'Discount Value';
-
-  @override
-  String get storeZeroTotalHint =>
-      'A total of 0 can\'t be made into a payment code — reduce the discount or add items.';
 
   @override
   String get storeSessionTitle => 'This Session';
 
   @override
   String storeSessionSales(int count, String total) {
-    return '$count sales • $total nusan';
+    return '$count sales • Rp$total';
   }
 
   @override
@@ -876,7 +859,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeProductName => 'Product Name';
 
   @override
-  String get storeProductPrice => 'Price (nusan)';
+  String get storeProductPrice => 'Price (Rp)';
 
   @override
   String get storeProductDiscount => 'Default Discount (optional)';
@@ -892,11 +875,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String storeProductAdded(String name) {
     return 'Added: $name';
-  }
-
-  @override
-  String storeReceiptDiscountNote(String amount) {
-    return 'Total discount on this sale: $amount nusan';
   }
 
   @override
@@ -917,7 +895,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get storeShiftOpenHint =>
-      'Open a shift first to build orders, create payment codes, and take payments in Store Mode.';
+      'Open a shift first to build orders and take rupiah payments in Store Mode.';
 
   @override
   String get storeShiftOpen => 'Open Shift';
@@ -935,7 +913,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get storeCloseShiftBlocked =>
-      'Can\'t close the shift yet: a payment code is still waiting or a payment is being celebrated. Finish or cancel it first.';
+      'Can\'t close the shift yet: a points issuance is still in progress. Finish issuing the points first.';
 
   @override
   String get storeCloseShiftConfirmTitle => 'Close This Shift?';
@@ -949,7 +927,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String storeCloseShiftHeldBody(int count, String total) {
-    return 'There are $count held orders (total $total nusan) still unpaid. Held orders stay saved and can be resumed in the next shift.';
+    return 'There are $count held orders (total $total) still unpaid. Held orders stay saved and can be resumed in the next shift.';
   }
 
   @override
@@ -993,10 +971,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeReportEmpty => 'No sales recorded in this period yet.';
 
   @override
-  String get storeInvoiceExpiredVoid =>
-      'The payment code expired — the order was recorded as VOID.';
-
-  @override
   String get storeReportSummaryTitle => 'SELECTED REPORT';
 
   @override
@@ -1012,10 +986,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeReportTotalOrderInfo => 'Total ORDER Info';
 
   @override
-  String get storeReportInvoices => '#Invoices';
+  String get storeReportInvoices => '#Sales';
 
   @override
-  String get storeReportInvUnit => 'inv.';
+  String get storeReportInvUnit => 'sales';
 
   @override
   String get storeReportVoidInfo => 'VOID Info';
@@ -1050,4 +1024,351 @@ class AppLocalizationsEn extends AppLocalizations {
   String storeReportShiftsNote(int count) {
     return 'Covers $count shift(s)';
   }
+
+  @override
+  String get storeCatalogManagerTitle => 'Manage Catalog';
+
+  @override
+  String get storeAddProduct => 'Add Product';
+
+  @override
+  String get storeEditProduct => 'Edit Product';
+
+  @override
+  String get storeNoDiscount => 'No Discount';
+
+  @override
+  String get storeCheckout => 'Settle Payment';
+
+  @override
+  String get storePayTitle => 'Settle Payment';
+
+  @override
+  String get storePayTotalLabel => 'Order Total';
+
+  @override
+  String get storeCash => 'Cash';
+
+  @override
+  String get storeQris => 'QRIS';
+
+  @override
+  String get storeQrisNote =>
+      'The customer pays via QRIS as usual at this store. The app only records the payment method — tap the button below once the QRIS payment has been received.';
+
+  @override
+  String get storeCashReceived => 'Cash Received';
+
+  @override
+  String get storeCashExact => 'Exact';
+
+  @override
+  String get storeChange => 'Change';
+
+  @override
+  String storeCashShort(String amount) {
+    return 'Short Rp$amount';
+  }
+
+  @override
+  String get storeSettle => 'Settled — Finish';
+
+  @override
+  String get storeSettleQris => 'QRIS Received — Finish';
+
+  @override
+  String get storeSettlePromo => 'Finish Without Payment';
+
+  @override
+  String get storePromoNote =>
+      'Order total is Rp0 (promotion) — no payment is taken; the sale is still recorded.';
+
+  @override
+  String get storeCancelOrder => 'Cancel Order';
+
+  @override
+  String get storeVoidConfirmTitle => 'Cancel This Order?';
+
+  @override
+  String get storeVoidConfirmBody =>
+      'The order is cancelled and recorded as VOID in the report. This can\'t be undone.';
+
+  @override
+  String get storeVoidRecorded => 'Order cancelled — recorded as VOID.';
+
+  @override
+  String get storeCancelBlockedRedeem =>
+      'The points redemption is already verified — this order can no longer be cancelled; settle its payment.';
+
+  @override
+  String get storeRedeemTitle => 'Redeem Nusan Points';
+
+  @override
+  String get storeRedeemHint =>
+      'The customer redeems nusan points as a discount on this order. Enter the points, create a redemption code, and ask the customer to pay it from their own ELNUX app. The discount applies only after the points payment is verified.';
+
+  @override
+  String get storeRedeemPointsLabel => 'Points';
+
+  @override
+  String storeRedeemMaxNote(int max) {
+    return 'At most $max points for this order.';
+  }
+
+  @override
+  String storeRedeemClamped(int max) {
+    return 'That exceeds the limit — using $max points.';
+  }
+
+  @override
+  String get storeRedeemCreate => 'Create Redemption Code';
+
+  @override
+  String get storeRedeemWaiting =>
+      'Waiting for the customer\'s points payment…';
+
+  @override
+  String storeRedeemVerified(int points, String amount) {
+    return 'Redemption verified: $points points = Rp$amount discount.';
+  }
+
+  @override
+  String get storeRedeemFailed =>
+      'The points redemption failed or expired — no discount. The order can still be paid in rupiah.';
+
+  @override
+  String get storeRedeemCancel => 'Cancel Redemption';
+
+  @override
+  String get storeRedeemCancelWarn =>
+      'This redemption code will be cancelled. If the customer pays it afterwards anyway, the points still arrive in the store wallet but no discount applies — settle this order in full rupiah.';
+
+  @override
+  String get storeRedeemLeaveBody =>
+      'A points redemption is still in progress. Leaving this page cancels the redemption — the order returns to the cashier without a points discount.';
+
+  @override
+  String get storeRedeemDesc => 'Nusan points redemption';
+
+  @override
+  String get storeRedeemMinChannel =>
+      'This points amount is below the minimum for creating a new receiving path (1,000 points). Increase the points, or skip redemption this time.';
+
+  @override
+  String get storeRedeemInvalidPoints =>
+      'That points amount isn\'t valid, or exceeds the possible discount for this order.';
+
+  @override
+  String get storeSaleCompleted => 'Sale Completed';
+
+  @override
+  String storePointsEarnedLine(int points) {
+    return 'Nusan points earned: $points points';
+  }
+
+  @override
+  String get storePointsIssueButton => 'Scan & Issue';
+
+  @override
+  String get storePointsSkip => 'Skip';
+
+  @override
+  String get storePointsIssuedOk => 'Nusan points issued to the customer.';
+
+  @override
+  String get storeIssueInvalidCode =>
+      'That code isn\'t a readable ELNUX invoice or payment code — scan the customer\'s code again.';
+
+  @override
+  String get storeIssueAmountMismatch =>
+      'The code amount doesn\'t equal the points to issue — ask the customer to create a code for exactly the earned points.';
+
+  @override
+  String get storeIssueFailed =>
+      'Issuing the points failed — they stay pending and can be issued from the Pending Points list.';
+
+  @override
+  String get storeIssueStillPending =>
+      'The points payment is still in flight — it stays pending; check again from the Pending Points list.';
+
+  @override
+  String get storeDoneButton => 'Done';
+
+  @override
+  String storePendingBadge(int count) {
+    return 'Pending Points ($count)';
+  }
+
+  @override
+  String get storePendingTitle => 'Pending Points';
+
+  @override
+  String get storePendingEmpty => 'No points are pending.';
+
+  @override
+  String storePendingEntryMeta(String time, String total) {
+    return '$time • $total';
+  }
+
+  @override
+  String get storePendingIssue => 'Issue';
+
+  @override
+  String get storePendingWaive => 'Cancel Issuance';
+
+  @override
+  String get storePendingWaiveTitle => 'Cancel Points Issuance?';
+
+  @override
+  String storePendingWaiveBody(String total, String time) {
+    return 'The points from the $time sale (total $total) will NOT be issued to the customer. The sale record stays saved.';
+  }
+
+  @override
+  String get storePendingWaived => 'Points issuance cancelled.';
+
+  @override
+  String get storeReceiptTotalPay => 'TOTAL TO PAY';
+
+  @override
+  String storeReceiptPointsDiscount(int points, String amount) {
+    return 'Points redemption ($points pts) -Rp$amount';
+  }
+
+  @override
+  String storeReceiptPointsEarned(int points) {
+    return 'Nusan points earned: +$points points';
+  }
+
+  @override
+  String storeReceiptPointsPending(int points) {
+    return 'Nusan points earned: +$points points (not yet issued)';
+  }
+
+  @override
+  String storeReceiptPointsRule(String rate) {
+    return '1 nusan point = Rp$rate discount (store policy)';
+  }
+
+  @override
+  String get storeReceiptPromo => 'No payment (promotion)';
+
+  @override
+  String get storeSettingsTitle => 'Store Settings';
+
+  @override
+  String get storeSettingsStoreName => 'Store Name';
+
+  @override
+  String get storeSettingsPointsEnabled => 'Nusan Points Program On';
+
+  @override
+  String get storeSettingsPointsHint =>
+      'Points are a promotional bonus on rupiah purchases — not a payment method. Points are only redeemed as a discount at this store.';
+
+  @override
+  String get storeSettingsEarnStep => 'Earning Step (Rp)';
+
+  @override
+  String get storeSettingsEarnPoints => 'Points per Step';
+
+  @override
+  String get storeSettingsRedeemRate => 'Discount Value per Point (Rp)';
+
+  @override
+  String get storeSettingsMaxRedeem => 'Max Points Discount (% of total)';
+
+  @override
+  String get storeSettingsMaxRedeemHint =>
+      'May be left empty = no cap beyond the remaining order total.';
+
+  @override
+  String storeSettingsEarnPreview(String step, int points) {
+    return 'Example: an Rp$step purchase earns $points points.';
+  }
+
+  @override
+  String get storeSettingsSave => 'Save Settings';
+
+  @override
+  String get storeSettingsSaved => 'Store settings saved.';
+
+  @override
+  String get storeSettingsInvalid =>
+      'Check again: the step and discount value must be above 0; the max cap is 1–100 when filled.';
+
+  @override
+  String get storeRulesTitle => 'Points Program Rules';
+
+  @override
+  String get storeRulesHeading => 'Nusan Points — Store Promotional Bonus';
+
+  @override
+  String get storeRulesP1 =>
+      'Nusan points are a promotional bonus from this store — not money and not a payment method. Purchases at this store are always paid in rupiah (cash or QRIS).';
+
+  @override
+  String get storeRulesP2 =>
+      'Points are earned only from settled rupiah purchases, under the earning terms in effect at this store.';
+
+  @override
+  String get storeRulesP3 =>
+      'Points can only be redeemed as a discount on purchases at this store, at the per-point discount value set by the store.';
+
+  @override
+  String get storeRulesP4 =>
+      'Points cannot be cashed out, sold, bought, or exchanged for cash in any form.';
+
+  @override
+  String get storeRulesP5 =>
+      'The per-point discount value and program terms may change with prior notice at this store.';
+
+  @override
+  String get storeRulesP6 =>
+      'To receive and redeem points, customers use their own ELNUX app.';
+
+  @override
+  String get storeRulesP7 =>
+      'When first receiving points, the customer\'s wallet may be charged a one-time receiving-path creation fee of 0.5% of the amount received (a network rule, charged only when the path is created).';
+
+  @override
+  String get storeRulesFooter =>
+      'These terms follow the store\'s points program guidelines. Keep your purchase receipt as proof of points earned and redeemed.';
+
+  @override
+  String get storeMigrationTitle => 'Store Mode Updated';
+
+  @override
+  String get storeMigrationShiftClosed =>
+      'An old shift (nusan pricing) that was still open has been closed and marked as legacy data. Sales are recorded in rupiah from now on.';
+
+  @override
+  String storeMigrationHeldDropped(int count) {
+    return '$count held order(s) from the old version (nusan pricing) were dropped and not carried over.';
+  }
+
+  @override
+  String get storeMigrationCatalog =>
+      'The old nusan-priced catalog is no longer used. Refill the catalog with rupiah prices via the Manage button.';
+
+  @override
+  String get storeMigrationOk => 'Got It';
+
+  @override
+  String get storeReportCash => 'CASH';
+
+  @override
+  String get storeReportQris => 'QRIS';
+
+  @override
+  String get storeReportPointsDiscount => 'Points Discount';
+
+  @override
+  String get storeReportPointsIssued => 'Points Issued';
+
+  @override
+  String get storeReportPointsPending => 'Points Pending';
+
+  @override
+  String get storeReportPointsRedeemed => 'Points Redeemed';
 }

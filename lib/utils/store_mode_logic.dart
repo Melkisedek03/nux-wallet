@@ -1,15 +1,30 @@
-/// Logika murni Mode Toko (PoS kasir): keypad nominal bebas,
-/// daftar baris pesanan, ringkasan sesi, dan keputusan layout.
+/// Logika murni Mode Toko v2 (PoS kasir): keypad, daftar baris
+/// pesanan, hitungan rupiah, dan hitungan poin loyalitas.
 ///
 /// Semua di file ini bebas efek samping dan teruji unit — layar
 /// Mode Toko (store_mode_screen.dart) hanya menyambungkan hasil
 /// keputusan di sini ke widget dan ke node.
 ///
+/// KERANGKA HUKUM (Pedoman miniPOS tim, 3 Nov 2026): rupiah
+/// adalah alat pembayaran; nusan adalah POIN loyalitas. Karena
+/// itu seluruh nominal belanja di file ini berdenominasi RUPIAH
+/// bulat, dan "poin" (satuannya nusan) hanya muncul pada dua
+/// hitungan loyalitas: perolehan poin dari rupiah yang dibayar,
+/// dan potongan rupiah dari penukaran poin. Tidak ada hitungan
+/// di sini yang melunasi belanja dengan poin.
+///
 /// Satu sumber kebenaran nominal penjualan adalah DAFTAR BARIS
 /// pesanan: keypad hanya pengisi satu baris "item bebas", tombol
-/// jumlah cepat hanya menambah nilai keypad, dan total yang dibuat
-/// kode bayar selalu [orderTotalNusan] dari baris-baris itu.
+/// jumlah cepat hanya menambah nilai keypad, dan total akhir
+/// selalu [orderGrandTotalRp] dari baris-baris itu.
 library;
+
+/// Penanda era record/shift Mode Toko: 'nusan' = era v1 (kasir
+/// nusan, sebelum pivot), 'rp' = era v2 (kasir rupiah). Laporan
+/// v2 HANYA membaca record era 'rp' — dua era tidak pernah
+/// dicampur dalam satu angka laporan.
+const storeEraNusan = 'nusan';
+const storeEraRupiah = 'rp';
 
 /// Lebar (dp) minimal untuk layout dua panel Mode Toko: di bawah
 /// ini satu kolom (kasir di atas, status/QR di bawah, boleh
@@ -22,16 +37,16 @@ const storeModeTwoPanelBreakpoint = 720.0;
 bool storeModeUsesTwoPanels(double width) =>
     width >= storeModeTwoPanelBreakpoint;
 
-/// Plafon nominal keypad (nusan): 9 digit. Cukup untuk harga UMKM
-/// mana pun, dan menahan nominal yang jelas-jelas salah ketik
-/// sebelum jadi invoice.
-const storeKeypadMaxNusan = 999999999;
+/// Plafon nominal keypad (rupiah): Rp99.999.999 — jauh di atas
+/// harga & uang tunai ritel UMKM mana pun, dan menahan nominal
+/// yang jelas-jelas salah ketik sebelum jadi pesanan/pembayaran.
+const storeKeypadMaxRp = 99999999;
 
 /// Tekan satu digit (0–9) pada keypad: digit ditambahkan di kanan.
-/// Tekanan yang melewati [storeKeypadMaxNusan] diabaikan.
+/// Tekanan yang melewati [storeKeypadMaxRp] diabaikan.
 int keypadPressDigit(int current, int digit) {
   final next = current * 10 + digit;
-  return next > storeKeypadMaxNusan ? current : next;
+  return next > storeKeypadMaxRp ? current : next;
 }
 
 /// Tekan "00" pada keypad: dua nol sekaligus. Pada nilai 0 tetap 0
@@ -39,17 +54,17 @@ int keypadPressDigit(int current, int digit) {
 int keypadPressDoubleZero(int current) {
   if (current == 0) return 0;
   final next = current * 100;
-  return next > storeKeypadMaxNusan ? current : next;
+  return next > storeKeypadMaxRp ? current : next;
 }
 
 /// Hapus satu digit paling kanan; pada 0 tetap 0.
 int keypadBackspace(int current) => current ~/ 10;
 
 /// Tombol jumlah cepat: MENAMBAH [quick] ke nilai keypad saat ini,
-/// terpotong di [storeKeypadMaxNusan].
+/// terpotong di [storeKeypadMaxRp].
 int keypadQuickAdd(int current, int quick) {
   final next = current + quick;
-  return next > storeKeypadMaxNusan ? storeKeypadMaxNusan : next;
+  return next > storeKeypadMaxRp ? storeKeypadMaxRp : next;
 }
 
 /// Plafon pengali qty keypad mode Qty: 999 — pesanan toko ritel
@@ -80,7 +95,7 @@ enum DiscountKind {
   /// Persen dari nilai yang didiskon (0–100).
   percent,
 
-  /// Nominal nusan tetap.
+  /// Nominal rupiah tetap.
   fixed,
 }
 
@@ -90,14 +105,14 @@ enum DiscountKind {
 class Discount {
   final DiscountKind kind;
 
-  /// Persen (0–100) bila [kind] persen; nusan bila nominal.
+  /// Persen (0–100) bila [kind] persen; rupiah bila nominal.
   final int value;
 
   const Discount.percent(int percent)
     : kind = DiscountKind.percent,
       value = percent;
 
-  const Discount.fixed(int nusan) : kind = DiscountKind.fixed, value = nusan;
+  const Discount.fixed(int rp) : kind = DiscountKind.fixed, value = rp;
 
   @override
   bool operator ==(Object other) =>
@@ -107,20 +122,19 @@ class Discount {
   int get hashCode => Object.hash(kind, value);
 }
 
-/// Besaran potongan (nusan bulat) dari [discount] atas [baseNusan].
+/// Besaran potongan (rupiah bulat) dari [discount] atas [baseRp].
 ///
-/// Aturan angka Mode Toko (keputusan NUX 3 Nov 2026): semua hitung
-/// di domain nusan bulat; persen dibulatkan ke BAWAH
-/// (floor(base × persen / 100)); nominal dibatasi maksimal sebesar
-/// nilai yang didiskon; hasilnya tidak pernah negatif dan tidak
-/// pernah melebihi [baseNusan]. Diskon null/nol → 0.
-int discountAmountFor(int baseNusan, Discount? discount) {
-  if (discount == null || baseNusan <= 0 || discount.value <= 0) return 0;
+/// Aturan angka Mode Toko: semua hitung di domain rupiah bulat;
+/// persen dibulatkan ke BAWAH (floor(base × persen / 100));
+/// nominal dibatasi maksimal sebesar nilai yang didiskon;
+/// hasilnya tidak pernah negatif dan tidak pernah melebihi
+/// [baseRp]. Diskon null/nol → 0.
+int discountAmountFor(int baseRp, Discount? discount) {
+  if (discount == null || baseRp <= 0 || discount.value <= 0) return 0;
   return switch (discount.kind) {
     DiscountKind.percent =>
-      discount.value >= 100 ? baseNusan : (baseNusan * discount.value) ~/ 100,
-    DiscountKind.fixed =>
-      discount.value >= baseNusan ? baseNusan : discount.value,
+      discount.value >= 100 ? baseRp : (baseRp * discount.value) ~/ 100,
+    DiscountKind.fixed => discount.value >= baseRp ? baseRp : discount.value,
   };
 }
 
@@ -129,11 +143,11 @@ int discountAmountFor(int baseNusan, Discount? discount) {
 /// Baris produk katalog membawa [code] (isi barcode/QR produk)
 /// supaya scan/ketuk berulang menggabung ke baris yang sama; baris
 /// bebas (dari keypad) [code]-nya null dan menggabung hanya bila
-/// label + harga satuannya sama persis.
+/// label + harga satuannya sama persis. Semua harga dalam RUPIAH.
 class OrderLine {
   final String? code;
   final String label;
-  final int unitPriceNusan;
+  final int unitPriceRp;
   final int qty;
 
   /// Kategori produk saat baris dibuat (snapshot dari katalog;
@@ -159,7 +173,7 @@ class OrderLine {
   const OrderLine({
     this.code,
     required this.label,
-    required this.unitPriceNusan,
+    required this.unitPriceRp,
     required this.qty,
     this.category = '',
     this.discount,
@@ -167,13 +181,13 @@ class OrderLine {
   });
 
   /// Harga × qty sebelum diskon baris.
-  int get lineGrossNusan => unitPriceNusan * qty;
+  int get lineGrossRp => unitPriceRp * qty;
 
-  /// Potongan baris ini (nusan).
-  int get lineDiscountNusan => discountAmountFor(lineGrossNusan, discount);
+  /// Potongan baris ini (rupiah).
+  int get lineDiscountRp => discountAmountFor(lineGrossRp, discount);
 
   /// Yang dibayar pembeli untuk baris ini: bruto − diskon baris.
-  int get lineTotalNusan => lineGrossNusan - lineDiscountNusan;
+  int get lineTotalRp => lineGrossRp - lineDiscountRp;
 
   OrderLine copyWith({
     int? qty,
@@ -183,7 +197,7 @@ class OrderLine {
   }) => OrderLine(
     code: code,
     label: label,
-    unitPriceNusan: unitPriceNusan,
+    unitPriceRp: unitPriceRp,
     qty: qty ?? this.qty,
     category: category,
     discount: clearDiscount ? null : (discount ?? this.discount),
@@ -195,7 +209,7 @@ class OrderLine {
       other is OrderLine &&
       other.code == code &&
       other.label == label &&
-      other.unitPriceNusan == unitPriceNusan &&
+      other.unitPriceRp == unitPriceRp &&
       other.qty == qty &&
       other.category == category &&
       other.discount == discount &&
@@ -203,7 +217,7 @@ class OrderLine {
 
   @override
   int get hashCode =>
-      Object.hash(code, label, unitPriceNusan, qty, category, discount, note);
+      Object.hash(code, label, unitPriceRp, qty, category, discount, note);
 }
 
 /// Tambah satu produk katalog ke pesanan: baris berkode sama yang
@@ -211,13 +225,13 @@ class OrderLine {
 /// dipertahankan; diskon yang sudah diedit kasir di baris itu
 /// dipertahankan), selain itu baris baru ditambahkan di akhir
 /// dengan qty sebesar [qty] dan [defaultDiscount] dari katalog
-/// (boleh null). [qty] bawaan 1 — perilaku lama; keypad mode Qty
-/// meneruskan pengali aktifnya ke sini. qty < 1 dijepit ke 1.
+/// (boleh null). [qty] bawaan 1; keypad mode Qty meneruskan
+/// pengali aktifnya ke sini. qty < 1 dijepit ke 1.
 List<OrderLine> orderAddProduct(
   List<OrderLine> lines, {
   required String code,
   required String label,
-  required int unitPriceNusan,
+  required int unitPriceRp,
   String category = '',
   Discount? defaultDiscount,
   int qty = 1,
@@ -230,7 +244,7 @@ List<OrderLine> orderAddProduct(
       OrderLine(
         code: code,
         label: label,
-        unitPriceNusan: unitPriceNusan,
+        unitPriceRp: unitPriceRp,
         qty: addQty,
         category: category,
         discount: defaultDiscount,
@@ -275,20 +289,20 @@ List<OrderLine> orderSetLineDiscount(
 List<OrderLine> orderAddFreeAmount(
   List<OrderLine> lines, {
   required String label,
-  required int amountNusan,
+  required int amountRp,
 }) {
-  if (amountNusan <= 0) return lines;
+  if (amountRp <= 0) return lines;
   final idx = lines.indexWhere(
     (l) =>
         l.code == null &&
         l.label == label &&
-        l.unitPriceNusan == amountNusan &&
+        l.unitPriceRp == amountRp &&
         l.discount == null,
   );
   if (idx < 0) {
     return [
       ...lines,
-      OrderLine(label: label, unitPriceNusan: amountNusan, qty: 1),
+      OrderLine(label: label, unitPriceRp: amountRp, qty: 1),
     ];
   }
   final next = [...lines];
@@ -328,55 +342,148 @@ List<OrderLine> orderRemoveLine(List<OrderLine> lines, int index) {
 }
 
 /// Total pesanan SEBELUM diskon apa pun (Σ harga × qty).
-int orderGrossNusan(List<OrderLine> lines) =>
-    lines.fold(0, (sum, l) => sum + l.lineGrossNusan);
+int orderGrossRp(List<OrderLine> lines) =>
+    lines.fold(0, (sum, l) => sum + l.lineGrossRp);
 
 /// Subtotal: Σ baris SESUDAH diskon baris masing-masing. Inilah
-/// nilai yang didiskon oleh diskon order.
-int orderSubtotalNusan(List<OrderLine> lines) =>
-    lines.fold(0, (sum, l) => sum + l.lineTotalNusan);
+/// nilai yang didiskon oleh diskon order dan diskon poin.
+int orderSubtotalRp(List<OrderLine> lines) =>
+    lines.fold(0, (sum, l) => sum + l.lineTotalRp);
 
 /// Potongan diskon order atas [lines] (dihitung dari subtotal).
-int orderDiscountAmountNusan(List<OrderLine> lines, Discount? orderDiscount) =>
-    discountAmountFor(orderSubtotalNusan(lines), orderDiscount);
+int orderDiscountAmountRp(List<OrderLine> lines, Discount? orderDiscount) =>
+    discountAmountFor(orderSubtotalRp(lines), orderDiscount);
 
 /// Total diskon keseluruhan: diskon baris + diskon order. Angka
 /// ini yang ditampilkan terpisah di ringkasan & struk — tidak
-/// disembunyikan di dalam angka akhir.
-int orderTotalDiscountNusan(List<OrderLine> lines, Discount? orderDiscount) =>
-    lines.fold(0, (sum, l) => sum + l.lineDiscountNusan) +
-    orderDiscountAmountNusan(lines, orderDiscount);
+/// disembunyikan di dalam angka akhir. (Diskon POIN dihitung
+/// terpisah oleh [pointsDiscountRpFor] dan ditambahkan pemanggil
+/// bila ada penukaran terverifikasi.)
+int orderTotalDiscountRp(List<OrderLine> lines, Discount? orderDiscount) =>
+    lines.fold(0, (sum, l) => sum + l.lineDiscountRp) +
+    orderDiscountAmountRp(lines, orderDiscount);
 
-/// Total akhir pesanan (nusan) — satu-satunya nominal yang boleh
-/// dibuat kode bayar oleh Mode Toko. Urutan hitung tetap:
-/// baris (harga × qty − diskon baris) → subtotal → diskon order →
-/// total akhir, berlantai 0 (tidak pernah negatif).
-int orderGrandTotalNusan(List<OrderLine> lines, Discount? orderDiscount) {
-  final total =
-      orderSubtotalNusan(lines) -
-      orderDiscountAmountNusan(lines, orderDiscount);
+/// Sisa yang harus dibayar rupiah SEBELUM penukaran poin:
+/// subtotal − diskon order, berlantai 0.
+int orderDueRp(List<OrderLine> lines, Discount? orderDiscount) {
+  final due = orderSubtotalRp(lines) - orderDiscountAmountRp(lines, orderDiscount);
+  return due < 0 ? 0 : due;
+}
+
+/// Total akhir pesanan (rupiah) — satu-satunya nominal yang
+/// dilunasi pembeli dalam rupiah. Urutan hitung tetap:
+/// baris (harga × qty − diskon baris) → subtotal → diskon order
+/// → diskon poin terverifikasi ([pointsDiscountRp], bawaan 0)
+/// → total akhir, berlantai 0 (tidak pernah negatif).
+int orderGrandTotalRp(
+  List<OrderLine> lines,
+  Discount? orderDiscount, {
+  int pointsDiscountRp = 0,
+}) {
+  final total = orderDueRp(lines, orderDiscount) - pointsDiscountRp;
   return total < 0 ? 0 : total;
 }
+
+// ---------------------------------------------------------------------
+// Poin loyalitas (pedoman: nusan = poin, BUKAN alat pembayaran)
+// ---------------------------------------------------------------------
+
+/// Poin nusan yang DIPEROLEH dari satu transaksi lunas — model
+/// PER KELIPATAN (keputusan NUX 3 Nov 2026): tiap [stepRp] rupiah
+/// yang benar-benar dibayar memberi [pointsPerStep] poin.
+/// Perolehan = floor(rupiahDibayar / kelipatan) × poinPerKelipatan.
+/// Basis [paidRp] adalah total rupiah yang sungguh dibayar
+/// pembeli sesudah SEMUA diskon (termasuk diskon poin) — jadi
+/// transaksi promosi Rp0 memberi 0 poin. Parameter tak sah
+/// (kelipatan/poin per kelipatan <= 0) → 0 poin.
+int pointsEarnedFor({
+  required int paidRp,
+  required int stepRp,
+  required int pointsPerStep,
+}) {
+  if (paidRp <= 0 || stepRp <= 0 || pointsPerStep <= 0) return 0;
+  return (paidRp ~/ stepRp) * pointsPerStep;
+}
+
+/// Nilai potongan (rupiah) dari penukaran [points] poin:
+/// points × [rateRpPerPoint] ("nilai potongan per poin" milik
+/// toko — parameter diskon, BUKAN kurs), dijepit oleh:
+/// - [remainingRp]: sisa yang harus dibayar sesudah diskon biasa
+///   (diskon poin tidak pernah melebihi sisa tagihan), dan
+/// - [maxPercent] (bila diatur): persen maksimum dari [totalRp]
+///   (total sesudah diskon baris & order, sebelum diskon poin).
+/// Hasil tidak pernah negatif. Poin/nilai tak sah → 0.
+int pointsDiscountRpFor({
+  required int points,
+  required int rateRpPerPoint,
+  required int remainingRp,
+  required int totalRp,
+  int? maxPercent,
+}) {
+  if (points <= 0 || rateRpPerPoint <= 0 || remainingRp <= 0) return 0;
+  var cap = remainingRp;
+  if (maxPercent != null) {
+    final pctCap = (totalRp * maxPercent) ~/ 100;
+    if (pctCap < cap) cap = pctCap;
+  }
+  final raw = points * rateRpPerPoint;
+  return raw < cap ? raw : cap;
+}
+
+/// Jumlah poin MAKSIMUM yang berguna ditukar pada satu transaksi:
+/// poin di atas ini nilai potongannya akan terjepit plafon
+/// [pointsDiscountRpFor] — pelanggan akan menyerahkan poin tanpa
+/// potongan tambahan, jadi kasir dicegah menukarkan lebih dari
+/// ini. Dihitung floor(plafon rupiah / nilai per poin) supaya
+/// tidak pernah melampaui plafon.
+int maxRedeemablePoints({
+  required int remainingRp,
+  required int totalRp,
+  required int rateRpPerPoint,
+  int? maxPercent,
+}) {
+  if (rateRpPerPoint <= 0 || remainingRp <= 0) return 0;
+  var cap = remainingRp;
+  if (maxPercent != null) {
+    final pctCap = (totalRp * maxPercent) ~/ 100;
+    if (pctCap < cap) cap = pctCap;
+  }
+  return cap ~/ rateRpPerPoint;
+}
+
+// ---------------------------------------------------------------------
+// Tunai
+// ---------------------------------------------------------------------
+
+/// Kembalian tunai: uang diterima − yang harus dibayar. Negatif
+/// berarti uangnya belum cukup (belum bisa lunas).
+int cashChangeRp({required int receivedRp, required int dueRp}) =>
+    receivedRp - dueRp;
+
+/// Bolehkah transaksi tunai dilunasi sekarang? Hanya bila uang
+/// diterima menutupi sisa bayar (kembalian >= 0).
+bool cashCanSettle({required int receivedRp, required int dueRp}) =>
+    receivedRp >= dueRp;
 
 /// Baris-baris rincian struk pelanggan untuk satu pesanan lunas:
 /// per baris pesanan — label item, lalu "qty × harga satuan =
 /// total baris" (total SESUDAH diskon baris) menjorok dua spasi,
 /// dan catatan baris (bila ada) sebagai baris menjorok
-/// "<noteWord>: <catatan>" tepat di bawah itemnya. [formatNusan]
-/// adalah pemformat angka layar (pemisah ribuan aplikasi);
-/// [noteWord] kata "Catatan"/"Note" dari l10n. Teks mentah apa
-/// adanya — pemanggil (PrintService) yang membersihkan non-ASCII.
+/// "<noteWord>: <catatan>" tepat di bawah itemnya. [formatRp]
+/// adalah pemformat rupiah layar; [noteWord] kata
+/// "Catatan"/"Note" dari l10n. Teks mentah apa adanya —
+/// pemanggil (PrintService) yang membersihkan non-ASCII.
 List<String> orderReceiptDetailLines(
   List<OrderLine> lines, {
-  required String Function(int nusan) formatNusan,
+  required String Function(int rp) formatRp,
   required String noteWord,
 }) {
   final out = <String>[];
   for (final line in lines) {
     out.add(line.label);
     out.add(
-      '  ${line.qty} x ${formatNusan(line.unitPriceNusan)}'
-      ' = ${formatNusan(line.lineTotalNusan)}',
+      '  ${line.qty} x ${formatRp(line.unitPriceRp)}'
+      ' = ${formatRp(line.lineTotalRp)}',
     );
     if (line.note.isNotEmpty) out.add('  $noteWord: ${line.note}');
   }
@@ -387,29 +494,31 @@ List<String> orderReceiptDetailLines(
 ///
 /// JUJUR soal cakupan: ini akumulator sesi di memori layar ini
 /// saja — nol lagi setiap Mode Toko dibuka, bukan laporan harian
-/// dan bukan catatan resmi (catatan resmi tetap Riwayat node).
-/// Label di layar menyatakannya sebagai "Sesi Ini".
+/// dan bukan catatan resmi (catatan resmi tetap record penjualan
+/// tersimpan). Label di layar menyatakannya sebagai "Sesi Ini".
+/// Total dalam RUPIAH (total akhir penjualan lunas sesi ini).
 class StoreSessionSummary {
   final int saleCount;
-  final BigInt totalMsat;
+  final int totalRp;
 
-  const StoreSessionSummary({this.saleCount = 0, required this.totalMsat});
+  const StoreSessionSummary({this.saleCount = 0, this.totalRp = 0});
 
-  static final empty = StoreSessionSummary(totalMsat: BigInt.zero);
+  static const empty = StoreSessionSummary();
 
-  /// Catat satu penjualan yang sungguh diterima sebesar
-  /// [amountMsat] (dipanggil hanya dari event penerimaan nyata).
-  StoreSessionSummary recordSale(BigInt amountMsat) => StoreSessionSummary(
+  /// Catat satu penjualan yang sungguh lunas sebesar [totalRp]
+  /// (dipanggil hanya dari penyelesaian pembayaran rupiah yang
+  /// tercatat, tidak dari peristiwa lain).
+  StoreSessionSummary recordSale(int totalRp) => StoreSessionSummary(
     saleCount: saleCount + 1,
-    totalMsat: totalMsat + amountMsat,
+    totalRp: this.totalRp + totalRp,
   );
 
   @override
   bool operator ==(Object other) =>
       other is StoreSessionSummary &&
       other.saleCount == saleCount &&
-      other.totalMsat == totalMsat;
+      other.totalRp == totalRp;
 
   @override
-  int get hashCode => Object.hash(saleCount, totalMsat);
+  int get hashCode => Object.hash(saleCount, totalRp);
 }

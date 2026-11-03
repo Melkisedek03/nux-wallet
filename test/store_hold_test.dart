@@ -18,13 +18,13 @@ HeldOrder sample({
           OrderLine(
             code: 'A1',
             label: 'Kopi',
-            unitPriceNusan: 5000,
+            unitPriceRp: 5000,
             qty: 2,
             category: 'MINUMAN',
             discount: Discount.percent(10),
             note: 'tanpa gula',
           ),
-          OrderLine(label: 'Item Bebas', unitPriceNusan: 2000, qty: 1),
+          OrderLine(label: 'Item Bebas', unitPriceRp: 2000, qty: 1),
         ],
     orderDiscount: orderDiscount,
   );
@@ -44,7 +44,7 @@ void main() {
       final held = sample(orderDiscount: const Discount.fixed(1000));
       // Baris: Kopi 10.000 −10% = 9.000; Bebas 2.000; subtotal
       // 11.000 − diskon order 1.000 = 10.000.
-      expect(held.grandTotalNusan, 10000);
+      expect(held.grandTotalRp, 10000);
       expect(held.totalQty, 3);
     });
 
@@ -54,7 +54,7 @@ void main() {
       expect(decodeHeldOrders('{"bukan":"daftar"}'), isEmpty);
       final raw = encodeHeldOrders([sample()]);
       final tampered =
-          '${raw.substring(0, raw.length - 1)},{"id":"","heldAtMs":1,"lines":[{"label":"X","unitPriceNusan":5,"qty":1}]},{"id":"h9","heldAtMs":1,"lines":[]}]';
+          '${raw.substring(0, raw.length - 1)},{"id":"","heldAtMs":1,"lines":[{"label":"X","unitPriceRp":5,"qty":1}]},{"id":"h9","heldAtMs":1,"lines":[]}]';
       final decoded = decodeHeldOrders(tampered);
       expect(decoded.length, 1);
       expect(decoded.single.id, 'h1');

@@ -78,6 +78,12 @@ class ReceiptData {
   /// pemanggil lain TIDAK berubah sama sekali.
   final List<String>? detailLines;
 
+  /// Teks kop struk yang menggantikan header pengaturan printer
+  /// untuk struk ini saja — dipakai Mode Toko untuk nama toko.
+  /// Null/kosong (bawaan) = kop dari pengaturan printer apa
+  /// adanya: keluaran struk pemanggil lain TIDAK berubah.
+  final String? headerText;
+
   const ReceiptData({
     required this.typeText,
     required this.statusText,
@@ -87,6 +93,7 @@ class ReceiptData {
     this.hashValue,
     this.invoice,
     this.detailLines,
+    this.headerText,
   });
 }
 
@@ -140,8 +147,12 @@ class PrintService {
     required String defaultFooter,
   }) async {
     if (!settings.hasPrinter) return PrintOutcome.noPrinter;
+    final kop = receipt.headerText?.trim() ?? '';
+    final effectiveSettings = kop.isEmpty
+        ? settings
+        : settings.copyWith(headerText: kop);
     final bytes = await _receiptBytes(
-      settings: settings,
+      settings: effectiveSettings,
       defaultFooter: defaultFooter,
       body: (gen) {
         var b = <int>[];

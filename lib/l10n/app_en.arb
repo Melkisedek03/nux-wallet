@@ -280,12 +280,9 @@
   "communityTelegramGroup": "Telegram Group",
   "communityOpenFailed": "Couldn't open the link.",
   "storeMode": "Store Mode",
-  "storeModeSubtitle": "Cashier mode for accepting payments in your store",
-  "storeCreateCode": "Create Payment Code",
-  "storeWaitingPayment": "Waiting for payment…",
-  "storeCancelCode": "Cancel Code",
-  "storeIdleHint": "Build an order, then create a payment code for its total — or show the static payment code.",
-  "storeFreeAmountLabel": "Custom Amount (nusan)",
+  "storeModeSubtitle": "Store cashier — rupiah sales & nusan points program",
+  "storeIdleHint": "Build an order, then settle the payment in rupiah. Customers earn nusan points after a settled sale.",
+  "storeFreeAmountLabel": "Custom Amount (Rp)",
   "storeAddFreeItem": "Add Custom Item",
   "storeFreeItem": "Custom Item",
   "storeFreeTitleLabel": "Item Name (optional)",
@@ -307,7 +304,6 @@
   "storeClearNote": "Clear Note",
   "storeSaveNote": "Save",
   "storeHoldOrder": "Hold Order",
-  "storeHoldBlocked": "Finish or cancel the pending payment code first before holding the order.",
   "storeHeldSaved": "Order held — resume it any time from the Held list.",
   "storeHeldTitle": "Held Orders",
   "storeHeldBadge": "Held ({count})",
@@ -319,7 +315,7 @@
     }
   },
   "storeHeldEmpty": "No orders are on hold.",
-  "storeHeldEntryMeta": "{time} • {count} item(s) • {total} nusan",
+  "storeHeldEntryMeta": "{time} • {count} item(s) • {total}",
   "@storeHeldEntryMeta": {
     "placeholders": {
       "time": {
@@ -370,11 +366,10 @@
   "storeApplyDiscount": "Apply",
   "storeRemoveDiscount": "Remove Discount",
   "storeDiscountPercent": "Percent (%)",
-  "storeDiscountFixed": "Fixed (nusan)",
+  "storeDiscountFixed": "Fixed (Rp)",
   "storeDiscountValue": "Discount Value",
-  "storeZeroTotalHint": "A total of 0 can't be made into a payment code — reduce the discount or add items.",
   "storeSessionTitle": "This Session",
-  "storeSessionSales": "{count} sales • {total} nusan",
+  "storeSessionSales": "{count} sales • Rp{total}",
   "@storeSessionSales": {
     "placeholders": {
       "count": {
@@ -394,7 +389,7 @@
   "storeRegisterNow": "Register It Now",
   "storeProductCode": "Product Code",
   "storeProductName": "Product Name",
-  "storeProductPrice": "Price (nusan)",
+  "storeProductPrice": "Price (Rp)",
   "storeProductDiscount": "Default Discount (optional)",
   "storeSaveProduct": "Save Product",
   "storeProductSaved": "Product saved: {name}",
@@ -413,20 +408,12 @@
       }
     }
   },
-  "storeReceiptDiscountNote": "Total discount on this sale: {amount} nusan",
-  "@storeReceiptDiscountNote": {
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
   "storeClearKeypad": "Clear",
   "storeProductFormError": "Check again: code, name, and a price above 0 are all required.",
   "storeProductCategory": "Category (optional)",
   "storeShiftTitle": "Cashier Shift",
   "storeShiftNotOpen": "Shift Not Open",
-  "storeShiftOpenHint": "Open a shift first to build orders, create payment codes, and take payments in Store Mode.",
+  "storeShiftOpenHint": "Open a shift first to build orders and take rupiah payments in Store Mode.",
   "storeShiftOpen": "Open Shift",
   "storeShiftClose": "Close Shift",
   "storeShiftOpenedAt": "Opened {time}",
@@ -438,11 +425,11 @@
     }
   },
   "storeShiftStillOpen": "Still Open",
-  "storeCloseShiftBlocked": "Can't close the shift yet: a payment code is still waiting or a payment is being celebrated. Finish or cancel it first.",
+  "storeCloseShiftBlocked": "Can't close the shift yet: a points issuance is still in progress. Finish issuing the points first.",
   "storeCloseShiftConfirmTitle": "Close This Shift?",
   "storeCloseShiftConfirmBody": "Once closed, later sales go into a new shift.",
   "storeCloseShiftHeldTitle": "Held Orders Still Pending",
-  "storeCloseShiftHeldBody": "There are {count} held orders (total {total} nusan) still unpaid. Held orders stay saved and can be resumed in the next shift.",
+  "storeCloseShiftHeldBody": "There are {count} held orders (total {total}) still unpaid. Held orders stay saved and can be resumed in the next shift.",
   "@storeCloseShiftHeldBody": {
     "placeholders": {
       "count": {
@@ -466,14 +453,13 @@
   "storeReportPrint": "Print Report",
   "storeReportSharePdf": "Share PDF",
   "storeReportEmpty": "No sales recorded in this period yet.",
-  "storeInvoiceExpiredVoid": "The payment code expired — the order was recorded as VOID.",
   "storeReportSummaryTitle": "SELECTED REPORT",
   "storeReportDetailsTitle": "MENU SALES DETAILS",
   "storeReportItemQty": "Item Qty",
   "storeReportTotalOrder": "Total ORDER",
   "storeReportTotalOrderInfo": "Total ORDER Info",
-  "storeReportInvoices": "#Invoices",
-  "storeReportInvUnit": "inv.",
+  "storeReportInvoices": "#Sales",
+  "storeReportInvUnit": "sales",
   "storeReportVoidInfo": "VOID Info",
   "storeReportVoidItemQty": "VOID Item Qty",
   "storeReportVoidSubTotal": "VOID Sub Total",
@@ -497,5 +483,215 @@
         "type": "int"
       }
     }
-  }
+  },
+  "storeCatalogManagerTitle": "Manage Catalog",
+  "storeAddProduct": "Add Product",
+  "storeEditProduct": "Edit Product",
+  "storeNoDiscount": "No Discount",
+  "storeCheckout": "Settle Payment",
+  "storePayTitle": "Settle Payment",
+  "storePayTotalLabel": "Order Total",
+  "storeCash": "Cash",
+  "storeQris": "QRIS",
+  "storeQrisNote": "The customer pays via QRIS as usual at this store. The app only records the payment method — tap the button below once the QRIS payment has been received.",
+  "storeCashReceived": "Cash Received",
+  "storeCashExact": "Exact",
+  "storeChange": "Change",
+  "storeCashShort": "Short Rp{amount}",
+  "@storeCashShort": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "storeSettle": "Settled — Finish",
+  "storeSettleQris": "QRIS Received — Finish",
+  "storeSettlePromo": "Finish Without Payment",
+  "storePromoNote": "Order total is Rp0 (promotion) — no payment is taken; the sale is still recorded.",
+  "storeCancelOrder": "Cancel Order",
+  "storeVoidConfirmTitle": "Cancel This Order?",
+  "storeVoidConfirmBody": "The order is cancelled and recorded as VOID in the report. This can't be undone.",
+  "storeVoidRecorded": "Order cancelled — recorded as VOID.",
+  "storeCancelBlockedRedeem": "The points redemption is already verified — this order can no longer be cancelled; settle its payment.",
+  "storeRedeemTitle": "Redeem Nusan Points",
+  "storeRedeemHint": "The customer redeems nusan points as a discount on this order. Enter the points, create a redemption code, and ask the customer to pay it from their own ELNUX app. The discount applies only after the points payment is verified.",
+  "storeRedeemPointsLabel": "Points",
+  "storeRedeemMaxNote": "At most {max} points for this order.",
+  "@storeRedeemMaxNote": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "storeRedeemClamped": "That exceeds the limit — using {max} points.",
+  "@storeRedeemClamped": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "storeRedeemCreate": "Create Redemption Code",
+  "storeRedeemWaiting": "Waiting for the customer's points payment…",
+  "storeRedeemVerified": "Redemption verified: {points} points = Rp{amount} discount.",
+  "@storeRedeemVerified": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "storeRedeemFailed": "The points redemption failed or expired — no discount. The order can still be paid in rupiah.",
+  "storeRedeemCancel": "Cancel Redemption",
+  "storeRedeemCancelWarn": "This redemption code will be cancelled. If the customer pays it afterwards anyway, the points still arrive in the store wallet but no discount applies — settle this order in full rupiah.",
+  "storeRedeemLeaveBody": "A points redemption is still in progress. Leaving this page cancels the redemption — the order returns to the cashier without a points discount.",
+  "storeRedeemDesc": "Nusan points redemption",
+  "storeRedeemMinChannel": "This points amount is below the minimum for creating a new receiving path (1,000 points). Increase the points, or skip redemption this time.",
+  "storeRedeemInvalidPoints": "That points amount isn't valid, or exceeds the possible discount for this order.",
+  "storeSaleCompleted": "Sale Completed",
+  "storePointsEarnedLine": "Nusan points earned: {points} points",
+  "@storePointsEarnedLine": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "storePointsIssueButton": "Scan & Issue",
+  "storePointsSkip": "Skip",
+  "storePointsIssuedOk": "Nusan points issued to the customer.",
+  "storeIssueInvalidCode": "That code isn't a readable ELNUX invoice or payment code — scan the customer's code again.",
+  "storeIssueAmountMismatch": "The code amount doesn't equal the points to issue — ask the customer to create a code for exactly the earned points.",
+  "storeIssueFailed": "Issuing the points failed — they stay pending and can be issued from the Pending Points list.",
+  "storeIssueStillPending": "The points payment is still in flight — it stays pending; check again from the Pending Points list.",
+  "storeDoneButton": "Done",
+  "storePendingBadge": "Pending Points ({count})",
+  "@storePendingBadge": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "storePendingTitle": "Pending Points",
+  "storePendingEmpty": "No points are pending.",
+  "storePendingEntryMeta": "{time} • {total}",
+  "@storePendingEntryMeta": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "storePendingIssue": "Issue",
+  "storePendingWaive": "Cancel Issuance",
+  "storePendingWaiveTitle": "Cancel Points Issuance?",
+  "storePendingWaiveBody": "The points from the {time} sale (total {total}) will NOT be issued to the customer. The sale record stays saved.",
+  "@storePendingWaiveBody": {
+    "placeholders": {
+      "total": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "storePendingWaived": "Points issuance cancelled.",
+  "storeReceiptTotalPay": "TOTAL TO PAY",
+  "storeReceiptPointsDiscount": "Points redemption ({points} pts) -Rp{amount}",
+  "@storeReceiptPointsDiscount": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "storeReceiptPointsEarned": "Nusan points earned: +{points} points",
+  "@storeReceiptPointsEarned": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "storeReceiptPointsPending": "Nusan points earned: +{points} points (not yet issued)",
+  "@storeReceiptPointsPending": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "storeReceiptPointsRule": "1 nusan point = Rp{rate} discount (store policy)",
+  "@storeReceiptPointsRule": {
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "storeReceiptPromo": "No payment (promotion)",
+  "storeSettingsTitle": "Store Settings",
+  "storeSettingsStoreName": "Store Name",
+  "storeSettingsPointsEnabled": "Nusan Points Program On",
+  "storeSettingsPointsHint": "Points are a promotional bonus on rupiah purchases — not a payment method. Points are only redeemed as a discount at this store.",
+  "storeSettingsEarnStep": "Earning Step (Rp)",
+  "storeSettingsEarnPoints": "Points per Step",
+  "storeSettingsRedeemRate": "Discount Value per Point (Rp)",
+  "storeSettingsMaxRedeem": "Max Points Discount (% of total)",
+  "storeSettingsMaxRedeemHint": "May be left empty = no cap beyond the remaining order total.",
+  "storeSettingsEarnPreview": "Example: an Rp{step} purchase earns {points} points.",
+  "@storeSettingsEarnPreview": {
+    "placeholders": {
+      "step": {
+        "type": "String"
+      },
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "storeSettingsSave": "Save Settings",
+  "storeSettingsSaved": "Store settings saved.",
+  "storeSettingsInvalid": "Check again: the step and discount value must be above 0; the max cap is 1–100 when filled.",
+  "storeRulesTitle": "Points Program Rules",
+  "storeRulesHeading": "Nusan Points — Store Promotional Bonus",
+  "storeRulesP1": "Nusan points are a promotional bonus from this store — not money and not a payment method. Purchases at this store are always paid in rupiah (cash or QRIS).",
+  "storeRulesP2": "Points are earned only from settled rupiah purchases, under the earning terms in effect at this store.",
+  "storeRulesP3": "Points can only be redeemed as a discount on purchases at this store, at the per-point discount value set by the store.",
+  "storeRulesP4": "Points cannot be cashed out, sold, bought, or exchanged for cash in any form.",
+  "storeRulesP5": "The per-point discount value and program terms may change with prior notice at this store.",
+  "storeRulesP6": "To receive and redeem points, customers use their own ELNUX app.",
+  "storeRulesP7": "When first receiving points, the customer's wallet may be charged a one-time receiving-path creation fee of 0.5% of the amount received (a network rule, charged only when the path is created).",
+  "storeRulesFooter": "These terms follow the store's points program guidelines. Keep your purchase receipt as proof of points earned and redeemed.",
+  "storeMigrationTitle": "Store Mode Updated",
+  "storeMigrationShiftClosed": "An old shift (nusan pricing) that was still open has been closed and marked as legacy data. Sales are recorded in rupiah from now on.",
+  "storeMigrationHeldDropped": "{count} held order(s) from the old version (nusan pricing) were dropped and not carried over.",
+  "@storeMigrationHeldDropped": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "storeMigrationCatalog": "The old nusan-priced catalog is no longer used. Refill the catalog with rupiah prices via the Manage button.",
+  "storeMigrationOk": "Got It",
+  "storeReportCash": "CASH",
+  "storeReportQris": "QRIS",
+  "storeReportPointsDiscount": "Points Discount",
+  "storeReportPointsIssued": "Points Issued",
+  "storeReportPointsPending": "Points Pending",
+  "storeReportPointsRedeemed": "Points Redeemed"
 }

@@ -4,70 +4,74 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ldk_node/src/generated/api/types.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../locale_controller.dart';
 import '../theme.dart';
-import '../services/bolt12_service.dart';
 import '../services/lsp_service.dart';
 import '../services/print_service.dart';
 import '../services/store_catalog.dart';
 import '../services/store_hold.dart';
 import '../services/store_order_history.dart';
+import '../services/store_settings.dart';
 import '../services/store_shift.dart';
 import '../utils/animated_checkmark.dart';
 import '../utils/bolt11_info.dart';
+import '../utils/bolt12_info.dart';
 import '../utils/coin_alert.dart';
 import '../utils/format.dart';
 import '../utils/friendly_error.dart';
 import '../utils/receive_watch.dart';
+import '../utils/store_migration.dart';
 import '../utils/store_mode_logic.dart';
 import '../utils/store_report.dart';
 import 'scan_screen.dart';
+import 'store_point_rules_screen.dart';
+import 'store_settings_screen.dart';
 import 'store_shift_report_screen.dart';
 
-/// Mode Toko — kasir (PoS) di dalam ELNUX untuk UMKM.
+/// Mode Toko v2 — kasir (PoS) di dalam ELNUX untuk UMKM.
+///
+/// KERANGKA (Pedoman miniPOS tim, keputusan NUX 3 Nov 2026):
+/// rupiah adalah alat pembayaran; nusan adalah POIN loyalitas.
+/// Karena itu layar ini adalah kasir RUPIAH: harga, total, dan
+/// pelunasan selalu rupiah (tunai dicatat dengan kembalian, QRIS
+/// dicatat metodenya — pemrosesan QRIS di luar aplikasi). Poin
+/// nusan hanya punya dua peran di sini, keduanya tercatat jujur:
+/// DITUKAR sebagai potongan harga (baris diskon rupiah, hanya
+/// sesudah perpindahan poin terverifikasi dari node) dan
+/// DITERBITKAN sebagai bonus sesudah pembayaran rupiah lunas.
+/// TIDAK ADA alur di layar ini yang melunasi belanja dengan
+/// poin.
 ///
 /// Satu sumber kebenaran nominal penjualan adalah DAFTAR BARIS
 /// pesanan: baris ditambah dengan (a) memindai QR/barcode produk,
 /// (b) mengetuk item katalog (sekaligus "item cepat"), atau
-/// (c) nominal bebas dari keypad. Total akhir pesanan (sesudah
-/// diskon baris lalu diskon order) adalah satu-satunya nominal
-/// yang dibuat kode bayar.
-///
-/// Kode bayar per penjualan adalah invoice Bolt11 nominal tetap
-/// lewat keputusan jalur yang PERSIS sama dengan layar Terima
-/// (Jalur 1: invoice biasa bila kapasitas terima cukup, JIT bila
-/// jalur harus lahir — termasuk pesan minimum 1.000 nusan untuk
-/// kelahiran). Kode Bayar Statis (offer Bolt12) tersedia untuk
-/// QR cetak di meja; pembayaran offer saat panelnya tampil juga
-/// dirayakan dan masuk ringkasan sesi.
-///
-/// Penerimaan diawasi dengan pola pengawas event layar Terima:
-/// antrean dikuras dulu, lalu poll Event_PaymentReceived. Untuk
-/// invoice toko, event dicocokkan lewat HASH pembayaran invoice
-/// aktif — bukan nominal, karena nominal event pada invoice JIT
-/// adalah yang sungguh diterima (terpotong fee kelahiran), bukan
-/// nominal invoice. Panel sukses tidak pernah tampil sebelum
-/// event penerimaan sungguhan (layar adalah kebenarannya).
+/// (c) nominal bebas dari keypad. Penyelesaian pesanan berjalan
+/// lewat HALAMAN PEMBAYARAN (_StorePaymentPage): penukaran poin
+/// opsional + pelunasan rupiah; hasilnya satu record penjualan
+/// era 'rp' di riwayat (bahan laporan shift).
 ///
 /// Alur shift (keputusan NUX 3 Nov 2026): kasir MEMULAI dengan
-/// Buka Shift; tanpa shift terbuka panel kasir nonaktif dan kode
-/// bayar tidak bisa dibuat — semua penjualan tercatat di dalam
-/// shift. Tutup Shift terhalang selama ada invoice menunggu /
-/// perayaan berjalan; invoice yang dibatalkan kasir atau
-/// kedaluwarsa tak terbayar dicatat sebagai VOID (satu record
-/// per invoice, anti-ganda). Laporan per shift (atau per
-/// tanggal) dibuka dari kartu shift di panel status.
+/// Buka Shift; tanpa shift terbuka panel kasir nonaktif dan
+/// pesanan tidak bisa diselesaikan — semua penjualan tercatat
+/// di dalam shift. Pesanan yang dibatalkan kasir dari halaman
+/// pembayaran tercatat sebagai VOID. Laporan per shift (atau
+/// per tanggal) dibuka dari kartu shift di panel status.
 ///
-/// Penyempurnaan lapangan (NUX 3 Nov 2026, batch kedua): pesanan
-/// bisa DITAHAN untuk tamu yang bayar belakangan (daftar tahan
-/// persisten; Tutup Shift memperingatkan bila masih ada yang
-/// ditahan, tetapi tidak menghapusnya); keypad mode ganda —
-/// Qty (bawaan: digit = pengali item berikutnya) dan Nominal
-/// (perilaku lama); tiap baris pesanan bisa diberi catatan
-/// singkat yang ikut tercetak pada struk rinci pelanggan;
-/// field Kategori di Kelola Katalog menyarankan kategori yang
-/// sudah ada sebagai chip.
+/// Penyempurnaan lapangan (NUX 3 Nov 2026): pesanan bisa DITAHAN
+/// untuk tamu yang bayar belakangan (daftar tahan persisten;
+/// Tutup Shift memperingatkan bila masih ada yang ditahan,
+/// tetapi tidak menghapusnya); keypad mode ganda — Qty (bawaan:
+/// digit = pengali item berikutnya) dan Nominal; tiap baris
+/// pesanan bisa diberi catatan singkat yang ikut tercetak pada
+/// struk rinci pelanggan; katalog dapat dicari dan field
+/// Kategori menyarankan kategori yang sudah ada sebagai chip.
+///
+/// Penerbitan poin yang gagal/dilewati TIDAK membatalkan
+/// penjualan: record-nya berstatus 'pending' dan masuk antre
+/// "Poin Tertunda" di panel status, bisa diterbitkan ulang atau
+/// ditandai batal terbit dari sana.
 class StoreModeScreen extends StatefulWidget {
   final LspService lspService;
 
@@ -77,40 +81,17 @@ class StoreModeScreen extends StatefulWidget {
   State<StoreModeScreen> createState() => _StoreModeScreenState();
 }
 
-/// Penjualan terakhir yang lunas — bahan tombol Cetak Struk
-/// selama panel sukses tampil.
-class _LastSale {
-  final BigInt amountMsat;
-  final DateTime time;
-  final int discountNusan;
-  final String? paymentHashHex;
-  final bool isOrderSale;
-
-  /// Baris pesanan penjualan ini (hanya penjualan berpesanan) —
-  /// bahan rincian item pada struk pelanggan.
-  final List<OrderLine> lines;
-
-  const _LastSale({
-    required this.amountMsat,
-    required this.time,
-    required this.discountNusan,
-    required this.paymentHashHex,
-    required this.isOrderSale,
-    this.lines = const [],
-  });
-}
-
 class _StoreModeScreenState extends State<StoreModeScreen> {
   // --- Pesanan berjalan ---
-  int _keypadNusan = 0;
+  int _keypadRp = 0;
   List<OrderLine> _lines = const [];
   Discount? _orderDiscount;
 
   // --- Keypad mode ganda (keputusan NUX 3 Nov 2026) ---
   /// True = mode Qty (BAWAAN saat layar dibuka): digit keypad
   /// menyusun pengali untuk item berikutnya yang ditambahkan
-  /// dari katalog/scan. False = mode Nominal: perilaku lama
-  /// (nominal bebas + jumlah cepat + judul kustom).
+  /// dari katalog/scan. False = mode Nominal: nominal bebas
+  /// rupiah + jumlah cepat + judul kustom.
   bool _qtyKeypadMode = true;
 
   /// Nilai pengali yang sedang disusun di mode Qty; 0 = belum
@@ -123,13 +104,13 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
   final _holdStore = HeldOrderStore();
   List<HeldOrder> _heldOrders = const [];
 
-  // --- Katalog ---
+  // --- Katalog (store v2, harga rupiah) ---
   final _catalogStore = StoreCatalogStore();
   List<CatalogItem> _catalog = const [];
 
   /// Kolom cari katalog (nama/kode) + kolom judul kustom untuk
   /// baris nominal bebas. Keduanya dibersihkan mengikuti reset
-  /// pesanan sesudah pembayaran lunas (lihat _finishCelebration).
+  /// pesanan sesudah penjualan lunas (lihat _resetOrderPanel).
   final _searchController = TextEditingController();
   String _searchQuery = '';
   final _freeTitleController = TextEditingController();
@@ -139,96 +120,173 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
   List<StoreShift> _shifts = const [];
   StoreShift? _openShift;
 
-  // --- Invoice toko aktif ---
-  String? _invoice;
-  String? _invoiceHashHex;
-  DateTime? _invoiceExpiresAt;
+  // --- Pengaturan toko & program poin ---
+  final _settingsStore = StoreSettingsStore();
+  StoreSettings _settings = StoreSettings.defaults;
 
-  /// Anti-ganda pencatatan VOID: satu invoice toko paling banyak
-  /// satu record void (batal dan kedaluwarsa tidak boleh
-  /// mencatat dua kali untuk invoice yang sama).
-  bool _invoiceVoidRecorded = false;
-
-  /// Total (nusan) saat invoice dibuat — yang ditampilkan selama
-  /// menunggu, bukan total pesanan berjalan yang masih bisa
-  /// diedit kasir.
-  int _invoiceTotalNusan = 0;
-  bool _creating = false;
-  String? _error;
-
-  // --- Pengawas penerimaan (pola layar Terima) ---
-  Timer? _eventTimer;
-  int _watchGen = 0;
-  bool _watching = false;
+  // --- Penjualan terakhir & panel sukses ---
+  final _historyStore = StoreOrderHistoryStore();
+  CompletedOrder? _saleRecord;
   bool _received = false;
-  BigInt? _receivedMsat;
   Timer? _celebrationTimer;
-  _LastSale? _lastSale;
+
+  /// Penerbitan poin sedang berjalan (kirim ke pelanggan) —
+  /// tombol terbit dinonaktifkan & Tutup Shift terhalang sesaat.
+  bool _issuing = false;
+
+  /// Record era 'rp' yang poinnya berstatus 'pending' — bahan
+  /// penanda & daftar antre "Poin Tertunda".
+  List<CompletedOrder> _pendingIssues = const [];
 
   // --- Ringkasan sesi ---
   StoreSessionSummary _session = StoreSessionSummary.empty;
 
-  // --- Kode Bayar Statis ---
-  late final Bolt12OfferService _bolt12Service = Bolt12OfferService(
-    widget.lspService,
-  );
-  bool _staticOpen = false;
-  bool _staticLoading = false;
-  String? _staticOffer;
-  String? _staticError;
-
-  final _historyStore = StoreOrderHistoryStore();
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _loadCatalog();
-    _loadShifts();
-    _loadHeldOrders();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _prefetchStaticOffer();
-    });
+    _init();
   }
 
   @override
   void dispose() {
-    _eventTimer?.cancel();
     _celebrationTimer?.cancel();
-    _watchGen++;
     _searchController.dispose();
     _freeTitleController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadCatalog() async {
-    final items = await _catalogStore.load();
-    if (mounted) setState(() => _catalog = items);
-  }
+  /// Muat semua keadaan lokal, lalu jalankan migrasi v1 → v2
+  /// satu kali (rancangan §7) sebelum layar dipakai.
+  Future<void> _init() async {
+    final settings = await _settingsStore.load();
+    var shifts = await _shiftStore.load();
+    final held = await _holdStore.load();
+    final catalog = await _catalogStore.load();
+    if (!mounted) return;
 
-  // ------------------------------------------------------------------
-  // Shift kasir (alur NUX: Open Shift dulu, Close Shift penutup)
-  // ------------------------------------------------------------------
-
-  Future<void> _loadShifts() async {
-    final shifts = await _shiftStore.load();
+    var openShift = openShiftIn(shifts);
+    final migrationNote = await _runMigrationOnce(shifts, openShift);
+    if (migrationNote != null) {
+      // Migrasi bisa menutup shift terbuka — segarkan keadaan.
+      shifts = await _shiftStore.load();
+      openShift = openShiftIn(shifts);
+    }
     if (!mounted) return;
     setState(() {
+      _settings = settings;
       _shifts = shifts;
-      _openShift = openShiftIn(shifts);
+      _openShift = openShift;
+      _heldOrders = held;
+      _catalog = catalog;
     });
+    await _loadPendingIssues();
+    if (migrationNote != null && mounted) {
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: ctx.palette.card,
+          title: Text(ctx.l10n.storeMigrationTitle),
+          content: Text(migrationNote),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(ctx.l10n.storeMigrationOk),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
-  Future<void> _loadHeldOrders() async {
-    final held = await _holdStore.load();
-    if (mounted) setState(() => _heldOrders = held);
+  /// Eksekusi migrasi era satu kali; mengembalikan teks
+  /// pemberitahuan untuk dialog bila ada hal yang perlu
+  /// diketahui kasir (pesanan ditahan gugur / katalog perlu
+  /// diisi ulang / shift lama ditutup), null bila tidak ada.
+  Future<String?> _runMigrationOnce(
+    List<StoreShift> shifts,
+    StoreShift? openShift,
+  ) async {
+    final flag = StoreMigrationFlagStore();
+    final done = await flag.isDone();
+    // Keadaan simpanan v1 dibaca dari kunci lamanya langsung —
+    // store v2 menunjuk kunci baru dan tidak melihat data v1.
+    var legacyHeldCount = 0;
+    var legacyCatalogNonEmpty = false;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      legacyHeldCount = decodeHeldOrders(
+        prefs.getString('store_held_orders_v1'),
+      ).length;
+      legacyCatalogNonEmpty = decodeCatalog(
+        prefs.getString('store_catalog_items_v1'),
+      ).isNotEmpty;
+    } catch (_) {
+      // Gagal baca simpanan lama = tidak ada yang diketahui
+      // untuk dimigrasikan; jangan mengarang.
+    }
+    final plan = planStoreMigration(
+      alreadyDone: done,
+      hasOpenLegacyShift: openShift != null && openShift.era == storeEraNusan,
+      legacyHeldCount: legacyHeldCount,
+      legacyCatalogNonEmpty: legacyCatalogNonEmpty,
+    );
+    if (!plan.hasActions) {
+      if (!done) await flag.markDone();
+      return null;
+    }
+    if (plan.closeOpenLegacyShift && openShift != null) {
+      final closed = openShift.close(DateTime.now());
+      final next = [
+        for (final s in shifts) s == openShift ? closed : s,
+      ];
+      await _shiftStore.save(next);
+    }
+    if (plan.droppedHeldOrders > 0) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('store_held_orders_v1');
+      } catch (_) {
+        // Abaikan — kunci lama yang tertinggal tidak dibaca v2.
+      }
+    }
+    await flag.markDone();
+    if (!plan.hasNotices && !plan.closeOpenLegacyShift) return null;
+    final l10n = context.l10n;
+    final parts = <String>[
+      if (plan.closeOpenLegacyShift) l10n.storeMigrationShiftClosed,
+      if (plan.droppedHeldOrders > 0)
+        l10n.storeMigrationHeldDropped(plan.droppedHeldOrders),
+      if (plan.catalogNeedsRefill) l10n.storeMigrationCatalog,
+    ];
+    return parts.join('\n\n');
+  }
+
+  Future<void> _loadPendingIssues() async {
+    final orders = await _historyStore.load();
+    if (!mounted) return;
+    setState(() {
+      _pendingIssues = [
+        for (final o in orders)
+          if (o.isRupiahEra &&
+              !o.isVoid &&
+              o.pointsIssueStatus == issueStatusPending)
+            o,
+      ];
+    });
   }
 
   String get _reportLocale =>
       context.l10n.localeName.startsWith('en') ? 'en' : 'id';
 
+  // ------------------------------------------------------------------
+  // Shift kasir (alur NUX: Open Shift dulu, Close Shift penutup)
+  // ------------------------------------------------------------------
+
   Future<void> _openShiftAction() async {
     if (_openShift != null) return;
-    final shift = StoreShift(openedAt: DateTime.now());
+    final shift = StoreShift(openedAt: DateTime.now(), era: storeEraRupiah);
     final next = [..._shifts, shift];
     await _shiftStore.save(next);
     if (!mounted) return;
@@ -238,16 +296,15 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
     });
   }
 
-  /// Tutup shift. TERHALANG selama masih ada invoice menunggu,
-  /// invoice sedang dibuat, atau perayaan penerimaan berjalan —
-  /// kasir menyelesaikan atau membatalkan dulu (pembatalan
-  /// tercatat VOID). Sesudah bersih, tutup berhasil dan laporan
+  /// Tutup shift. Terhalang sesaat selama penerbitan poin
+  /// berjalan (supaya status record tidak berpacu dengan
+  /// penutupan). Sesudah bersih, tutup berhasil dan laporan
   /// shift yang baru ditutup ditawarkan.
   Future<void> _requestCloseShift() async {
     final shift = _openShift;
     if (shift == null) return;
     final l10n = context.l10n;
-    if (_invoice != null || _received || _creating) {
+    if (_issuing) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(l10n.storeCloseShiftBlocked)));
@@ -260,10 +317,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
       // tertutup/terhapus: ia tetap tersimpan dan bisa
       // dilanjutkan di shift berikutnya. Dialog ini merangkap
       // konfirmasi tutup pada jalur ini.
-      final heldTotal = _heldOrders.fold(
-        0,
-        (sum, h) => sum + h.grandTotalNusan,
-      );
+      final heldTotal = _heldOrders.fold(0, (sum, h) => sum + h.grandTotalRp);
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -272,7 +326,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
           content: Text(
             l10n.storeCloseShiftHeldBody(
               _heldOrders.length,
-              _fmtNusan(heldTotal),
+              'Rp${_fmtRp(heldTotal)}',
             ),
           ),
           actions: [
@@ -326,9 +380,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
     setState(() {
       _shifts = next;
       _openShift = null;
-      _staticOpen = false;
     });
-    _syncWatcher();
     final view = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -466,20 +518,11 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
     );
   }
 
-  Future<void> _prefetchStaticOffer() async {
-    final result = await _bolt12Service.ensureOffer(
-      description: context.l10n.staticOfferDescription,
-    );
-    if (result.outcome == StaticOfferOutcome.ready && mounted) {
-      setState(() => _staticOffer = result.offer);
-    }
-  }
-
   // ------------------------------------------------------------------
   // Pesanan
   // ------------------------------------------------------------------
 
-  int get _grandTotal => orderGrandTotalNusan(_lines, _orderDiscount);
+  int get _grandTotal => orderGrandTotalRp(_lines, _orderDiscount);
 
   void _addProduct(CatalogItem item) {
     // Di mode Qty, pengali yang sedang disusun berlaku untuk
@@ -492,7 +535,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
         _lines,
         code: item.code,
         label: item.name,
-        unitPriceNusan: item.priceNusan,
+        unitPriceRp: item.priceRp,
         category: item.category,
         defaultDiscount: item.defaultDiscount,
         qty: qty,
@@ -518,7 +561,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
       if (_qtyKeypadMode) {
         _qtyMultiplier = qtyMultiplierPressDigit(_qtyMultiplier, digit);
       } else {
-        _keypadNusan = keypadPressDigit(_keypadNusan, digit);
+        _keypadRp = keypadPressDigit(_keypadRp, digit);
       }
     });
   }
@@ -528,7 +571,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
       if (_qtyKeypadMode) {
         _qtyMultiplier = qtyMultiplierPressDoubleZero(_qtyMultiplier);
       } else {
-        _keypadNusan = keypadPressDoubleZero(_keypadNusan);
+        _keypadRp = keypadPressDoubleZero(_keypadRp);
       }
     });
   }
@@ -538,7 +581,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
       if (_qtyKeypadMode) {
         _qtyMultiplier = keypadBackspace(_qtyMultiplier);
       } else {
-        _keypadNusan = keypadBackspace(_keypadNusan);
+        _keypadRp = keypadBackspace(_keypadRp);
       }
     });
   }
@@ -548,13 +591,13 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
       if (_qtyKeypadMode) {
         _qtyMultiplier = 0;
       } else {
-        _keypadNusan = 0;
+        _keypadRp = 0;
       }
     });
   }
 
   void _addFreeAmount() {
-    if (_keypadNusan <= 0) return;
+    if (_keypadRp <= 0) return;
     // Judul kustom opsional: terisi → jadi label baris (untuk
     // barang yang belum terinput di katalog); kosong → label
     // baku "Item Bebas". Kolom judul dibersihkan sesudah baris
@@ -564,12 +607,8 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
       fallbackLabel: context.l10n.storeFreeItem,
     );
     setState(() {
-      _lines = orderAddFreeAmount(
-        _lines,
-        label: label,
-        amountNusan: _keypadNusan,
-      );
-      _keypadNusan = 0;
+      _lines = orderAddFreeAmount(_lines, label: label, amountRp: _keypadRp);
+      _keypadRp = 0;
     });
     _freeTitleController.clear();
   }
@@ -631,12 +670,12 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
   // ------------------------------------------------------------------
 
   /// Bersihkan panel pesanan penuh TANPA perayaan — pola reset
-  /// yang sama dengan _finishCelebration, dipakai sesudah
-  /// pesanan ditahan (dan tidak untuk hal lain).
+  /// yang sama dengan sesudah penjualan lunas, dipakai sesudah
+  /// pesanan ditahan.
   void _resetOrderPanel() {
     _lines = const [];
     _orderDiscount = null;
-    _keypadNusan = 0;
+    _keypadRp = 0;
     _qtyMultiplier = 0;
     _searchQuery = '';
     _searchController.clear();
@@ -645,20 +684,8 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
 
   /// Tahan pesanan berjalan: parkir apa adanya ke daftar tahan
   /// persisten, lalu panel dibersihkan untuk pelanggan berikut.
-  /// Terhalang selama ada invoice menunggu / perayaan berjalan /
-  /// invoice sedang dibuat (keluarga pagar Tutup Shift): kode
-  /// bayar yang sudah terbit harus diselesaikan atau dibatalkan
-  /// dulu — pesanan yang invoicenya menggantung tidak boleh
-  /// berpindah wujud diam-diam.
   Future<void> _holdCurrentOrder() async {
     if (_lines.isEmpty) return;
-    final l10n = context.l10n;
-    if (_invoice != null || _received || _creating) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.storeHoldBlocked)));
-      return;
-    }
     final now = DateTime.now();
     final held = HeldOrder(
       id: '${now.microsecondsSinceEpoch}',
@@ -675,7 +702,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
     });
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(l10n.storeHeldSaved)));
+    ).showSnackBar(SnackBar(content: Text(context.l10n.storeHeldSaved)));
   }
 
   /// Ringkasan satu entri tahan untuk daftar & dialog: label
@@ -741,7 +768,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
                           l10n.storeHeldEntryMeta(
                             _receiptTime(held.heldAt),
                             held.totalQty,
-                            _fmtNusan(held.grandTotalNusan),
+                            'Rp${_fmtRp(held.grandTotalRp)}',
                           ),
                         ),
                         trailing: IconButton(
@@ -957,8 +984,9 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
     setState(() => _orderDiscount = result.cleared ? null : result.discount);
   }
 
-  /// Dialog atur diskon: persen ATAU nominal, dapat dihapus.
-  /// Mengembalikan null bila dibatalkan (tanpa perubahan).
+  /// Dialog atur diskon: persen ATAU nominal rupiah, dapat
+  /// dihapus. Mengembalikan null bila dibatalkan (tanpa
+  /// perubahan).
   Future<_DiscountEditResult?> _showDiscountDialog({
     required String title,
     required Discount? current,
@@ -1047,379 +1075,377 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
   }
 
   // ------------------------------------------------------------------
-  // Kode bayar (invoice toko)
+  // Penyelesaian pembayaran (halaman pembayaran)
   // ------------------------------------------------------------------
 
-  Future<void> _createPaymentCode() async {
-    // Kode bayar hanya di dalam shift terbuka (alur NUX) — panel
-    // kasir memang nonaktif tanpa shift; ini pagar keduanya.
-    if (_openShift == null) return;
-    final total = _grandTotal;
-    if (total <= 0 || _lines.isEmpty) return;
-    _stopWatching();
+  /// Buka halaman pembayaran untuk pesanan berjalan. Hasilnya:
+  /// null = kembali tanpa catatan (pesanan utuh); record VOID =
+  /// pesanan dibatalkan kasir (catat, bersihkan panel); record
+  /// lunas = penjualan tercatat (panel sukses + penerbitan poin).
+  Future<void> _openPayment() async {
+    if (_openShift == null || _lines.isEmpty) return;
+    final result = await Navigator.push<CompletedOrder>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _StorePaymentPage(
+          lines: List.of(_lines),
+          orderDiscount: _orderDiscount,
+          settings: _settings,
+          lspService: widget.lspService,
+        ),
+      ),
+    );
+    if (result == null || !mounted) return;
+    await _historyStore.append(result);
+    if (!mounted) return;
+    if (result.isVoid) {
+      setState(_resetOrderPanel);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.storeVoidRecorded)));
+      return;
+    }
+    setState(() {
+      _session = _session.recordSale(result.grandTotalRp);
+      _saleRecord = result;
+      _received = true;
+      _resetOrderPanel();
+    });
+    CoinAlert.play();
+    await _loadPendingIssues();
+    _armCelebrationTimer();
+  }
+
+  /// Panel sukses boleh menutup otomatis HANYA bila tidak ada
+  /// keputusan penerbitan poin yang menggantung — selama poin
+  /// berstatus 'pending' pada penjualan ini, panel menunggu
+  /// kasir (Terbitkan / Lewati / Selesai) supaya poin pelanggan
+  /// tidak hilang terlupakan di antre.
+  bool get _saleAwaitingIssueDecision =>
+      _saleRecord != null &&
+      _saleRecord!.pointsEarned > 0 &&
+      _saleRecord!.pointsIssueStatus == issueStatusPending;
+
+  void _armCelebrationTimer() {
+    _celebrationTimer?.cancel();
+    if (_saleAwaitingIssueDecision) return;
+    _celebrationTimer = Timer(receiveCelebrationDuration, _finishCelebration);
+  }
+
+  /// Tutup panel sukses: penjualan berikutnya bisa dimulai.
+  /// (Baris pesanan sudah dibersihkan saat lunas tercatat.)
+  void _finishCelebration() {
+    if (!mounted) return;
     _celebrationTimer?.cancel();
     setState(() {
-      _creating = true;
-      _error = null;
-      _invoice = null;
-      _invoiceHashHex = null;
-      _invoiceExpiresAt = null;
-      _invoiceVoidRecorded = false;
       _received = false;
-      _receivedMsat = null;
-      _staticOpen = false;
+      _saleRecord = null;
     });
+  }
 
-    final amountMsat = BigInt.from(total) * BigInt.from(1000);
-    final description = context.l10n.receiveInvoiceDesc(total.toString());
+  // ------------------------------------------------------------------
+  // Penerbitan poin (toko → pelanggan, sesudah rupiah lunas)
+  // ------------------------------------------------------------------
 
-    // Keputusan jalur PERSIS layar Terima (Jalur 1): invoice biasa
-    // bila kapasitas terima usable mencukupi, JIT bila jalur harus
-    // lahir; gagal baca kapasitas jatuh ke JIT seperti di Terima.
-    var route = ReceiveInvoiceRoute.jit;
+  /// Terbitkan poin satu record: pindai kode dari ELNUX
+  /// pelanggan (invoice Bolt11 sejumlah pas poin yang diperoleh,
+  /// atau offer Bolt12-nya), lalu bayar lewat jalur kirim dompet
+  /// yang sudah ada. Nominal kode WAJIB sama dengan poin yang
+  /// diperoleh — kode bernominal lain ditolak, bukan dibayar
+  /// sebagian. Hasil akhir ditunggu dari catatan node; sukses →
+  /// record ditandai 'issued'; gagal/masih berjalan → tetap
+  /// 'pending' (antre Poin Tertunda), penjualan rupiahnya tidak
+  /// terpengaruh sama sekali.
+  Future<void> _issuePoints(CompletedOrder record) async {
+    if (_issuing || record.pointsEarned <= 0) return;
+    final l10n = context.l10n;
+    final raw = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const ScanScreen()),
+    );
+    if (raw == null || !mounted) return;
+    final code = raw.trim();
+    if (code.isEmpty) return;
+    final amountMsat = BigInt.from(record.pointsEarned) * BigInt.from(1000);
+    setState(() => _issuing = true);
     try {
-      final inbound = await widget.lspService.usableInboundCapacityMsat();
-      route = chooseReceiveInvoiceRoute(
-        amountMsat: amountMsat,
-        usableInboundCapacityMsat: inbound,
-      );
-    } catch (_) {
-      route = ReceiveInvoiceRoute.jit;
-    }
-
-    try {
-      final invoice = route == ReceiveInvoiceRoute.regular
-          ? await widget.lspService.createRegularInvoice(
-              amountMsat: amountMsat,
-              description: description,
-            )
-          : await widget.lspService.createJitInvoice(
-              amountMsat: amountMsat,
-              description: description,
-            );
+      final PaymentId paymentId;
+      if (code.startsWith('lno1')) {
+        final info = parseOfferInfo(code);
+        if (info == null || info.isExpiredAt(DateTime.now())) {
+          _snack(l10n.storeIssueInvalidCode);
+          return;
+        }
+        if (info.isFixedAmount) {
+          if (info.amountMsat != amountMsat) {
+            _snack(l10n.storeIssueAmountMismatch);
+            return;
+          }
+          paymentId = await widget.lspService.payOffer(code);
+        } else {
+          paymentId = await widget.lspService.payOfferUsingAmount(
+            code,
+            amountMsat,
+          );
+        }
+      } else {
+        final amount = parseBolt11AmountMsat(code);
+        if (amount == null) {
+          _snack(l10n.storeIssueInvalidCode);
+          return;
+        }
+        if (amount != amountMsat) {
+          _snack(l10n.storeIssueAmountMismatch);
+          return;
+        }
+        paymentId = await widget.lspService.payInvoice(code);
+      }
+      final status = await widget.lspService.waitForPaymentOutcome(paymentId);
       if (!mounted) return;
-      final info = parseBolt11Info(invoice);
-      setState(() {
-        _invoice = invoice;
-        _invoiceTotalNusan = total;
-        // Hash untuk pencocokan event penerimaan + waktu
-        // kedaluwarsa untuk pencatatan VOID. Invoice toko
-        // SENGAJA tidak disimpan ke SavedInvoiceStore: ia urusan
-        // kasir sesaat, bukan invoice pending personal yang perlu
-        // dipulihkan layar Terima.
-        _invoiceHashHex = info?.paymentHashHex;
-        _invoiceExpiresAt = info?.expiresAt;
-      });
-      _syncWatcher();
+      if (status == PaymentStatus.succeeded) {
+        final updated = record.withIssueStatus(
+          issueStatusIssued,
+          issueHashHex: paymentIdHex(paymentId),
+        );
+        await _historyStore.replace(updated);
+        if (!mounted) return;
+        if (_saleRecord?.id == updated.id) {
+          setState(() => _saleRecord = updated);
+        }
+        await _loadPendingIssues();
+        _snack(l10n.storePointsIssuedOk);
+        _armCelebrationTimer();
+      } else if (status == PaymentStatus.failed) {
+        _snack(l10n.storeIssueFailed);
+      } else {
+        _snack(l10n.storeIssueStillPending);
+      }
     } catch (e) {
       if (!mounted) return;
-      // Pesan minimum kelahiran JIT sama persis dengan layar
-      // Terima — jangan sampai hilang di Mode Toko.
-      setState(
-        () => _error =
-            route == ReceiveInvoiceRoute.jit &&
-                amountMsat < BigInt.from(1000000)
-            ? context.l10n.receiveJitMinimumNote
-            : friendlyError(
-                e,
-                fallback: context.l10n.createInvoiceFailed,
-                l10n: context.l10n,
-              ),
+      _snack(
+        friendlyError(
+          e,
+          fallback: l10n.storeIssueFailed,
+          l10n: l10n,
+        ),
       );
     } finally {
-      if (mounted) {
-        setState(() => _creating = false);
-        _syncWatcher();
-      }
+      if (mounted) setState(() => _issuing = false);
     }
   }
 
-  /// Catat invoice toko aktif sebagai VOID dari pesanan berjalan
-  /// saat ini. Anti-ganda: bendera per invoice memastikan batal
-  /// dan kedaluwarsa tidak mencatat dua kali untuk invoice yang
-  /// sama (dan invoice yang sudah lunas tidak pernah jadi VOID).
-  void _recordVoidForActiveInvoice() {
-    if (_invoice == null || _invoiceVoidRecorded || _lines.isEmpty) return;
-    _invoiceVoidRecorded = true;
-    _historyStore.append(
-      buildCompletedOrder(
-        time: DateTime.now(),
-        lines: _lines,
-        orderDiscount: _orderDiscount,
-        paymentHashHex: _invoiceHashHex,
-        isVoid: true,
+  void _snack(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  // ------------------------------------------------------------------
+  // Antre poin tertunda
+  // ------------------------------------------------------------------
+
+  /// Lembar antre "Poin Tertunda": penjualan yang poinnya belum
+  /// diterbitkan. Per entri: Terbitkan (pindai & bayar ulang —
+  /// alur yang sama dengan panel sukses) atau Batal Terbit
+  /// (tandai 'waived' lewat konfirmasi; record penjualan tetap).
+  Future<void> _openPendingIssues() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.palette.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          final l10n = ctx.l10n;
+          return SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 16, 18, 6),
+                    child: Text(
+                      l10n.storePendingTitle,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  if (_pendingIssues.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 6, 18, 18),
+                      child: Text(
+                        l10n.storePendingEmpty,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: ctx.palette.muted,
+                        ),
+                      ),
+                    )
+                  else
+                    for (final record in _pendingIssues)
+                      ListTile(
+                        leading: const Icon(Icons.loyalty_outlined),
+                        title: Text(
+                          l10n.storePointsEarnedLine(record.pointsEarned),
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: Text(
+                          l10n.storePendingEntryMeta(
+                            _receiptTime(record.time),
+                            'Rp${_fmtRp(record.grandTotalRp)}',
+                          ),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            TextButton(
+                              onPressed: _issuing
+                                  ? null
+                                  : () async {
+                                      Navigator.pop(ctx);
+                                      await _issuePoints(record);
+                                    },
+                              child: Text(l10n.storePendingIssue),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close_rounded, size: 20),
+                              onPressed: () async {
+                                final waived =
+                                    await _confirmWaiveIssue(record);
+                                if (waived) setSheet(() {});
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                  const SizedBox(height: 10),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 
-  void _cancelPaymentCode() {
-    _recordVoidForActiveInvoice();
-    setState(() {
-      _invoice = null;
-      _invoiceHashHex = null;
-      _invoiceExpiresAt = null;
-    });
-    _syncWatcher();
-  }
-
-  /// Kedaluwarsa invoice yang sedang ditunggu terdeteksi di
-  /// layar: catat VOID, bersihkan invoice, beri tahu kasir.
-  void _checkInvoiceExpiry() {
-    final expiresAt = _invoiceExpiresAt;
-    if (_invoice == null || expiresAt == null) return;
-    if (!DateTime.now().isAfter(expiresAt)) return;
-    _recordVoidForActiveInvoice();
-    if (!mounted) return;
-    setState(() {
-      _invoice = null;
-      _invoiceHashHex = null;
-      _invoiceExpiresAt = null;
-      _error = context.l10n.storeInvoiceExpiredVoid;
-    });
-    _syncWatcher();
-  }
-
-  // ------------------------------------------------------------------
-  // Pengawas penerimaan (pola layar Terima, commit d27236d1)
-  // ------------------------------------------------------------------
-
-  void _syncWatcher() {
-    final shouldRun = receiveWatcherShouldRun(
-      invoicePending: _invoice != null,
-      staticPanelOpen: _staticOpen,
-      celebrating: _received,
+  /// Konfirmasi "Batal Terbit" satu entri antre: poin memang
+  /// TIDAK jadi diterbitkan; record penjualannya tetap tercatat.
+  Future<bool> _confirmWaiveIssue(CompletedOrder record) async {
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ctx.palette.card,
+        title: Text(l10n.storePendingWaiveTitle),
+        content: Text(
+          l10n.storePendingWaiveBody(
+            'Rp${_fmtRp(record.grandTotalRp)}',
+            _receiptTime(record.time),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(l10n.storePendingWaive),
+          ),
+        ],
+      ),
     );
-    if (shouldRun && !_watching) {
-      _startWatching();
-    } else if (!shouldRun && _watching) {
-      _stopWatching();
-    }
-  }
-
-  void _stopWatching() {
-    _eventTimer?.cancel();
-    _eventTimer = null;
-    _watchGen++;
-    _watching = false;
-  }
-
-  Future<void> _startWatching() async {
-    _eventTimer?.cancel();
-    final gen = ++_watchGen;
-    _watching = true;
-    await _drainEvents();
-    if (!mounted || gen != _watchGen) return;
-    _eventTimer = Timer.periodic(
-      const Duration(seconds: 2),
-      (_) => _pollEvents(gen),
+    if (confirmed != true || !mounted) return false;
+    await _historyStore.replace(
+      record.withIssueStatus(issueStatusWaived),
     );
-  }
-
-  Future<void> _drainEvents() async {
-    try {
-      for (var i = 0; i < 100; i++) {
-        final e = await widget.lspService.pollNextEvent();
-        if (e == null) break;
-      }
-    } catch (_) {
-      // Node belum siap — polling berikutnya yang bekerja.
-    }
-  }
-
-  Future<void> _pollEvents(int gen) async {
-    if (!mounted || gen != _watchGen) return;
-    try {
-      for (var i = 0; i < 20; i++) {
-        final e = await widget.lspService.pollNextEvent();
-        if (e == null) break;
-        if (e is Event_PaymentReceived) {
-          if (_handleReceived(e, gen)) return;
-          // Event bukan untuk layar ini (mis. pembayaran lain
-          // lewat node yang sama) — lanjut membaca, jangan
-          // dirayakan di sini.
-        }
-      }
-    } catch (_) {
-      // Gagal baca sesaat — coba lagi di tick berikut.
-    }
-    // Pembayaran yang datang pada tick ini sudah ditangani di
-    // atas (return lebih dulu) — kedaluwarsa hanya dinilai bila
-    // invoice masih menunggu sesudah antrean event dibaca.
-    if (mounted && gen == _watchGen) _checkInvoiceExpiry();
-  }
-
-  String _eventHashHex(Event_PaymentReceived e) =>
-      e.paymentHash.data.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-
-  /// Terima satu event pembayaran. Mengembalikan true bila event
-  /// ini adalah penjualan Mode Toko (sudah dirayakan), false bila
-  /// bukan urusan layar ini.
-  ///
-  /// Pencocokan invoice toko lewat HASH pembayaran: event yang
-  /// hash-nya sama dengan invoice aktif = penjualan pesanan ini.
-  /// Bila hash invoice tak terbaca saat pembuatan (parse gagal),
-  /// jatuh ke perilaku layar Terima: pembayaran apa pun selama
-  /// menunggu dianggap penjualan ini. Pembayaran offer dirayakan
-  /// hanya saat panel statis tampil dan tidak ada invoice aktif.
-  bool _handleReceived(Event_PaymentReceived e, int gen) {
-    final eventHash = _eventHashHex(e);
-    final isOrderSale =
-        _invoice != null &&
-        (_invoiceHashHex == null || _invoiceHashHex == eventHash);
-    final isStaticSale =
-        _invoice == null && _staticOpen && _staticOffer != null;
-    if (!isOrderSale && !isStaticSale) return false;
-
-    CoinAlert.play();
-    final now = DateTime.now();
-    var saleDiscountNusan = 0;
-    if (isOrderSale) {
-      // Invoice ini LUNAS — kunci supaya tidak pernah tercatat
-      // VOID oleh jalur batal/kedaluwarsa yang terlambat.
-      _invoiceVoidRecorded = true;
-      saleDiscountNusan = orderTotalDiscountNusan(_lines, _orderDiscount);
-      // Simpan fakta penjualan lengkap sebagai bahan laporan
-      // (rendering laporan menyusul; fondasi datanya di sini).
-      final record = buildCompletedOrder(
-        time: now,
-        lines: _lines,
-        orderDiscount: _orderDiscount,
-        paymentHashHex: eventHash,
+    if (!mounted) return false;
+    if (_saleRecord?.id == record.id) {
+      setState(
+        () => _saleRecord = record.withIssueStatus(issueStatusWaived),
       );
-      _historyStore.append(record);
     }
-    if (!mounted || gen != _watchGen) return true;
-    setState(() {
-      _session = _session.recordSale(e.amountMsat);
-      _lastSale = _LastSale(
-        amountMsat: e.amountMsat,
-        time: now,
-        discountNusan: saleDiscountNusan,
-        paymentHashHex: eventHash,
-        isOrderSale: isOrderSale,
-        // Salin baris pesanan untuk rincian struk — pesanan
-        // berjalan sendiri dibersihkan di akhir perayaan.
-        lines: isOrderSale ? List.of(_lines) : const [],
-      );
-      _received = true;
-      _receivedMsat = e.amountMsat;
-      if (isOrderSale) {
-        _invoice = null;
-        _invoiceHashHex = null;
-        _invoiceExpiresAt = null;
-      }
-    });
-    _celebrationTimer?.cancel();
-    _celebrationTimer = Timer(receiveCelebrationDuration, _finishCelebration);
-    _syncWatcher();
+    await _loadPendingIssues();
+    _snack(l10n.storePendingWaived);
     return true;
-  }
-
-  /// Jeda perayaan selesai: reset panel; bila penjualan terakhir
-  /// adalah pesanan, pesanan dibersihkan — siap penjualan berikut
-  /// tanpa keluar Mode Toko.
-  void _finishCelebration() {
-    if (!mounted) return;
-    setState(() {
-      _received = false;
-      _receivedMsat = null;
-      if (_lastSale?.isOrderSale ?? false) {
-        _lines = const [];
-        _orderDiscount = null;
-        _keypadNusan = 0;
-        _qtyMultiplier = 0;
-        // Keadaan penyusun pesanan kembali bersih untuk
-        // pelanggan berikutnya, satu bundel dengan pesanan:
-        // saringan katalog dan judul bebas ikut direset.
-        _searchQuery = '';
-        _searchController.clear();
-        _freeTitleController.clear();
-      }
-    });
-    _syncWatcher();
-  }
-
-  // ------------------------------------------------------------------
-  // Kode Bayar Statis
-  // ------------------------------------------------------------------
-
-  void _toggleStaticCode() {
-    setState(() => _staticOpen = !_staticOpen);
-    if (_staticOpen && _staticOffer == null && !_staticLoading) {
-      _loadStaticOffer();
-    }
-    _syncWatcher();
-  }
-
-  Future<void> _loadStaticOffer() async {
-    setState(() {
-      _staticLoading = true;
-      _staticError = null;
-    });
-    final result = await _bolt12Service.ensureOffer(
-      description: context.l10n.staticOfferDescription,
-    );
-    if (!mounted) return;
-    setState(() {
-      _staticLoading = false;
-      switch (result.outcome) {
-        case StaticOfferOutcome.ready:
-          _staticOffer = result.offer;
-          _staticError = null;
-        case StaticOfferOutcome.needsPeer:
-          _staticError = context.l10n.staticCodeNeedsConnection;
-        case StaticOfferOutcome.failed:
-          _staticError = context.l10n.staticCodeFailed;
-      }
-    });
   }
 
   // ------------------------------------------------------------------
   // Struk
   // ------------------------------------------------------------------
 
+  /// Struk penjualan terakhir: kop nama toko (bila diatur),
+  /// rincian item, lalu ringkasan rupiah mengikuti contoh
+  /// pedoman §4 — subtotal, diskon, diskon poin, TOTAL BAYAR,
+  /// metode & kembalian, poin diperoleh, dan baris ketentuan
+  /// nilai potongan. TANPA baris saldo poin (aplikasi toko tidak
+  /// tahu saldo dompet pelanggan).
   Future<void> _printLastReceipt() async {
-    final sale = _lastSale;
-    if (sale == null) return;
+    final record = _saleRecord;
+    if (record == null) return;
     final l10n = context.l10n;
     final settings = await PrintService.loadSettings();
+    final gross = record.lines.fold(0, (s, l) => s + l.lineGrossRp);
+    final regularDiscount = record.totalDiscountRp - record.pointsDiscountRp;
+    final detail = <String>[
+      ...orderReceiptDetailLines(
+        record.lines,
+        formatRp: (rp) => 'Rp${_fmtRp(rp)}',
+        noteWord: l10n.storeNoteWord,
+      ),
+      '',
+      '${l10n.storeSubtotal} Rp${_fmtRp(gross)}',
+      if (regularDiscount > 0)
+        '${l10n.storeDiscount} -Rp${_fmtRp(regularDiscount)}',
+      if (record.pointsRedeemed > 0)
+        l10n.storeReceiptPointsDiscount(
+          record.pointsRedeemed,
+          _fmtRp(record.pointsDiscountRp),
+        ),
+      '${l10n.storeReceiptTotalPay} Rp${_fmtRp(record.grandTotalRp)}',
+      if (record.payMethod == payMethodCash)
+        '${l10n.storeCash} Rp${_fmtRp(record.cashReceivedRp)}',
+      if (record.payMethod == payMethodQris) l10n.storeQris,
+      if (record.payMethod == null) l10n.storeReceiptPromo,
+      if (record.changeRp > 0)
+        '${l10n.storeChange} Rp${_fmtRp(record.changeRp)}',
+      if (_settings.pointsEnabled && record.pointsEarned > 0)
+        record.pointsIssueStatus == issueStatusIssued
+            ? l10n.storeReceiptPointsEarned(record.pointsEarned)
+            : l10n.storeReceiptPointsPending(record.pointsEarned),
+      if (_settings.pointsEnabled)
+        l10n.storeReceiptPointsRule(_fmtRp(_settings.redeemRateRp)),
+    ];
     final outcome = await PrintService.printReceipt(
       settings: settings,
       receipt: ReceiptData(
         typeText: l10n.storeMode,
         statusText: l10n.txSucceeded,
-        amountText: '+${formatNusan(sale.amountMsat)} nusan',
-        timeText: _receiptTime(sale.time),
-        hashLabel: sale.paymentHashHex != null ? 'Hash' : null,
-        hashValue: sale.paymentHashHex,
-        // Rincian item pesanan (nama, qty × harga = total baris
-        // sesudah diskon baris, catatan menjorok di bawah
-        // itemnya) — hanya penjualan berpesanan; pembayaran
-        // kode statis tanpa rincian seperti sebelumnya.
-        detailLines: sale.isOrderSale && sale.lines.isNotEmpty
-            ? orderReceiptDetailLines(
-                sale.lines,
-                formatNusan: _fmtNusan,
-                noteWord: l10n.storeNoteWord,
-              )
+        amountText: 'Rp${_fmtRp(record.grandTotalRp)}',
+        timeText: _receiptTime(record.time),
+        hashLabel: record.paymentHashHex != null ? 'Hash' : null,
+        hashValue: record.paymentHashHex,
+        detailLines: detail,
+        headerText: _settings.storeName.isNotEmpty
+            ? _settings.storeName
             : null,
       ),
       typeLabel: l10n.txType,
       statusLabel: l10n.txStatus,
       timeLabel: l10n.txTime,
-      // Total diskon tetap perjalanan lewat footer bawaan struk
-      // (teks bebas di kaki struk) bila penjualan ini punya
-      // diskon — rincian per baris di atas tidak mengulanginya.
-      defaultFooter: sale.discountNusan > 0
-          ? l10n.storeReceiptDiscountNote(
-              formatNusan(BigInt.from(sale.discountNusan) * BigInt.from(1000)),
-            )
-          : l10n.receiptDefaultFooter,
+      defaultFooter: l10n.receiptDefaultFooter,
     );
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(printOutcomeMessage(l10n, outcome))));
+    _snack(printOutcomeMessage(l10n, outcome));
   }
 
   String _receiptTime(DateTime t) {
@@ -1462,8 +1488,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
   // Build
   // ------------------------------------------------------------------
 
-  String _fmtNusan(int nusan) =>
-      formatNusan(BigInt.from(nusan) * BigInt.from(1000));
+  String _fmtRp(int rp) => formatRupiah(rp);
 
   @override
   Widget build(BuildContext context) {
@@ -1515,7 +1540,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
 
   /// Keadaan "shift belum dibuka": panel kasir nonaktif, yang
   /// tampil hanya gerbang Buka Shift (penegasan alur NUX — tidak
-  /// ada jalan menyusun/menagih pesanan di luar shift).
+  /// ada jalan menyusun/menyelesaikan pesanan di luar shift).
   Widget _buildShiftGate(BuildContext context) {
     final l10n = context.l10n;
     return Column(
@@ -1672,8 +1697,8 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
                 ActionChip(
                   label: Text(
                     item.defaultDiscount == null
-                        ? '${item.name} • ${_fmtNusan(item.priceNusan)}'
-                        : '${item.name} • ${_fmtNusan(item.priceNusan)} • ${l10n.storeDiscount} ${_discountBadge(item.defaultDiscount!)}',
+                        ? '${item.name} • Rp${_fmtRp(item.priceRp)}'
+                        : '${item.name} • Rp${_fmtRp(item.priceRp)} • ${l10n.storeDiscount} ${_discountBadge(item.defaultDiscount!)}',
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -1689,11 +1714,6 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
           ),
         const SizedBox(height: 18),
         // --- Keypad mode ganda: Qty (bawaan) | Nominal ---
-        // Satu keypad fisik, dua sasaran (lihat handler
-        // _pressKeypad*): mode Qty menyusun pengali untuk item
-        // berikutnya dari katalog/scan; mode Nominal adalah
-        // perilaku lama persis (blok else di bawah tidak
-        // berubah isinya).
         SegmentedButton<bool>(
           segments: [
             ButtonSegment(
@@ -1748,98 +1768,108 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
             style: TextStyle(fontSize: 12, color: context.palette.muted),
           ),
         ] else ...[
-        // --- Nominal bebas (keypad) ---
-        Text(
-          l10n.storeFreeAmountLabel,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 8),
-        // Judul kustom opsional untuk baris bebas ini — jalan
-        // untuk barang/jasa yang belum terinput di katalog.
-        // Kosong berarti label baku "Item Bebas".
-        TextField(
-          controller: _freeTitleController,
-          decoration: InputDecoration(
-            labelText: l10n.storeFreeTitleLabel,
-            filled: true,
-            fillColor: context.palette.cardAlt,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
+          // --- Nominal bebas (keypad, rupiah) ---
+          Text(
+            l10n.storeFreeAmountLabel,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          // Judul kustom opsional untuk baris bebas ini — jalan
+          // untuk barang/jasa yang belum terinput di katalog.
+          // Kosong berarti label baku "Item Bebas".
+          TextField(
+            controller: _freeTitleController,
+            decoration: InputDecoration(
+              labelText: l10n.storeFreeTitleLabel,
+              filled: true,
+              fillColor: context.palette.cardAlt,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: context.palette.cardAlt,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  _fmtNusan(_keypadNusan),
-                  style: const TextStyle(
-                    fontSize: 30,
-                    fontWeight: FontWeight.w800,
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: context.palette.cardAlt,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Rp${_fmtRp(_keypadRp)}',
+                    style: const TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
-              ),
-              Text(
-                'nusan',
-                style: TextStyle(
-                  fontSize: 15,
-                  color: context.palette.muted,
-                  fontWeight: FontWeight.w600,
+                Text(
+                  'Rp',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: context.palette.muted,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            for (final quick in const [5000, 10000, 20000, 50000]) ...[
-              Expanded(
-                child: OutlinedButton(
+          const SizedBox(height: 10),
+          // Jumlah cepat pecahan rupiah umum.
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final quick in const [
+                1000,
+                2000,
+                5000,
+                10000,
+                20000,
+                50000,
+                100000,
+              ])
+                OutlinedButton(
                   onPressed: () => setState(
-                    () => _keypadNusan = keypadQuickAdd(_keypadNusan, quick),
+                    () => _keypadRp = keypadQuickAdd(_keypadRp, quick),
                   ),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   child: Text(
-                    '+${_fmtNusan(quick)}',
+                    '+${_fmtRp(quick)}',
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
             ],
-          ]..removeLast(),
-        ),
-        const SizedBox(height: 10),
-        _buildKeypad(context),
-        const SizedBox(height: 10),
-        OutlinedButton.icon(
-          onPressed: _keypadNusan > 0 ? _addFreeAmount : null,
-          icon: const Icon(Icons.add_rounded, size: 20),
-          label: Text(
-            l10n.storeAddFreeItem,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
           ),
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 13),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+          const SizedBox(height: 10),
+          _buildKeypad(context),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: _keypadRp > 0 ? _addFreeAmount : null,
+            icon: const Icon(Icons.add_rounded, size: 20),
+            label: Text(
+              l10n.storeAddFreeItem,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+            ),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 13),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
           ),
-        ),
         ],
         const SizedBox(height: 20),
         // --- Pesanan ---
@@ -1874,7 +1904,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
           _summaryRow(
             context,
             l10n.storeSubtotal,
-            _fmtNusan(orderSubtotalNusan(_lines)),
+            'Rp${_fmtRp(orderSubtotalRp(_lines))}',
           ),
           InkWell(
             onTap: _editOrderDiscount,
@@ -1894,8 +1924,8 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
                     ),
                   ),
                   Text(
-                    orderDiscountAmountNusan(_lines, _orderDiscount) > 0
-                        ? '−${_fmtNusan(orderDiscountAmountNusan(_lines, _orderDiscount))}'
+                    orderDiscountAmountRp(_lines, _orderDiscount) > 0
+                        ? '−Rp${_fmtRp(orderDiscountAmountRp(_lines, _orderDiscount))}'
                         : l10n.storeSetDiscount,
                     style: const TextStyle(
                       fontSize: 14,
@@ -1906,11 +1936,11 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
               ),
             ),
           ),
-          if (orderTotalDiscountNusan(_lines, _orderDiscount) > 0)
+          if (orderTotalDiscountRp(_lines, _orderDiscount) > 0)
             _summaryRow(
               context,
               l10n.storeTotalDiscount,
-              '−${_fmtNusan(orderTotalDiscountNusan(_lines, _orderDiscount))}',
+              '−Rp${_fmtRp(orderTotalDiscountRp(_lines, _orderDiscount))}',
             ),
           const SizedBox(height: 6),
           Row(
@@ -1925,7 +1955,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
                 ),
               ),
               Text(
-                '${_fmtNusan(_grandTotal)} nusan',
+                'Rp${_fmtRp(_grandTotal)}',
                 style: const TextStyle(
                   fontSize: 19,
                   fontWeight: FontWeight.w800,
@@ -1933,16 +1963,6 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
               ),
             ],
           ),
-          if (_grandTotal <= 0) ...[
-            const SizedBox(height: 8),
-            Text(
-              l10n.storeZeroTotalHint,
-              style: TextStyle(
-                fontSize: 12,
-                color: context.palette.warningIcon,
-              ),
-            ),
-          ],
         ],
         if (_error != null) ...[
           const SizedBox(height: 12),
@@ -1953,13 +1973,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
         ],
         const SizedBox(height: 14),
         ElevatedButton(
-          onPressed:
-              (_lines.isNotEmpty &&
-                  _grandTotal > 0 &&
-                  !_creating &&
-                  _invoice == null)
-              ? _createPaymentCode
-              : null,
+          onPressed: _lines.isNotEmpty ? _openPayment : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF10B981),
             foregroundColor: Colors.white,
@@ -1968,27 +1982,14 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
               borderRadius: BorderRadius.circular(16),
             ),
           ),
-          child: _creating
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : Text(
-                  l10n.storeCreateCode,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+          child: Text(
+            l10n.storeCheckout,
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+          ),
         ),
         const SizedBox(height: 10),
         // Tahan pesanan (tamu bayar belakangan): parkir pesanan
-        // berjalan ke daftar tahan persisten; pagar invoice
-        // menunggu/perayaan ada di dalam _holdCurrentOrder.
+        // berjalan ke daftar tahan persisten.
         OutlinedButton.icon(
           onPressed: _lines.isNotEmpty ? _holdCurrentOrder : null,
           icon: const Icon(Icons.pause_circle_outline_rounded, size: 20),
@@ -2007,87 +2008,394 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
     );
   }
 
-  Widget _buildKeypad(BuildContext context) {
-    Widget key(String label, VoidCallback onTap) {
-      return Expanded(
-        child: Padding(
-          padding: const EdgeInsets.all(3),
-          child: Material(
-            color: context.palette.card,
-            borderRadius: BorderRadius.circular(14),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(14),
-              onTap: onTap,
-              child: Container(
-                height: 58,
-                alignment: Alignment.center,
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
+  // ------------------------------------------------------------------
+  // Panel status (kanan / bawah)
+  // ------------------------------------------------------------------
+
+  Widget _buildStatusPanel(BuildContext context) {
+    if (_openShift == null) return _buildClosedStatusPanel(context);
+    final l10n = context.l10n;
+    final sale = _saleRecord;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildShiftCard(context),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const StoreSettingsScreen(),
+                    ),
+                  );
+                  if (!mounted) return;
+                  final s = await _settingsStore.load();
+                  if (mounted) setState(() => _settings = s);
+                },
+                icon: const Icon(Icons.settings_rounded, size: 19),
+                label: Text(l10n.storeSettingsTitle),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
             ),
-          ),
-        ),
-      );
-    }
-
-    return Column(
-      children: [
-        for (final row in const [
-          ['1', '2', '3'],
-          ['4', '5', '6'],
-          ['7', '8', '9'],
-        ])
-          Row(
-            children: [
-              for (final d in row)
-                key(d, () => _pressKeypadDigit(int.parse(d))),
-            ],
-          ),
-        Row(
-          children: [
-            key('00', _pressKeypadDoubleZero),
-            key('0', () => _pressKeypadDigit(0)),
+            const SizedBox(width: 10),
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(3),
-                child: Material(
-                  color: context.palette.card,
-                  borderRadius: BorderRadius.circular(14),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: _pressKeypadBackspace,
-                    child: Container(
-                      height: 58,
-                      alignment: Alignment.center,
-                      child: const Icon(Icons.backspace_outlined, size: 22),
-                    ),
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const StorePointRulesScreen(),
+                  ),
+                ),
+                icon: const Icon(Icons.menu_book_rounded, size: 19),
+                label: Text(l10n.storeRulesTitle),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
             ),
           ],
         ),
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton(
-            onPressed: _pressKeypadClear,
-            child: Text(context.l10n.storeClearKeypad),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: context.palette.card,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: context.palette.border),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.receipt_long_rounded,
+                color: Color(0xFF34D399),
+                size: 26,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.storeSessionTitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.palette.muted,
+                      ),
+                    ),
+                    Text(
+                      l10n.storeSessionSales(
+                        _session.saleCount,
+                        _fmtRp(_session.totalRp),
+                      ),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (_pendingIssues.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          InkWell(
+            onTap: _openPendingIssues,
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF59E0B).withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.45),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.loyalty_rounded,
+                    size: 20,
+                    color: Color(0xFFF59E0B),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      l10n.storePendingBadge(_pendingIssues.length),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right_rounded, size: 20),
+                ],
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 16),
+        if (_received && sale != null) ...[
+          Center(child: AnimatedCheckmark(size: 84)),
+          const SizedBox(height: 12),
+          Text(
+            l10n.storeSaleCompleted,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Rp${_fmtRp(sale.grandTotalRp)}',
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            sale.payMethod == payMethodCash
+                ? '${l10n.storeCash} • Rp${_fmtRp(sale.cashReceivedRp)}'
+                : sale.payMethod == payMethodQris
+                ? l10n.storeQris
+                : l10n.storeReceiptPromo,
+            style: TextStyle(fontSize: 13, color: context.palette.muted),
+            textAlign: TextAlign.center,
+          ),
+          if (sale.changeRp > 0)
+            Text(
+              '${l10n.storeChange} Rp${_fmtRp(sale.changeRp)}',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF34D399),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          if (_settings.pointsEnabled && sale.pointsEarned > 0) ...[
+            const SizedBox(height: 14),
+            if (sale.pointsIssueStatus == issueStatusIssued)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.check_circle_rounded,
+                    size: 19,
+                    color: Color(0xFF34D399),
+                  ),
+                  const SizedBox(width: 7),
+                  Flexible(
+                    child: Text(
+                      l10n.storePointsIssuedOk,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            else if (sale.pointsIssueStatus == issueStatusWaived)
+              Text(
+                l10n.storePendingWaived,
+                style: TextStyle(fontSize: 13, color: context.palette.muted),
+                textAlign: TextAlign.center,
+              )
+            else ...[
+              Text(
+                l10n.storePointsEarnedLine(sale.pointsEarned),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 10),
+              if (_issuing)
+                const Center(child: CircularProgressIndicator())
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _issuePoints(sale),
+                        icon: const Icon(
+                          Icons.qr_code_scanner_rounded,
+                          size: 19,
+                        ),
+                        label: Text(l10n.storePointsIssueButton),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF10B981),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(13),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    TextButton(
+                      onPressed: _finishCelebration,
+                      child: Text(l10n.storePointsSkip),
+                    ),
+                  ],
+                ),
+            ],
+          ],
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _printLastReceipt,
+                  icon: const Icon(Icons.print_rounded, size: 19),
+                  label: Text(l10n.storePrintReceipt),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              TextButton(
+                onPressed: _finishCelebration,
+                child: Text(l10n.storeDoneButton),
+              ),
+            ],
+          ),
+        ] else
+          Text(
+            l10n.storeIdleHint,
+            style: TextStyle(fontSize: 13, color: context.palette.muted),
+            textAlign: TextAlign.center,
+          ),
+      ],
+    );
+  }
+
+  /// Kartu shift berjalan: waktu buka, nomor shift, dan tombol
+  /// Tutup Shift yang membuka laporan shift.
+  Widget _buildShiftCard(BuildContext context) {
+    final l10n = context.l10n;
+    final shift = _openShift!;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.palette.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.palette.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.schedule_rounded,
+                color: Color(0xFF34D399),
+                size: 24,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.storeShiftOpenedAt(
+                        _receiptTime(shift.openedAt),
+                      ),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      l10n.storeShiftTitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.palette.muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: _requestCloseShift,
+            icon: const Icon(Icons.stop_circle_outlined, size: 19),
+            label: Text(l10n.storeShiftClose),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.redAccent,
+              side: const BorderSide(color: Colors.redAccent),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Panel status saat shift tertutup: hanya pemilih laporan.
+  Widget _buildClosedStatusPanel(BuildContext context) {
+    final l10n = context.l10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          l10n.storeSalesReport,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 10),
+        OutlinedButton.icon(
+          onPressed: _openReportChooser,
+          icon: const Icon(Icons.assessment_rounded, size: 19),
+          label: Text(l10n.storeReportPastShifts),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 13),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: () => _pickDayReport(),
+          icon: const Icon(Icons.calendar_month_rounded, size: 19),
+          label: Text(l10n.storeReportByDate),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 13),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildOrderLine(BuildContext context, int index) {
+  Widget _buildOrderLine(BuildContext context, int i) {
     final l10n = context.l10n;
-    final line = _lines[index];
+    final line = _lines[i];
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2103,74 +2411,53 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
                   ),
                 ),
                 Text(
-                  '${_fmtNusan(line.unitPriceNusan)} × ${line.qty}',
-                  style: TextStyle(fontSize: 12, color: context.palette.muted),
-                ),
-                TextButton(
-                  onPressed: () => _editLineDiscount(index),
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    minimumSize: const Size(0, 30),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: Text(
-                    line.discount == null
-                        ? l10n.storeSetDiscount
-                        : '${l10n.storeDiscount} ${_discountBadge(line.discount!)} • ${l10n.storeSetDiscount}',
-                    style: const TextStyle(fontSize: 12),
+                  'Rp${_fmtRp(line.unitPriceRp)} × ${line.qty}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: context.palette.muted,
                   ),
                 ),
-                // Catatan baris: ikon terisi dibedakan warnanya;
-                // catatan tampil sebagai cuplikan di sini dan
-                // tercetak di struk di bawah itemnya. Ketuk
-                // membuka editor teks singkat.
-                InkWell(
-                  onTap: () => _editLineNote(index),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          line.note.isNotEmpty
-                              ? Icons.sticky_note_2_rounded
-                              : Icons.sticky_note_2_outlined,
-                          size: 15,
-                          color: line.note.isNotEmpty
-                              ? const Color(0xFF34D399)
-                              : context.palette.muted,
-                        ),
-                        const SizedBox(width: 5),
-                        Flexible(
-                          child: Text(
-                            line.note.isNotEmpty
-                                ? line.note
-                                : l10n.storeAddNote,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontStyle: line.note.isNotEmpty
-                                  ? FontStyle.italic
-                                  : FontStyle.normal,
-                              color: line.note.isNotEmpty
-                                  ? context.palette.label
-                                  : context.palette.muted,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
+                if (line.discount != null)
+                  Text(
+                    '${l10n.storeDiscount} ${_discountBadge(line.discount!)}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF34D399),
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                ),
+                if (line.note.isNotEmpty)
+                  Text(
+                    '${l10n.storeNoteWord}: ${line.note}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                      color: context.palette.muted,
+                    ),
+                  ),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.remove_circle_outline, size: 22),
-            // Minus ke qty 0 = buang baris → konfirmasi dulu;
-            // minus biasa mengurangi langsung (lihat _decrementLine).
-            onPressed: () => _decrementLine(index),
+            icon: Icon(
+              line.note.isEmpty
+                  ? Icons.note_add_outlined
+                  : Icons.note_alt_rounded,
+              size: 19,
+              color: line.note.isEmpty ? null : const Color(0xFF34D399),
+            ),
+            onPressed: () => _editLineNote(i),
+            visualDensity: VisualDensity.compact,
+          ),
+          IconButton(
+            icon: const Icon(Icons.percent_rounded, size: 19),
+            onPressed: () => _editLineDiscount(i),
+            visualDensity: VisualDensity.compact,
+          ),
+          IconButton(
+            icon: const Icon(Icons.remove_circle_outline, size: 20),
+            onPressed: () => _decrementLine(i),
+            visualDensity: VisualDensity.compact,
           ),
           Padding(
             padding: const EdgeInsets.only(top: 10),
@@ -2180,49 +2467,113 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.add_circle_outline, size: 22),
+            icon: const Icon(Icons.add_circle_outline, size: 20),
             onPressed: () =>
-                setState(() => _lines = orderChangeQty(_lines, index, 1)),
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline, size: 21),
-            // Hapus baris selalu lewat konfirmasi dulu.
-            onPressed: () => _confirmRemoveLine(index),
+                setState(() => _lines = orderChangeQty(_lines, i, 1)),
+            visualDensity: VisualDensity.compact,
           ),
           SizedBox(
             width: 86,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if (line.lineDiscountNusan > 0)
-                  Text(
-                    _fmtNusan(line.lineGrossNusan),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: context.palette.muted,
-                      decoration: TextDecoration.lineThrough,
-                    ),
-                  ),
-                Text(
-                  _fmtNusan(line.lineTotalNusan),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                if (line.lineDiscountNusan > 0)
-                  Text(
-                    '−${_fmtNusan(line.lineDiscountNusan)}',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF34D399),
-                    ),
-                  ),
-              ],
+            child: Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Text(
+                'Rp${_fmtRp(line.lineTotalRp)}',
+                textAlign: TextAlign.end,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
             ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline_rounded, size: 19),
+            onPressed: () => _confirmRemoveLine(i),
+            visualDensity: VisualDensity.compact,
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildKeypad(BuildContext context) {
+    Widget key(String label, VoidCallback onTap) {
+      return Expanded(
+        child: Padding(
+          padding: const EdgeInsets.all(3),
+          child: Material(
+            color: context.palette.card,
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: onTap,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Dua mode berbagi keypad fisik yang sama; digit masuk ke
+    // buffer yang aktif (pengali qty / nominal rupiah) lewat
+    // handler _pressKeypad* di state.
+    return Column(
+      children: [
+        Row(
+          children: [
+            key('1', () => _pressKeypadDigit(1)),
+            key('2', () => _pressKeypadDigit(2)),
+            key('3', () => _pressKeypadDigit(3)),
+          ],
+        ),
+        Row(
+          children: [
+            key('4', () => _pressKeypadDigit(4)),
+            key('5', () => _pressKeypadDigit(5)),
+            key('6', () => _pressKeypadDigit(6)),
+          ],
+        ),
+        Row(
+          children: [
+            key('7', () => _pressKeypadDigit(7)),
+            key('8', () => _pressKeypadDigit(8)),
+            key('9', () => _pressKeypadDigit(9)),
+          ],
+        ),
+        Row(
+          children: [
+            key('00', _pressKeypadDoubleZero),
+            key('0', () => _pressKeypadDigit(0)),
+            key('⌫', _pressKeypadBackspace),
+          ],
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(3),
+                child: OutlinedButton(
+                  onPressed: _pressKeypadClear,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(context.l10n.storeClearKeypad),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -2246,31 +2597,615 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
     );
   }
 
-  String _discountBadge(Discount d) => switch (d.kind) {
-    DiscountKind.percent => '${d.value}%',
-    DiscountKind.fixed => '−${_fmtNusan(d.value)}',
-  };
+  String _discountBadge(Discount d) => d.kind == DiscountKind.percent
+      ? '${d.value}%'
+      : '−Rp${_fmtRp(d.value)}';
+}
 
-  Widget _buildStatusPanel(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _buildShiftCard(context),
-        const SizedBox(height: 16),
-        if (_openShift != null)
-          _buildSellingStatusPanel(context)
-        else
-          _buildClosedStatusPanel(context),
-      ],
+/// Hasil dialog atur diskon: diskon baru, atau tandai dihapus.
+class _DiscountEditResult {
+  const _DiscountEditResult({this.discount}) : cleared = false;
+  const _DiscountEditResult.cleared() : discount = null, cleared = true;
+  final Discount? discount;
+  final bool cleared;
+}
+
+enum _RedeemState { idle, creating, waiting, verified, failed }
+
+/// Halaman Penyelesaian Pembayaran (Mode Toko v2). Pesanan
+/// SELALU diselesaikan dalam rupiah: opsional penukaran poin
+/// nusan lebih dulu (invoice penukaran dari dompet toko; diskon
+/// Rp diterapkan HANYA sesudah pembayaran poin terverifikasi
+/// cocok lewat hash), lalu sisa dibayar Tunai (dengan hitungan
+/// kembalian) atau QRIS (catat saja) — atau Rp0 penuh (promosi /
+/// tertutup poin seluruhnya). Mengembalikan [CompletedOrder]
+/// lunas atau VOID; null = kembali tanpa catatan apa pun.
+class _StorePaymentPage extends StatefulWidget {
+  const _StorePaymentPage({
+    required this.lines,
+    required this.orderDiscount,
+    required this.settings,
+    required this.lspService,
+  });
+
+  final List<OrderLine> lines;
+  final Discount? orderDiscount;
+  final StoreSettings settings;
+  final LspService lspService;
+
+  @override
+  State<_StorePaymentPage> createState() => _StorePaymentPageState();
+}
+
+class _StorePaymentPageState extends State<_StorePaymentPage> {
+  final _pointsController = TextEditingController();
+  final _cashController = TextEditingController();
+  _RedeemState _redeemState = _RedeemState.idle;
+  String? _redeemInvoice;
+  String? _redeemHashHex;
+  DateTime? _redeemExpiresAt;
+  int _redeemPoints = 0;
+  String? _redeemError;
+  Timer? _redeemTimer;
+  bool _polling = false;
+  String _method = payMethodCash;
+  int _cashRp = 0;
+
+  int get _dueBeforePoints =>
+      orderDueRp(widget.lines, widget.orderDiscount);
+
+  bool get _redeemVerified => _redeemState == _RedeemState.verified;
+
+  int get _pointsDiscountRp => _redeemVerified
+      ? pointsDiscountRpFor(
+          points: _redeemPoints,
+          rateRpPerPoint: widget.settings.redeemRateRp,
+          remainingRp: _dueBeforePoints,
+          totalRp: _dueBeforePoints,
+          maxPercent: widget.settings.maxRedeemPercent,
+        )
+      : 0;
+
+  int get _remainingRp => _dueBeforePoints - _pointsDiscountRp;
+
+  int get _maxPoints => maxRedeemablePoints(
+    rateRpPerPoint: widget.settings.redeemRateRp,
+    remainingRp: _dueBeforePoints,
+    totalRp: _dueBeforePoints,
+    maxPercent: widget.settings.maxRedeemPercent,
+  );
+
+  int get _earnedPreview => widget.settings.pointsEnabled
+      ? pointsEarnedFor(
+          paidRp: _remainingRp,
+          stepRp: widget.settings.earnStepRp,
+          pointsPerStep: widget.settings.earnPointsPerStep,
+        )
+      : 0;
+
+  @override
+  void dispose() {
+    _redeemTimer?.cancel();
+    _pointsController.dispose();
+    _cashController.dispose();
+    super.dispose();
+  }
+
+  // ---------------- Penukaran poin ----------------
+
+  Future<void> _createRedeemInvoice() async {
+    final l10n = context.l10n;
+    var points = int.tryParse(_pointsController.text.trim()) ?? 0;
+    if (points <= 0 || _maxPoints <= 0) {
+      setState(() => _redeemError = l10n.storeRedeemInvalidPoints);
+      return;
+    }
+    if (points > _maxPoints) {
+      points = _maxPoints;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.storeRedeemClamped(_maxPoints))),
+      );
+    }
+    setState(() {
+      _redeemState = _RedeemState.creating;
+      _redeemError = null;
+    });
+    try {
+      final amountMsat = BigInt.from(points) * BigInt.from(1000);
+      final usable = await widget.lspService.usableInboundCapacityMsat();
+      final route = chooseReceiveInvoiceRoute(
+        amountMsat: amountMsat,
+        usableInboundCapacityMsat: usable,
+      );
+      // Jalur terima BARU (JIT) punya lantai invoice 1.000 nusan
+      // di sisi klien: penukaran di bawah itu lewat jalur baru
+      // tidak bisa dibuat — sampaikan terus terang, kasir dapat
+      // menaikkan jumlah poin atau melewati penukaran.
+      if (route == ReceiveInvoiceRoute.jit && points < 1000) {
+        if (!mounted) return;
+        setState(() {
+          _redeemState = _RedeemState.failed;
+          _redeemError = l10n.storeRedeemMinChannel;
+        });
+        return;
+      }
+      final invoice = route == ReceiveInvoiceRoute.jit
+          ? await widget.lspService.createJitInvoice(
+              amountMsat: amountMsat,
+              description: l10n.storeRedeemDesc,
+              expirySecs: 3600,
+            )
+          : await widget.lspService.createRegularInvoice(
+              amountMsat: amountMsat,
+              description: l10n.storeRedeemDesc,
+              expirySecs: 3600,
+            );
+      final info = parseBolt11Info(invoice);
+      if (!mounted) return;
+      if (info == null) {
+        setState(() {
+          _redeemState = _RedeemState.failed;
+          _redeemError = l10n.storeRedeemFailed;
+        });
+        return;
+      }
+      setState(() {
+        _redeemState = _RedeemState.waiting;
+        _redeemInvoice = invoice;
+        _redeemHashHex = info.paymentHashHex;
+        _redeemExpiresAt = info.expiresAt;
+        _redeemPoints = points;
+      });
+      _startRedeemPoll();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _redeemState = _RedeemState.failed;
+        _redeemError = friendlyError(
+          e,
+          fallback: l10n.storeRedeemFailed,
+          l10n: l10n,
+        );
+      });
+    }
+  }
+
+  /// Pengawas invoice penukaran: tiriskan antre event node;
+  /// penerimaan yang hash-nya cocok dengan invoice penukaran
+  /// menandai penukaran TERVERIFIKASI (diskon boleh diterapkan).
+  /// Kedaluwarsa saat menunggu = penukaran gagal (tanpa diskon).
+  void _startRedeemPoll() {
+    _redeemTimer?.cancel();
+    _redeemTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
+      if (!mounted || _polling) return;
+      if (_redeemExpiresAt != null &&
+          DateTime.now().isAfter(_redeemExpiresAt!)) {
+        _redeemTimer?.cancel();
+        setState(() {
+          _redeemState = _RedeemState.failed;
+          _redeemError = context.l10n.storeRedeemFailed;
+        });
+        return;
+      }
+      _polling = true;
+      try {
+        while (mounted) {
+          final event = await widget.lspService.pollNextEvent();
+          if (event == null) break;
+          if (event is Event_PaymentReceived) {
+            final hex = event.paymentHash.data
+                .map((b) => b.toRadixString(16).padLeft(2, '0'))
+                .join();
+            if (_redeemHashHex != null && hex == _redeemHashHex) {
+              _redeemTimer?.cancel();
+              if (mounted) {
+                setState(() => _redeemState = _RedeemState.verified);
+              }
+              return;
+            }
+          }
+        }
+      } finally {
+        _polling = false;
+      }
+    });
+  }
+
+  Future<void> _cancelRedeem() async {
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ctx.palette.card,
+        title: Text(l10n.storeRedeemCancel),
+        content: Text(l10n.storeRedeemCancelWarn),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.storeRedeemCancel),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    _redeemTimer?.cancel();
+    setState(() {
+      _redeemState = _RedeemState.idle;
+      _redeemInvoice = null;
+      _redeemHashHex = null;
+      _redeemExpiresAt = null;
+      _redeemPoints = 0;
+      _redeemError = null;
+    });
+  }
+
+  // ---------------- Penyelesaian ----------------
+
+  void _settle(String? method) {
+    final now = DateTime.now();
+    final record = buildCompletedOrder(
+      id: now.microsecondsSinceEpoch.toString(),
+      time: now,
+      lines: widget.lines,
+      orderDiscount: widget.orderDiscount,
+      paymentHashHex: _redeemVerified ? _redeemHashHex : null,
+      payMethod: method,
+      cashReceivedRp: method == payMethodCash ? _cashRp : 0,
+      pointsRedeemed: _redeemVerified ? _redeemPoints : 0,
+      pointsDiscountRp: _pointsDiscountRp,
+      pointsEarned: _earnedPreview,
+      pointsIssueStatus: _earnedPreview > 0
+          ? issueStatusPending
+          : issueStatusNone,
+    );
+    Navigator.pop(context, record);
+  }
+
+  Future<void> _cancelOrder() async {
+    if (_redeemVerified) return;
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ctx.palette.card,
+        title: Text(l10n.storeVoidConfirmTitle),
+        content: Text(l10n.storeVoidConfirmBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(l10n.storeCancelOrder),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    _redeemTimer?.cancel();
+    final now = DateTime.now();
+    Navigator.pop(
+      context,
+      buildCompletedOrder(
+        id: now.microsecondsSinceEpoch.toString(),
+        time: now,
+        lines: widget.lines,
+        orderDiscount: widget.orderDiscount,
+        paymentHashHex: null,
+        isVoid: true,
+      ),
     );
   }
 
-  /// Kartu status shift: selalu tampil di panel status — status
-  /// buka/tutup, waktu buka, aksi Tutup Shift dan Laporan
-  /// Penjualan (pemilih shift berjalan / per tanggal / lampau).
-  Widget _buildShiftCard(BuildContext context) {
+  void _setCash(int value) {
+    _cashController.text = value.toString();
+    setState(() => _cashRp = value);
+  }
+
+  // ---------------- Build ----------------
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final shift = _openShift;
+    final due = _dueBeforePoints;
+    final remaining = _remainingRp;
+    final canPopDirectly =
+        _redeemState == _RedeemState.idle ||
+        _redeemState == _RedeemState.failed;
+    return PopScope(
+      canPop: canPopDirectly,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final leave = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: ctx.palette.card,
+            title: Text(l10n.storeRedeemCancel),
+            content: Text(l10n.storeRedeemLeaveBody),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(l10n.cancel),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(l10n.storeRedeemCancel),
+              ),
+            ],
+          ),
+        );
+        if (leave == true && mounted) {
+          _redeemTimer?.cancel();
+          Navigator.pop(context);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(l10n.storePayTitle),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(18, 4, 18, 18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _paySummaryRow(
+                context,
+                l10n.storePayTotalLabel,
+                'Rp${formatRupiah(due)}',
+              ),
+              if (_pointsDiscountRp > 0)
+                _paySummaryRow(
+                  context,
+                  l10n.storeReceiptPointsDiscount(
+                    _redeemPoints,
+                    formatRupiah(_pointsDiscountRp),
+                  ),
+                  '−Rp${formatRupiah(_pointsDiscountRp)}',
+                ),
+              const Divider(height: 22),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      l10n.storeGrandTotal,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    'Rp${formatRupiah(remaining)}',
+                    style: const TextStyle(
+                      fontSize: 21,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+              if (widget.settings.pointsEnabled && due > 0) ...[
+                const SizedBox(height: 20),
+                _buildRedeemSection(context),
+              ],
+              const SizedBox(height: 20),
+              if (remaining == 0) ...[
+                if (due == 0)
+                  Text(
+                    l10n.storePromoNote,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: context.palette.muted,
+                    ),
+                  ),
+                const SizedBox(height: 10),
+                ElevatedButton(
+                  onPressed: () => _settle(null),
+                  style: _settleButtonStyle(),
+                  child: Text(
+                    l10n.storeSettlePromo,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ] else ...[
+                SegmentedButton<String>(
+                  segments: [
+                    ButtonSegment(
+                      value: payMethodCash,
+                      icon: const Icon(Icons.payments_rounded, size: 18),
+                      label: Text(l10n.storeCash),
+                    ),
+                    ButtonSegment(
+                      value: payMethodQris,
+                      icon: const Icon(Icons.qr_code_2_rounded, size: 18),
+                      label: Text(l10n.storeQris),
+                    ),
+                  ],
+                  selected: {_method},
+                  onSelectionChanged: (s) =>
+                      setState(() => _method = s.first),
+                ),
+                const SizedBox(height: 14),
+                if (_method == payMethodCash) ...[
+                  TextField(
+                    controller: _cashController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
+                    onChanged: (v) =>
+                        setState(() => _cashRp = int.tryParse(v) ?? 0),
+                    decoration: InputDecoration(
+                      labelText: l10n.storeCashReceived,
+                      prefixText: 'Rp ',
+                      filled: true,
+                      fillColor: context.palette.cardAlt,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ActionChip(
+                        label: Text(l10n.storeCashExact),
+                        onPressed: () => _setCash(remaining),
+                      ),
+                      for (final denom in const [
+                        5000,
+                        10000,
+                        20000,
+                        50000,
+                        100000,
+                      ])
+                        ActionChip(
+                          label: Text(formatRupiah(denom)),
+                          onPressed: () => _setCash(denom),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  if (_cashRp >= remaining && _cashRp > 0)
+                    Text(
+                      '${l10n.storeChange} Rp${formatRupiah(cashChangeRp(receivedRp: _cashRp, dueRp: remaining))}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF34D399),
+                      ),
+                    )
+                  else if (_cashRp > 0)
+                    Text(
+                      l10n.storeCashShort(
+                        formatRupiah(remaining - _cashRp),
+                      ),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.redAccent,
+                      ),
+                    ),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed:
+                        cashCanSettle(receivedRp: _cashRp, dueRp: remaining)
+                        ? () => _settle(payMethodCash)
+                        : null,
+                    style: _settleButtonStyle(),
+                    child: Text(
+                      l10n.storeSettle,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  Text(
+                    l10n.storeQrisNote,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: context.palette.muted,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: () => _settle(payMethodQris),
+                    style: _settleButtonStyle(),
+                    child: Text(
+                      l10n.storeSettleQris,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+              if (_earnedPreview > 0) ...[
+                const SizedBox(height: 14),
+                Text(
+                  l10n.storePointsEarnedLine(_earnedPreview),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: context.palette.muted,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+              const SizedBox(height: 22),
+              const Divider(height: 1),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: _redeemVerified ? null : _cancelOrder,
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.redAccent,
+                ),
+                child: Text(l10n.storeCancelOrder),
+              ),
+              if (_redeemVerified)
+                Text(
+                  l10n.storeCancelBlockedRedeem,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: context.palette.muted,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  ButtonStyle _settleButtonStyle() {
+    return ElevatedButton.styleFrom(
+      backgroundColor: const Color(0xFF10B981),
+      foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    );
+  }
+
+  Widget _paySummaryRow(BuildContext context, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 14, color: context.palette.label),
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRedeemSection(BuildContext context) {
+    final l10n = context.l10n;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -2281,656 +3216,447 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Icon(
-                shift != null
-                    ? Icons.storefront_rounded
-                    : Icons.lock_outline_rounded,
-                color: const Color(0xFF34D399),
-                size: 22,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.storeShiftTitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: context.palette.muted,
-                      ),
-                    ),
-                    Text(
-                      shift != null
-                          ? l10n.storeShiftOpenedAt(
-                              _receiptTime(shift.openedAt),
-                            )
-                          : l10n.storeShiftNotOpen,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (shift != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0x2610B981),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    l10n.storeShiftStillOpen,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF34D399),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              if (shift != null) ...[
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _requestCloseShift,
-                    child: Text(l10n.storeShiftClose),
-                  ),
-                ),
-                const SizedBox(width: 8),
-              ],
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _openReportChooser,
-                  icon: const Icon(Icons.receipt_long_rounded, size: 18),
-                  label: Text(l10n.storeSalesReport),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Panel status saat shift tertutup: penjualan nonaktif; yang
-  /// ditawarkan hanya membuka shift (di panel kasir) atau melihat
-  /// laporan periode lampau.
-  Widget _buildClosedStatusPanel(BuildContext context) {
-    return Text(
-      context.l10n.storeShiftOpenHint,
-      style: TextStyle(fontSize: 13, color: context.palette.muted),
-      textAlign: TextAlign.center,
-    );
-  }
-
-  Widget _buildSellingStatusPanel(BuildContext context) {
-    final l10n = context.l10n;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Ringkasan sesi — akumulator sesi ini saja, dinyatakan
-        // apa adanya (bukan laporan harian).
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: context.palette.card,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: context.palette.border),
-          ),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.storefront_rounded,
-                color: Color(0xFF34D399),
-                size: 22,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.storeSessionTitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: context.palette.muted,
-                      ),
-                    ),
-                    Text(
-                      l10n.storeSessionSales(
-                        _session.saleCount,
-                        formatNusan(_session.totalMsat),
-                      ),
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        if (_received) ...[
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: const Color(0x2610B981),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0x6610B981)),
-            ),
-            child: Column(
-              children: [
-                const AnimatedCheckmark(),
-                const SizedBox(height: 12),
-                Text(
-                  l10n.paymentReceived,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF34D399),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  l10n.receivedAmount(
-                    formatNusan(_receivedMsat ?? BigInt.zero),
-                  ),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  l10n.fundsArrived,
-                  style: TextStyle(fontSize: 12, color: context.palette.muted),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 14),
-                OutlinedButton.icon(
-                  onPressed: _printLastReceipt,
-                  icon: const Icon(Icons.print_rounded, size: 19),
-                  label: Text(l10n.storePrintReceipt),
-                ),
-              ],
-            ),
-          ),
-        ] else if (_invoice != null) ...[
           Text(
-            l10n.storeWaitingPayment,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '${_fmtNusan(_invoiceTotalNusan)} nusan',
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Center(
-              child: QrImageView(
-                data: _invoice!,
-                version: QrVersions.auto,
-                size: 240,
-                backgroundColor: Colors.white,
-                errorCorrectionLevel: QrErrorCorrectLevel.M,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          TextButton(
-            onPressed: _cancelPaymentCode,
-            child: Text(l10n.storeCancelCode),
-          ),
-        ] else ...[
-          Text(
-            l10n.storeIdleHint,
-            style: TextStyle(fontSize: 13, color: context.palette.muted),
-            textAlign: TextAlign.center,
-          ),
-        ],
-        const SizedBox(height: 20),
-        OutlinedButton.icon(
-          onPressed: _invoice == null ? _toggleStaticCode : null,
-          icon: const Icon(Icons.qr_code_2_rounded, size: 20),
-          label: Text(
-            l10n.staticCodeTitle,
+            l10n.storeRedeemTitle,
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
           ),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFF34D399),
-            side: BorderSide(
-              color: const Color(0xFF10B981).withValues(alpha: 0.5),
-            ),
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
-        ),
-        if (_staticOpen) ...[
-          const SizedBox(height: 16),
-          if (_staticLoading)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 24),
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Color(0xFF34D399),
+          const SizedBox(height: 6),
+          if (_redeemState == _RedeemState.creating) ...[
+            Row(
+              children: [
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2.4),
                 ),
-              ),
-            )
-          else if (_staticOffer != null) ...[
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Center(
+                const SizedBox(width: 12),
+                Text(l10n.storeRedeemWaiting),
+              ],
+            ),
+          ] else if (_redeemState == _RedeemState.waiting) ...[
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                ),
                 child: QrImageView(
-                  data: _staticOffer!,
+                  data: _redeemInvoice!,
                   version: QrVersions.auto,
-                  size: 240,
+                  size: 200,
                   backgroundColor: Colors.white,
                   errorCorrectionLevel: QrErrorCorrectLevel.M,
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Text(
-              l10n.staticCodeHint,
-              style: TextStyle(fontSize: 12, color: context.palette.muted),
+              l10n.storeRedeemWaiting,
               textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
-          ] else if (_staticError != null) ...[
-            Text(
-              _staticError!,
-              style: const TextStyle(color: Colors.redAccent, fontSize: 13),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
             TextButton(
-              onPressed: _staticLoading ? null : _loadStaticOffer,
-              child: Text(l10n.updateRetry),
+              onPressed: _cancelRedeem,
+              child: Text(l10n.storeRedeemCancel),
             ),
+          ] else if (_redeemState == _RedeemState.verified) ...[
+            Row(
+              children: [
+                const Icon(
+                  Icons.check_circle_rounded,
+                  color: Color(0xFF34D399),
+                  size: 22,
+                ),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Text(
+                    l10n.storeRedeemVerified(
+                      _redeemPoints,
+                      formatRupiah(_pointsDiscountRp),
+                    ),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ] else ...[
+            Text(
+              l10n.storeRedeemHint,
+              style: TextStyle(fontSize: 12, color: context.palette.muted),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _pointsController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
+                    decoration: InputDecoration(
+                      labelText: l10n.storeRedeemPointsLabel,
+                      filled: true,
+                      fillColor: context.palette.cardAlt,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton(
+                  onPressed: _createRedeemInvoice,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 15,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(l10n.storeRedeemCreate),
+                ),
+              ],
+            ),
+            if (_maxPoints > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  l10n.storeRedeemMaxNote(_maxPoints),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: context.palette.muted,
+                  ),
+                ),
+              ),
+            if (_redeemError != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  _redeemError!,
+                  style: const TextStyle(
+                    color: Colors.redAccent,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
           ],
         ],
-      ],
+      ),
     );
   }
 }
 
-/// Hasil dialog atur diskon: nilai baru, atau [cleared] untuk
-/// menghapus diskon. null dari dialog = batal, tanpa perubahan.
-class _DiscountEditResult {
-  final Discount? discount;
-  final bool cleared;
-
-  const _DiscountEditResult({this.discount}) : cleared = false;
-  const _DiscountEditResult.cleared() : discount = null, cleared = true;
-}
-
-/// Lembar kelola katalog: daftar item (hapus), tambah item (kode
-/// diketik atau dari scan), diskon bawaan opsional. Perubahan
-/// langsung diteruskan ke [onChanged] untuk disimpan pemiliknya.
+/// Lembar kelola katalog: tambah / ubah / hapus item (harga
+/// rupiah, kunci v2). Perubahan dilaporkan ke induk lewat
+/// [onChanged] — induk yang menyimpan & menyegarkan chip
+/// katalog. [initialCode] terisi saat dibuka dari hasil pindai
+/// kode yang belum terdaftar: form tambah langsung terbuka
+/// dengan kode itu terisi.
 class _CatalogManagerSheet extends StatefulWidget {
-  final List<CatalogItem> initialItems;
-  final String? initialCode;
-  final void Function(List<CatalogItem> items) onChanged;
-
   const _CatalogManagerSheet({
     required this.initialItems,
-    required this.initialCode,
     required this.onChanged,
+    this.initialCode,
   });
+
+  final List<CatalogItem> initialItems;
+  final String? initialCode;
+  final ValueChanged<List<CatalogItem>> onChanged;
 
   @override
   State<_CatalogManagerSheet> createState() => _CatalogManagerSheetState();
 }
 
 class _CatalogManagerSheetState extends State<_CatalogManagerSheet> {
-  late List<CatalogItem> _items = [...widget.initialItems];
-  late final _codeController = TextEditingController(
-    text: widget.initialCode ?? '',
-  );
-  final _nameController = TextEditingController();
-  final _priceController = TextEditingController();
-  final _categoryController = TextEditingController();
-  final _discountValueController = TextEditingController();
-  DiscountKind? _discountKind;
-  String? _formError;
+  late List<CatalogItem> _items;
 
   @override
-  void dispose() {
-    _codeController.dispose();
-    _nameController.dispose();
-    _priceController.dispose();
-    _categoryController.dispose();
-    _discountValueController.dispose();
-    super.dispose();
-  }
-
-  void _emit() => widget.onChanged(List.unmodifiable(_items));
-
-  String _itemSubtitle(CatalogItem item) {
-    String nusanOf(int nusan) =>
-        formatNusan(BigInt.from(nusan) * BigInt.from(1000));
-    var text = '${item.code} • ${nusanOf(item.priceNusan)} nusan';
-    if (item.category.isNotEmpty) text = '$text • ${item.category}';
-    final d = item.defaultDiscount;
-    if (d != null) {
-      final badge = d.kind == DiscountKind.percent
-          ? '${d.value}%'
-          : '−${nusanOf(d.value)}';
-      text = '$text • ${context.l10n.storeDiscount} $badge';
+  void initState() {
+    super.initState();
+    _items = List.of(widget.initialItems);
+    final code = widget.initialCode;
+    if (code != null && code.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _editItem(initialCode: code);
+      });
     }
-    return text;
   }
 
-  /// Ketuk item di daftar = muat ke formulir untuk diedit
-  /// (termasuk kategori); simpan menimpa item berkode sama.
-  void _loadIntoForm(CatalogItem item) {
-    setState(() {
-      _codeController.text = item.code;
-      _nameController.text = item.name;
-      _priceController.text = item.priceNusan.toString();
-      _categoryController.text = item.category;
-      _discountKind = item.defaultDiscount?.kind;
-      _discountValueController.text =
-          item.defaultDiscount?.value.toString() ?? '';
-      _formError = null;
-    });
+  void _saveAll(List<CatalogItem> items) {
+    setState(() => _items = items);
+    widget.onChanged(items);
   }
 
-  Future<void> _scanIntoCode() async {
-    final raw = await Navigator.push<String>(
-      context,
-      MaterialPageRoute(builder: (_) => const ScanScreen()),
+  Future<void> _editItem({
+    CatalogItem? existing,
+    int? index,
+    String? initialCode,
+  }) async {
+    final l10n = context.l10n;
+    final existingDiscount = existing?.defaultDiscount;
+    final codeCtl = TextEditingController(
+      text: existing?.code ?? initialCode ?? '',
     );
-    if (raw == null || !mounted) return;
-    setState(() => _codeController.text = raw.trim());
-  }
-
-  void _saveItem() {
-    final code = _codeController.text.trim();
-    final name = _nameController.text.trim();
-    final price =
-        int.tryParse(
-          _priceController.text.replaceAll('.', '').replaceAll(',', ''),
-        ) ??
-        0;
-    if (code.isEmpty || name.isEmpty || price <= 0) {
-      setState(() => _formError = context.l10n.storeProductFormError);
+    final nameCtl = TextEditingController(text: existing?.name ?? '');
+    final priceCtl = TextEditingController(
+      text: existing == null ? '' : existing.priceRp.toString(),
+    );
+    final categoryCtl = TextEditingController(text: existing?.category ?? '');
+    DiscountKind? kind = existingDiscount?.kind;
+    final discountCtl = TextEditingController(
+      text: existingDiscount == null
+          ? ''
+          : existingDiscount.value.toString(),
+    );
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) {
+          return AlertDialog(
+            backgroundColor: ctx.palette.card,
+            title: Text(
+              existing == null ? l10n.storeAddProduct : l10n.storeEditProduct,
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: codeCtl,
+                    decoration: InputDecoration(
+                      labelText: l10n.storeProductCode,
+                      filled: true,
+                      fillColor: ctx.palette.cardAlt,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: nameCtl,
+                    decoration: InputDecoration(
+                      labelText: l10n.storeProductName,
+                      filled: true,
+                      fillColor: ctx.palette.cardAlt,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: priceCtl,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: InputDecoration(
+                      labelText: l10n.storeProductPrice,
+                      filled: true,
+                      fillColor: ctx.palette.cardAlt,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: categoryCtl,
+                    decoration: InputDecoration(
+                      labelText: l10n.storeProductCategory,
+                      filled: true,
+                      fillColor: ctx.palette.cardAlt,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      l10n.storeProductDiscount,
+                      style: TextStyle(fontSize: 13, color: ctx.palette.muted),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SegmentedButton<DiscountKind?>(
+                    segments: [
+                      ButtonSegment(
+                        value: null,
+                        label: Text(l10n.storeNoDiscount),
+                      ),
+                      ButtonSegment(
+                        value: DiscountKind.percent,
+                        label: Text(l10n.storeDiscountPercent),
+                      ),
+                      ButtonSegment(
+                        value: DiscountKind.fixed,
+                        label: const Text('Rp'),
+                      ),
+                    ],
+                    selected: {kind},
+                    onSelectionChanged: (s) => setLocal(() => kind = s.first),
+                  ),
+                  if (kind != null) ...[
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: discountCtl,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                      ],
+                      decoration: InputDecoration(
+                        labelText: l10n.storeDiscountValue,
+                        filled: true,
+                        fillColor: ctx.palette.cardAlt,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(l10n.cancel),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(l10n.storeSaveProduct),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    if (saved != true || !mounted) return;
+    final name = nameCtl.text.trim();
+    final price = int.tryParse(priceCtl.text.trim()) ?? 0;
+    if (name.isEmpty || price <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.storeProductFormError)),
+      );
       return;
     }
     Discount? discount;
-    final dv = int.tryParse(_discountValueController.text) ?? 0;
-    if (_discountKind != null && dv > 0) {
-      discount = _discountKind == DiscountKind.percent
-          ? Discount.percent(dv > 100 ? 100 : dv)
-          : Discount.fixed(dv);
+    final selectedKind = kind;
+    if (selectedKind != null) {
+      final value = int.tryParse(discountCtl.text.trim()) ?? 0;
+      if (value > 0) {
+        discount = selectedKind == DiscountKind.percent
+            ? Discount.percent(value > 100 ? 100 : value)
+            : Discount.fixed(value);
+      }
     }
+    final category = categoryCtl.text.trim();
     final item = CatalogItem(
-      code: code,
+      code: codeCtl.text.trim(),
       name: name,
-      priceNusan: price,
+      priceRp: price,
       defaultDiscount: discount,
-      category: _categoryController.text.trim(),
+      category: category,
     );
-    setState(() {
-      _items = [
-        for (final existing in _items)
-          if (existing.code != code) existing,
-        item,
-      ];
-      _formError = null;
-      _codeController.clear();
-      _nameController.clear();
-      _priceController.clear();
-      _categoryController.clear();
-      _discountValueController.clear();
-      _discountKind = null;
-    });
-    _emit();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(context.l10n.storeProductSaved(name))),
-    );
+    final next = List<CatalogItem>.of(_items);
+    if (index != null && index >= 0 && index < next.length) {
+      next[index] = item;
+    } else {
+      next.add(item);
+    }
+    _saveAll(next);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.storeProductSaved(item.name))),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(18, 16, 18, 16 + bottomInset),
+    return SafeArea(
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              l10n.storeCatalogTitle,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 6),
+              child: Text(
+                l10n.storeCatalogManagerTitle,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
-            const SizedBox(height: 10),
             if (_items.isEmpty)
-              Text(
-                l10n.storeCatalogEmpty,
-                style: TextStyle(fontSize: 12, color: context.palette.muted),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 6, 18, 6),
+                child: Text(
+                  l10n.storeCatalogEmpty,
+                  style: TextStyle(fontSize: 13, color: context.palette.muted),
+                ),
               )
             else
-              for (final item in _items)
+              for (var i = 0; i < _items.length; i++)
                 ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  onTap: () => _loadIntoForm(item),
                   title: Text(
-                    item.name,
+                    _items[i].name,
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  subtitle: Text(_itemSubtitle(item)),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete_outline, size: 21),
-                    onPressed: () {
-                      setState(
-                        () => _items = [
-                          for (final e in _items)
-                            if (e.code != item.code) e,
-                        ],
-                      );
-                      _emit();
-                    },
+                  subtitle: Text(
+                    'Rp${formatRupiah(_items[i].priceRp)}'
+                    '${_items[i].code.isEmpty ? '' : ' • ${_items[i].code}'}'
+                    '${_items[i].category.isEmpty ? '' : ' • ${_items[i].category}'}',
                   ),
-                ),
-            const Divider(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _codeController,
-                    decoration: InputDecoration(
-                      labelText: l10n.storeProductCode,
-                      filled: true,
-                      fillColor: context.palette.cardAlt,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.qr_code_scanner_rounded),
-                  onPressed: _scanIntoCode,
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                labelText: l10n.storeProductName,
-                filled: true,
-                fillColor: context.palette.cardAlt,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _priceController,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: InputDecoration(
-                labelText: l10n.storeProductPrice,
-                filled: true,
-                fillColor: context.palette.cardAlt,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _categoryController,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                labelText: l10n.storeProductCategory,
-                filled: true,
-                fillColor: context.palette.cardAlt,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-            // Saran kategori yang SUDAH ada (chip ketuk-untuk-isi):
-            // kasir tidak mengetik ulang dan ejaan kategori
-            // seragam untuk pengelompokan laporan. Mengetik
-            // kategori baru tetap bebas — chip hanya jalan
-            // pintas, bukan master terpisah. Saran menyaring
-            // mengikuti teks yang sedang diketik.
-            Builder(
-              builder: (context) {
-                final typed = _categoryController.text.trim().toLowerCase();
-                final suggestions = [
-                  for (final c in catalogCategories(_items))
-                    if (c.toLowerCase() != typed &&
-                        (typed.isEmpty || c.toLowerCase().contains(typed)))
-                      c,
-                ];
-                if (suggestions.isEmpty) return const SizedBox.shrink();
-                return Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      for (final c in suggestions)
-                        ActionChip(
-                          label: Text(c, style: const TextStyle(fontSize: 12)),
-                          visualDensity: VisualDensity.compact,
-                          onPressed: () => setState(
-                            () => _categoryController.text = c,
-                          ),
-                        ),
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined, size: 20),
+                        onPressed: () =>
+                            _editItem(existing: _items[i], index: i),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                        onPressed: () {
+                          final next = List<CatalogItem>.of(_items)
+                            ..removeAt(i);
+                          _saveAll(next);
+                        },
+                      ),
                     ],
                   ),
-                );
-              },
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    l10n.storeProductDiscount,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: context.palette.label,
-                    ),
+                ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 8, 18, 16),
+              child: ElevatedButton.icon(
+                onPressed: () => _editItem(),
+                icon: const Icon(Icons.add_rounded, size: 20),
+                label: Text(l10n.storeAddProduct),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                SegmentedButton<DiscountKind?>(
-                  segments: [
-                    ButtonSegment(value: null, label: Text('—')),
-                    ButtonSegment(
-                      value: DiscountKind.percent,
-                      label: Text('%'),
-                    ),
-                    ButtonSegment(
-                      value: DiscountKind.fixed,
-                      label: Text('nusan'),
-                    ),
-                  ],
-                  selected: {_discountKind},
-                  onSelectionChanged: (s) =>
-                      setState(() => _discountKind = s.first),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 84,
-                  child: TextField(
-                    controller: _discountValueController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: InputDecoration(
-                      hintText: '0',
-                      filled: true,
-                      fillColor: context.palette.cardAlt,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (_formError != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                _formError!,
-                style: const TextStyle(color: Colors.redAccent, fontSize: 12),
-              ),
-            ],
-            const SizedBox(height: 14),
-            ElevatedButton(
-              onPressed: _saveItem,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF10B981),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              child: Text(
-                l10n.storeSaveProduct,
-                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
           ],
