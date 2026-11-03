@@ -824,6 +824,12 @@ abstract class AppLocalizations {
   /// **'Pembayaran Lightning bersifat instan dan tidak bisa dibatalkan. Periksa lagi invoice di bawah sebelum lanjut.'**
   String get confirmPayBody;
 
+  /// No description provided for @confirmPayAmountLine.
+  ///
+  /// In id, this message translates to:
+  /// **'Nominal: {amount} nusan'**
+  String confirmPayAmountLine(String amount);
+
   /// No description provided for @paymentSuccess.
   ///
   /// In id, this message translates to:
@@ -1472,11 +1478,11 @@ abstract class AppLocalizations {
   /// **'Nominal'**
   String get storeKeypadModeAmount;
 
-  /// No description provided for @storeQtyMultiplierWord.
+  /// No description provided for @storeQtyBadge.
   ///
   /// In id, this message translates to:
-  /// **'Pengali'**
-  String get storeQtyMultiplierWord;
+  /// **'Qty: {qty}'**
+  String storeQtyBadge(int qty);
 
   /// No description provided for @storeQtyModeHint.
   ///
@@ -2114,6 +2120,12 @@ abstract class AppLocalizations {
   /// **'Menunggu pembayaran poin dari pelanggan…'**
   String get storeRedeemWaiting;
 
+  /// No description provided for @storeRedeemCopied.
+  ///
+  /// In id, this message translates to:
+  /// **'Kode penukaran disalin'**
+  String get storeRedeemCopied;
+
   /// No description provided for @storeRedeemVerified.
   ///
   /// In id, this message translates to:
@@ -2509,6 +2521,12 @@ abstract class AppLocalizations {
   /// In id, this message translates to:
   /// **'Aturan Program Poin'**
   String get storeRulesTitle;
+
+  /// No description provided for @storeRulesButton.
+  ///
+  /// In id, this message translates to:
+  /// **'Aturan Poin'**
+  String get storeRulesButton;
 
   /// No description provided for @storeRulesHeading.
   ///

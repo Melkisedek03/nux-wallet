@@ -78,6 +78,36 @@ void main() {
       expect(free(1).qty, 1);
     });
 
+    test('tambah bebas dengan pengali: baris baru & gabungan ikut qty', () {
+      // Pengali tertunda berlaku untuk item bebas seperti katalog
+      // (temuan lapangan NUX 3 Nov 2026).
+      var lines = orderAddFreeAmount(
+        const [],
+        label: 'Item Bebas',
+        amountRp: 7000,
+        qty: 3,
+      );
+      expect(lines.single.qty, 3);
+      // Baris yang sama menggabung sebesar pengali juga.
+      lines = orderAddFreeAmount(
+        lines,
+        label: 'Item Bebas',
+        amountRp: 7000,
+        qty: 2,
+      );
+      expect(lines.single.qty, 5);
+      expect(orderGrandTotalRp(lines, null), 35000);
+      // qty < 1 dinormalkan ke 1.
+      lines = orderAddFreeAmount(
+        lines,
+        label: 'Item Bebas',
+        amountRp: 2000,
+        qty: 0,
+      );
+      expect(lines.length, 2);
+      expect(lines[1].qty, 1);
+    });
+
     test('qty +/− dan hapus; kurang sampai 0 membuang baris', () {
       var lines = orderAddProduct(
         const [],

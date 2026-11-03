@@ -179,6 +179,14 @@
   "pay": "Bayar",
   "confirmPayTitle": "Bayar invoice ini?",
   "confirmPayBody": "Pembayaran Lightning bersifat instan dan tidak bisa dibatalkan. Periksa lagi invoice di bawah sebelum lanjut.",
+  "confirmPayAmountLine": "Nominal: {amount} nusan",
+  "@confirmPayAmountLine": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "paymentSuccess": "Pembayaran Berhasil!",
   "scanTitle": "Pindai Invoice QR",
   "cameraDenied": "Izin kamera ditolak. Aktifkan izin kamera untuk ELNUX di Pengaturan HP, lalu coba lagi.",
@@ -342,7 +350,14 @@
   },
   "storeKeypadModeQty": "Qty",
   "storeKeypadModeAmount": "Nominal",
-  "storeQtyMultiplierWord": "Pengali",
+  "storeQtyBadge": "Qty: {qty}",
+  "@storeQtyBadge": {
+    "placeholders": {
+      "qty": {
+        "type": "int"
+      }
+    }
+  },
   "storeQtyModeHint": "Mode Qty: ketuk angka sebagai pengali, lalu ketuk produk di katalog atau pindai kodenya — produk masuk sebanyak pengali itu.",
   "storeProductAddedQty": "Ditambahkan: {name} ×{qty}",
   "@storeProductAddedQty": {
@@ -535,6 +550,7 @@
   },
   "storeRedeemCreate": "Buat Kode Tukar",
   "storeRedeemWaiting": "Menunggu pembayaran poin dari pelanggan…",
+  "storeRedeemCopied": "Kode penukaran disalin",
   "storeRedeemVerified": "Penukaran terverifikasi: {points} poin = potongan Rp{amount}.",
   "@storeRedeemVerified": {
     "placeholders": {
@@ -693,6 +709,7 @@
   "storeSettingsSaved": "Pengaturan toko tersimpan.",
   "storeSettingsInvalid": "Periksa lagi: kelipatan dan nilai potongan harus di atas 0; batas maks 1–100 bila diisi.",
   "storeRulesTitle": "Aturan Program Poin",
+  "storeRulesButton": "Aturan Poin",
   "storeRulesHeading": "Poin Nusan — Bonus Promosi Toko",
   "storeRulesP1": "Poin nusan adalah bonus promosi dari toko, bukan uang dan bukan alat pembayaran. Pembayaran belanja di toko ini selalu dalam rupiah (tunai atau QRIS).",
   "storeRulesP2": "Poin hanya diperoleh dari belanja rupiah yang sudah lunas, sesuai ketentuan perolehan yang berlaku di toko ini.",

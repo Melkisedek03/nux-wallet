@@ -529,11 +529,11 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
   int get _grandTotal => orderGrandTotalRp(_lines, _orderDiscount);
 
   void _addProduct(CatalogItem item) {
-    // Di mode Qty, pengali yang sedang disusun berlaku untuk
+    // Pengali adalah state keypad yang sama lintas mode
+    // (Qty/Nominal): pengali yang sedang tertunda berlaku untuk
     // penambahan ini (ketuk katalog maupun hasil scan lewat
     // sini), lalu pengali kembali belum diatur (efektif ×1).
-    // Di mode Nominal penambahan selalu ×1 seperti sebelumnya.
-    final qty = _qtyKeypadMode ? _effectiveQty : 1;
+    final qty = _effectiveQty;
     setState(() {
       _lines = orderAddProduct(
         _lines,
@@ -544,7 +544,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
         defaultDiscount: item.defaultDiscount,
         qty: qty,
       );
-      if (_qtyKeypadMode) _qtyMultiplier = 0;
+      _qtyMultiplier = 0;
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -610,9 +610,20 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
       _freeTitleController.text,
       fallbackLabel: context.l10n.storeFreeItem,
     );
+    // Pengali tertunda berlaku juga untuk item bebas (temuan
+    // lapangan NUX 3 Nov 2026): baris ditambahkan sebanyak
+    // pengali, lalu pengali kembali belum diatur (efektif ×1),
+    // persis seperti jalur katalog.
+    final qty = _effectiveQty;
     setState(() {
-      _lines = orderAddFreeAmount(_lines, label: label, amountRp: _keypadRp);
+      _lines = orderAddFreeAmount(
+        _lines,
+        label: label,
+        amountRp: _keypadRp,
+        qty: qty,
+      );
       _keypadRp = 0;
+      _qtyMultiplier = 0;
     });
     _freeTitleController.clear();
   }
@@ -1786,26 +1797,16 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
               color: context.palette.cardAlt,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '×$_effectiveQty',
-                    style: const TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                Text(
-                  l10n.storeQtyMultiplierWord,
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: context.palette.muted,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+            // Angka pengali saja, rata tengah — tanpa awalan "×"
+            // dan tanpa kata "Multiplier" (temuan lapangan NUX
+            // 3 Nov 2026: tampilannya cukup angka).
+            child: Text(
+              '$_effectiveQty',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 30,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -1904,6 +1905,28 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
           const SizedBox(height: 10),
           _buildKeypad(context),
           const SizedBox(height: 10),
+          // Pengali tertunda ikut berlaku untuk item bebas —
+          // tampilkan penanda kecilnya di sini bila > 1 supaya
+          // kasir melihat jumlah yang akan ditambahkan, bukan
+          // diam-diam mengejutkan di daftar pesanan.
+          if (_effectiveQty > 1) ...[
+            Center(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: context.palette.cardAlt,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  l10n.storeQtyBadge(_effectiveQty),
+                  style: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
           OutlinedButton.icon(
             onPressed: _keypadRp > 0 ? _addFreeAmount : null,
             icon: const Icon(Icons.add_rounded, size: 20),
@@ -2104,7 +2127,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
                   ),
                 ),
                 icon: const Icon(Icons.menu_book_rounded, size: 19),
-                label: Text(l10n.storeRulesTitle),
+                label: Text(l10n.storeRulesButton),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
@@ -3330,7 +3353,29 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
                 ),
               ),
             ),
-            const SizedBox(height: 10),
+            // Salin kode penukaran sebagai teks: pelanggan yang
+            // tidak bisa memindai QR (kirim lewat chat, dsb.)
+            // tetap bisa membayar poinnya dari kode ini.
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.copy, color: Color(0xFF34D399)),
+                  tooltip: l10n.copy,
+                  onPressed: () {
+                    Clipboard.setData(
+                        ClipboardData(text: _redeemInvoice!));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(l10n.storeRedeemCopied)),
+                    );
+                  },
+                ),
+                Text(l10n.copy,
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w600)),
+              ],
+            ),
+            const SizedBox(height: 4),
             Text(
               l10n.storeRedeemWaiting,
               textAlign: TextAlign.center,

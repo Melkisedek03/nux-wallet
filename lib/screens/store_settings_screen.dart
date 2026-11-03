@@ -316,7 +316,7 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
                     ),
                   ),
                   icon: const Icon(Icons.info_outline_rounded, size: 19),
-                  label: Text(l10n.storeRulesTitle),
+                  label: Text(l10n.storeRulesButton),
                 ),
               ],
             ),

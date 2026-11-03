@@ -1,21 +1,22 @@
 /// Keputusan murni pengawas event pembayaran masuk di layar Terima.
 ///
 /// Pengawas event (poll Event_PaymentReceived dari antrean node)
-/// hanya berguna selama ada sesuatu yang sedang ditunggu layar:
+/// bersenjata SELAMA layar Terima aktif ([screenActive]) — bukan
+/// hanya saat ada invoice pending atau panel Kode Bayar Statis
+/// sedang terbuka. Offer Bolt12 tidak punya kedaluwarsa dan bisa
+/// dibayar kapan pun; pembayaran yang tiba saat QR kode statis
+/// TIDAK sedang ditampilkan tetap pembayaran sungguhan ke dompet
+/// ini, dan panel sukses layar Terima harus merayakannya juga
+/// (temuan lapangan NUX 3 Nov 2026: sebelumnya pengawas mati pada
+/// keadaan itu, jadi hanya suara + getar dari detektor dashboard
+/// yang muncul, tanpa animasi centang).
 ///
-/// - invoice Bolt11 yang belum lunas ([invoicePending]),
-/// - panel Kode Bayar Statis yang sedang terbuka
-///   ([staticPanelOpen]) — offer Bolt12 tidak punya kedaluwarsa
-///   dan bisa dibayar kapan pun selama panel tampil, dan
-/// - panel sukses yang sedang merayakan penerimaan
-///   ([celebrating]) — pengawas tetap hidup selama jendela ini
-///   supaya pembayaran berikutnya yang tiba di tengah perayaan
-///   tetap tertangkap dan menggantikan panel, bukan hilang
-///   diam-diam di antrean.
-///
-/// Di luar ketiga keadaan itu pengawas berhenti: antrean event
-/// adalah milik bersama satu node, tidak ada gunanya dikuras
-/// layar ini saat tidak ada yang ditunggu.
+/// Perlindungan dari perayaan palsu bukan di gerbang ini: antrean
+/// event dikuras lebih dulu saat pengawas mulai (event lama milik
+/// pembayaran yang tiba saat user di layar lain dibuang), dan
+/// pengawas berhenti total saat layar ditutup (dispose) — antrean
+/// adalah milik bersama satu node, tidak boleh dikuras layar yang
+/// sudah tidak aktif.
 library;
 
 /// Berapa lama panel sukses ("Pembayaran diterima") tampil
@@ -25,9 +26,5 @@ library;
 const receiveCelebrationDuration = Duration(seconds: 5);
 
 /// Haruskah pengawas event layar Terima berjalan pada keadaan ini?
-bool receiveWatcherShouldRun({
-  required bool invoicePending,
-  required bool staticPanelOpen,
-  required bool celebrating,
-}) =>
-    invoicePending || staticPanelOpen || celebrating;
+/// Ya, selama layarnya aktif; tidak, sesudah layarnya ditutup.
+bool receiveWatcherShouldRun({required bool screenActive}) => screenActive;

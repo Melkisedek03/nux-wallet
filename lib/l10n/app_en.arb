@@ -179,6 +179,14 @@
   "pay": "Pay",
   "confirmPayTitle": "Pay this invoice?",
   "confirmPayBody": "Lightning payments are instant and cannot be cancelled. Double-check the invoice below before continuing.",
+  "confirmPayAmountLine": "Amount: {amount} nusan",
+  "@confirmPayAmountLine": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "paymentSuccess": "Payment Successful!",
   "scanTitle": "Scan QR Invoice",
   "cameraDenied": "Camera permission denied. Enable camera permission for ELNUX in phone Settings, then try again.",
@@ -342,7 +350,14 @@
   },
   "storeKeypadModeQty": "Qty",
   "storeKeypadModeAmount": "Amount",
-  "storeQtyMultiplierWord": "Multiplier",
+  "storeQtyBadge": "Qty: {qty}",
+  "@storeQtyBadge": {
+    "placeholders": {
+      "qty": {
+        "type": "int"
+      }
+    }
+  },
   "storeQtyModeHint": "Qty mode: tap digits as a multiplier, then tap a catalog product or scan its code — the product is added that many times.",
   "storeProductAddedQty": "Added: {name} ×{qty}",
   "@storeProductAddedQty": {
@@ -535,6 +550,7 @@
   },
   "storeRedeemCreate": "Create Redemption Code",
   "storeRedeemWaiting": "Waiting for the customer's points payment…",
+  "storeRedeemCopied": "Redemption code copied",
   "storeRedeemVerified": "Redemption verified: {points} points = Rp{amount} discount.",
   "@storeRedeemVerified": {
     "placeholders": {
@@ -693,6 +709,7 @@
   "storeSettingsSaved": "Store settings saved.",
   "storeSettingsInvalid": "Check again: the step and discount value must be above 0; the max cap is 1–100 when filled.",
   "storeRulesTitle": "Points Program Rules",
+  "storeRulesButton": "Point Rules",
   "storeRulesHeading": "Nusan Points — Store Promotional Bonus",
   "storeRulesP1": "Nusan points are a promotional bonus from this store — not money and not a payment method. Purchases at this store are always paid in rupiah (cash or QRIS).",
   "storeRulesP2": "Points are earned only from settled rupiah purchases, under the earning terms in effect at this store.",

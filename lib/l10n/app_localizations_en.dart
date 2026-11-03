@@ -414,6 +414,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Lightning payments are instant and cannot be cancelled. Double-check the invoice below before continuing.';
 
   @override
+  String confirmPayAmountLine(String amount) {
+    return 'Amount: $amount nusan';
+  }
+
+  @override
   String get paymentSuccess => 'Payment Successful!';
 
   @override
@@ -770,7 +775,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeKeypadModeAmount => 'Amount';
 
   @override
-  String get storeQtyMultiplierWord => 'Multiplier';
+  String storeQtyBadge(int qty) {
+    return 'Qty: $qty';
+  }
 
   @override
   String get storeQtyModeHint =>
@@ -1128,6 +1135,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Waiting for the customer\'s points payment…';
 
   @override
+  String get storeRedeemCopied => 'Redemption code copied';
+
+  @override
   String storeRedeemVerified(int points, String amount) {
     return 'Redemption verified: $points points = Rp$amount discount.';
   }
@@ -1360,6 +1370,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get storeRulesTitle => 'Points Program Rules';
+
+  @override
+  String get storeRulesButton => 'Point Rules';
 
   @override
   String get storeRulesHeading => 'Nusan Points — Store Promotional Bonus';

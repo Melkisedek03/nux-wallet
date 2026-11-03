@@ -58,6 +58,10 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   Timer? _eventTimer;
   int _watchGen = 0;
   bool _watching = false;
+
+  /// Penanda layar sudah ditutup (dispose): pengawas event hanya
+  /// boleh berjalan selama layar aktif — lihat receive_watch.dart.
+  bool _disposed = false;
   bool _received = false;
   BigInt? _receivedMsat;
 
@@ -86,6 +90,10 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   @override
   void initState() {
     super.initState();
+    // Pengawas event bersenjata sejak layar dibuka (bukan hanya
+    // sesudah ada invoice/panel statis): pembayaran offer yang
+    // tiba kapan pun selama user di layar ini harus terayakan.
+    _syncWatcher();
     _restoreLastInvoice();
     // Sesudah frame pertama: context.l10n belum boleh dibaca di
     // initState.
@@ -112,15 +120,15 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   /// belum tersedia, pembuatan dicoba (lagi) — inilah titik coba
   /// ulang alami sesudah node tersambung ke LSP.
   ///
-  /// Membuka panel juga menyalakan pengawas event: pembayaran
-  /// offer masuk lewat Event_PaymentReceived yang sama seperti
-  /// invoice Bolt11 (handler PaymentClaimed di ldk-node menerbitkan
-  /// event itu untuk semua PaymentPurpose, termasuk
-  /// Bolt12OfferPayment), jadi panel sukses kini tampil juga untuk
-  /// pembayaran ke kode statis — bukan cuma suara + getar dari
-  /// detektor dashboard. Menutup panel menghentikan pengawas,
-  /// kecuali ada invoice pending atau perayaan yang sedang tampil
-  /// (diputuskan murni oleh [_syncWatcher]).
+  /// Pembayaran offer masuk lewat Event_PaymentReceived yang sama
+  /// seperti invoice Bolt11 (handler PaymentClaimed di ldk-node
+  /// menerbitkan event itu untuk semua PaymentPurpose, termasuk
+  /// Bolt12OfferPayment). Pengawas event layar ini bersenjata
+  /// selama layar aktif — membuka/menutup panel tidak lagi
+  /// menyalakan/mematikannya — jadi panel sukses tampil untuk
+  /// pembayaran ke kode statis baik QR-nya sedang ditampilkan
+  /// maupun tidak, bukan cuma suara + getar dari detektor
+  /// dashboard (temuan lapangan NUX 3 Nov 2026).
   void _toggleStaticCode() {
     setState(() => _staticOpen = !_staticOpen);
     if (_staticOpen && _staticOffer == null && !_staticLoading) {
@@ -195,9 +203,9 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
 
   @override
   void dispose() {
-    _eventTimer?.cancel();
+    _disposed = true;
+    _stopWatching();
     _celebrationTimer?.cancel();
-    _watchGen++;
     _amountController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -298,19 +306,14 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
     }
   }
 
-  /// Selaraskan pengawas event dengan keadaan layar: jalankan
-  /// bila ada yang ditunggu (invoice pending, panel Kode Bayar
-  /// Statis terbuka, atau panel sukses sedang tampil) dan hentikan
-  /// bila tidak ada — keputusan murninya di
-  /// [receiveWatcherShouldRun]. Aman dipanggil berulang: pengawas
-  /// yang sudah sesuai keadaan tidak diutak-atik, jadi tidak ada
-  /// timer ganda dan tidak ada kuras antrean berulang.
+  /// Selaraskan pengawas event dengan keadaan layar: pengawas
+  /// berjalan selama layar aktif dan berhenti sesudah layar
+  /// ditutup — keputusan murninya di [receiveWatcherShouldRun].
+  /// Aman dipanggil berulang: pengawas yang sudah sesuai keadaan
+  /// tidak diutak-atik, jadi tidak ada timer ganda dan tidak ada
+  /// kuras antrean berulang.
   void _syncWatcher() {
-    final shouldRun = receiveWatcherShouldRun(
-      invoicePending: _invoice != null,
-      staticPanelOpen: _staticOpen,
-      celebrating: _received,
-    );
+    final shouldRun = receiveWatcherShouldRun(screenActive: !_disposed);
     if (shouldRun && !_watching) {
       _startWatching();
     } else if (!shouldRun && _watching) {
@@ -387,8 +390,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   /// (di)mulai: penerimaan lain yang tiba selama jendela tampil
   /// menggantikan nominal panel dan memulai ulang jedanya, jadi
   /// tidak ada penerimaan yang hilang diam-diam. Pengawas TIDAK
-  /// dimatikan di sini — ia terus membaca selama perayaan dan
-  /// selama ada yang ditunggu sesudahnya.
+  /// dimatikan di sini — ia terus membaca selama layar aktif.
   void _handleReceived(Event_PaymentReceived e, int gen) {
     // Rayakan di sini juga (bunyi + getar), bersamaan dengan
     // tanda centang: pengawas event layar ini adalah pemicu
@@ -428,10 +430,9 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
 
   /// Jeda tampil panel sukses selesai: reset panel supaya layar
   /// siap menerima pembayaran berikutnya tanpa user keluar
-  /// halaman, lalu selaraskan pengawas — ia berhenti bila tidak
-  /// ada lagi yang ditunggu (panel statis tertutup dan tidak ada
-  /// invoice), dan tetap berjalan bila panel statis masih terbuka
-  /// (offer memang untuk dibayar berulang).
+  /// halaman, lalu selaraskan pengawas — ia tetap berjalan selama
+  /// layar aktif (offer memang untuk dibayar berulang, dan
+  /// pembayaran berikutnya bisa tiba kapan saja).
   void _finishCelebration() {
     if (!mounted) return;
     setState(() {

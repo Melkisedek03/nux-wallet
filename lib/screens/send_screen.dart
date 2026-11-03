@@ -247,6 +247,19 @@ class _SendScreenState extends State<SendScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(context.l10n.confirmPayBody),
+            // Nominal yang akan dikirim, di samping pratinjau
+            // invoice — jumlahnya dibaca dari invoice itu sendiri
+            // (permintaan lapangan NUX 3 Nov 2026). Invoice tanpa
+            // nominal terbaca tidak punya angka jujur untuk
+            // ditampilkan di sini; node tetap penentu akhirnya.
+            if (amountMsat != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                context.l10n
+                    .confirmPayAmountLine(formatNusan(amountMsat)),
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ],
             const SizedBox(height: 12),
             Text(
               _invoicePreview(invoice),

@@ -413,6 +413,11 @@ class AppLocalizationsId extends AppLocalizations {
       'Pembayaran Lightning bersifat instan dan tidak bisa dibatalkan. Periksa lagi invoice di bawah sebelum lanjut.';
 
   @override
+  String confirmPayAmountLine(String amount) {
+    return 'Nominal: $amount nusan';
+  }
+
+  @override
   String get paymentSuccess => 'Pembayaran Berhasil!';
 
   @override
@@ -771,7 +776,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeKeypadModeAmount => 'Nominal';
 
   @override
-  String get storeQtyMultiplierWord => 'Pengali';
+  String storeQtyBadge(int qty) {
+    return 'Qty: $qty';
+  }
 
   @override
   String get storeQtyModeHint =>
@@ -1128,6 +1135,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeRedeemWaiting => 'Menunggu pembayaran poin dari pelanggan…';
 
   @override
+  String get storeRedeemCopied => 'Kode penukaran disalin';
+
+  @override
   String storeRedeemVerified(int points, String amount) {
     return 'Penukaran terverifikasi: $points poin = potongan Rp$amount.';
   }
@@ -1363,6 +1373,9 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get storeRulesTitle => 'Aturan Program Poin';
+
+  @override
+  String get storeRulesButton => 'Aturan Poin';
 
   @override
   String get storeRulesHeading => 'Poin Nusan — Bonus Promosi Toko';

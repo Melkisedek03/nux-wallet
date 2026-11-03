@@ -282,16 +282,22 @@ List<OrderLine> orderSetLineDiscount(
   return next;
 }
 
-/// Tambah satu baris nominal bebas dari keypad. Baris bebas dengan
-/// label + nominal yang sama menggabung (qty +1); nominal berbeda
-/// jadi baris sendiri supaya kasir bisa mengoreksi per baris.
+/// Tambah baris nominal bebas dari keypad. Baris bebas dengan
+/// label + nominal yang sama menggabung (qty bertambah [qty]);
+/// nominal berbeda jadi baris sendiri supaya kasir bisa
+/// mengoreksi per baris. [qty] adalah pengali keypad yang sedang
+/// tertunda — berlaku untuk item bebas sama seperti item katalog.
 /// Nominal <= 0 tidak menambah apa pun.
 List<OrderLine> orderAddFreeAmount(
   List<OrderLine> lines, {
   required String label,
   required int amountRp,
+  int qty = 1,
 }) {
   if (amountRp <= 0) return lines;
+  // Pengali keypad yang tertunda berlaku juga di sini (temuan
+  // lapangan NUX 3 Nov 2026): qty < 1 dinormalkan ke 1.
+  final addQty = qty < 1 ? 1 : qty;
   final idx = lines.indexWhere(
     (l) =>
         l.code == null &&
@@ -302,11 +308,11 @@ List<OrderLine> orderAddFreeAmount(
   if (idx < 0) {
     return [
       ...lines,
-      OrderLine(label: label, unitPriceRp: amountRp, qty: 1),
+      OrderLine(label: label, unitPriceRp: amountRp, qty: addQty),
     ];
   }
   final next = [...lines];
-  next[idx] = next[idx].copyWith(qty: next[idx].qty + 1);
+  next[idx] = next[idx].copyWith(qty: next[idx].qty + addQty);
   return next;
 }
 
