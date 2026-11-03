@@ -11,7 +11,7 @@ import '../utils/store_mode_logic.dart';
 ///
 /// Yang disimpan adalah FAKTA penjualan saat terjadi: baris-baris
 /// apa adanya (label, harga satuan, qty, kategori snapshot, diskon
-/// baris), diskon order, dan tiga angka hasil hitung (subtotal,
+/// baris, catatan baris), diskon order, dan tiga angka hasil hitung (subtotal,
 /// total diskon, total akhir) — supaya laporan tidak perlu menebak
 /// ulang dari keadaan katalog yang mungkin sudah berubah.
 ///
@@ -147,6 +147,7 @@ Map<String, Object?> _lineToJson(OrderLine l) => {
   'qty': l.qty,
   'category': l.category,
   'discount': _discountToJson(l.discount),
+  if (l.note.isNotEmpty) 'note': l.note,
 };
 
 OrderLine? _lineFromJson(Object? raw) {
@@ -158,6 +159,7 @@ OrderLine? _lineFromJson(Object? raw) {
   if (price is! num || price < 0 || qty is! num || qty <= 0) return null;
   final code = raw['code'];
   final category = raw['category'];
+  final note = raw['note'];
   return OrderLine(
     code: code is String && code.isNotEmpty ? code : null,
     label: label,
@@ -165,8 +167,27 @@ OrderLine? _lineFromJson(Object? raw) {
     qty: qty.toInt(),
     category: category is String ? category : '',
     discount: _discountFromJson(raw['discount']),
+    // Record lama tanpa field note terbaca '' (kompatibel mundur).
+    note: note is String ? note : '',
   );
 }
+
+/// Serialisasi SATU baris pesanan & diskon untuk store lokal lain
+/// yang menyimpan baris yang sama (daftar tahan Mode Toko di
+/// `store_hold.dart`) — satu bentuk JSON bersama supaya catatan,
+/// kategori, dan diskon baris tidak pernah berbeda tafsir antar
+/// store.
+Map<String, Object?> orderLineToJson(OrderLine line) => _lineToJson(line);
+
+/// Baca satu baris pesanan dari JSON bersama; null bila tak sah.
+OrderLine? orderLineFromJson(Object? raw) => _lineFromJson(raw);
+
+/// Serialisasi satu diskon (atau null) ke bentuk JSON bersama.
+Map<String, Object?> discountToJson(Discount? discount) =>
+    _discountToJson(discount);
+
+/// Baca satu diskon dari JSON bersama; null = tanpa diskon.
+Discount? discountFromJson(Object? raw) => _discountFromJson(raw);
 
 /// Susun record penjualan dari keadaan pesanan saat pembayaran
 /// lunas — angka hasil dihitung dengan fungsi murni yang sama

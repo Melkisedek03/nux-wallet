@@ -129,6 +129,25 @@ CatalogItem? findCatalogItemByCode(List<CatalogItem> items, String code) {
   return null;
 }
 
+/// Daftar kategori yang sudah ada di katalog — bahan saran
+/// isian field Kategori di lembar Kelola, supaya kasir tidak
+/// mengetik ulang dan ejaan kategori seragam antar produk
+/// (kategori adalah kunci pengelompokan laporan). Unik sesudah
+/// trim, tak peka huruf besar/kecil (bentuk pertama yang
+/// ditemukan yang dipertahankan), kosong dilewati, urut abjad
+/// tak peka huruf besar/kecil.
+List<String> catalogCategories(List<CatalogItem> items) {
+  final seen = <String>{};
+  final categories = <String>[];
+  for (final item in items) {
+    final category = item.category.trim();
+    if (category.isEmpty) continue;
+    if (seen.add(category.toLowerCase())) categories.add(category);
+  }
+  categories.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+  return categories;
+}
+
 /// Saring katalog untuk kolom cari kasir: item lolos bila NAMA
 /// atau KODE-nya mengandung [query] (sesudah trim, tak peka huruf
 /// besar/kecil, cocok sebagian — bukan harus persis seperti

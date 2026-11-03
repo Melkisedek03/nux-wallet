@@ -11,6 +11,7 @@ import '../services/bolt12_service.dart';
 import '../services/lsp_service.dart';
 import '../services/print_service.dart';
 import '../services/store_catalog.dart';
+import '../services/store_hold.dart';
 import '../services/store_order_history.dart';
 import '../services/store_shift.dart';
 import '../utils/animated_checkmark.dart';
@@ -57,6 +58,16 @@ import 'store_shift_report_screen.dart';
 /// kedaluwarsa tak terbayar dicatat sebagai VOID (satu record
 /// per invoice, anti-ganda). Laporan per shift (atau per
 /// tanggal) dibuka dari kartu shift di panel status.
+///
+/// Penyempurnaan lapangan (NUX 3 Nov 2026, batch kedua): pesanan
+/// bisa DITAHAN untuk tamu yang bayar belakangan (daftar tahan
+/// persisten; Tutup Shift memperingatkan bila masih ada yang
+/// ditahan, tetapi tidak menghapusnya); keypad mode ganda —
+/// Qty (bawaan: digit = pengali item berikutnya) dan Nominal
+/// (perilaku lama); tiap baris pesanan bisa diberi catatan
+/// singkat yang ikut tercetak pada struk rinci pelanggan;
+/// field Kategori di Kelola Katalog menyarankan kategori yang
+/// sudah ada sebagai chip.
 class StoreModeScreen extends StatefulWidget {
   final LspService lspService;
 
@@ -75,12 +86,17 @@ class _LastSale {
   final String? paymentHashHex;
   final bool isOrderSale;
 
+  /// Baris pesanan penjualan ini (hanya penjualan berpesanan) —
+  /// bahan rincian item pada struk pelanggan.
+  final List<OrderLine> lines;
+
   const _LastSale({
     required this.amountMsat,
     required this.time,
     required this.discountNusan,
     required this.paymentHashHex,
     required this.isOrderSale,
+    this.lines = const [],
   });
 }
 
@@ -89,6 +105,23 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
   int _keypadNusan = 0;
   List<OrderLine> _lines = const [];
   Discount? _orderDiscount;
+
+  // --- Keypad mode ganda (keputusan NUX 3 Nov 2026) ---
+  /// True = mode Qty (BAWAAN saat layar dibuka): digit keypad
+  /// menyusun pengali untuk item berikutnya yang ditambahkan
+  /// dari katalog/scan. False = mode Nominal: perilaku lama
+  /// (nominal bebas + jumlah cepat + judul kustom).
+  bool _qtyKeypadMode = true;
+
+  /// Nilai pengali yang sedang disusun di mode Qty; 0 = belum
+  /// diatur, pengali efektifnya 1. Kembali 0 sesudah dipakai.
+  int _qtyMultiplier = 0;
+
+  int get _effectiveQty => _qtyMultiplier <= 0 ? 1 : _qtyMultiplier;
+
+  // --- Pesanan ditahan (tamu bayar belakangan) ---
+  final _holdStore = HeldOrderStore();
+  List<HeldOrder> _heldOrders = const [];
 
   // --- Katalog ---
   final _catalogStore = StoreCatalogStore();
@@ -151,6 +184,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
     super.initState();
     _loadCatalog();
     _loadShifts();
+    _loadHeldOrders();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _prefetchStaticOffer();
     });
@@ -184,6 +218,11 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
     });
   }
 
+  Future<void> _loadHeldOrders() async {
+    final held = await _holdStore.load();
+    if (mounted) setState(() => _heldOrders = held);
+  }
+
   String get _reportLocale =>
       context.l10n.localeName.startsWith('en') ? 'en' : 'id';
 
@@ -214,6 +253,44 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
       ).showSnackBar(SnackBar(content: Text(l10n.storeCloseShiftBlocked)));
       return;
     }
+    if (_heldOrders.isNotEmpty) {
+      // Peringatan khusus (keputusan NUX 3 Nov 2026): masih ada
+      // pesanan ditahan yang BELUM dibayar — kasir harus sadar
+      // sebelum menutup shift. Pesanan ditahan tidak ikut
+      // tertutup/terhapus: ia tetap tersimpan dan bisa
+      // dilanjutkan di shift berikutnya. Dialog ini merangkap
+      // konfirmasi tutup pada jalur ini.
+      final heldTotal = _heldOrders.fold(
+        0,
+        (sum, h) => sum + h.grandTotalNusan,
+      );
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: ctx.palette.card,
+          title: Text(l10n.storeCloseShiftHeldTitle),
+          content: Text(
+            l10n.storeCloseShiftHeldBody(
+              _heldOrders.length,
+              _fmtNusan(heldTotal),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.storeBack),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.storeCloseShiftHeldConfirm),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+      await _performCloseShift(shift);
+      return;
+    }
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -233,6 +310,13 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
       ),
     );
     if (confirmed != true || !mounted) return;
+    await _performCloseShift(shift);
+  }
+
+  /// Eksekusi tutup shift sesudah semua pagar & konfirmasi
+  /// lolos: simpan shift tertutup, lalu tawarkan laporannya.
+  Future<void> _performCloseShift(StoreShift shift) async {
+    final l10n = context.l10n;
     final closed = shift.close(DateTime.now());
     final next = [
       for (final s in _shifts) s == shift ? closed : s,
@@ -398,6 +482,11 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
   int get _grandTotal => orderGrandTotalNusan(_lines, _orderDiscount);
 
   void _addProduct(CatalogItem item) {
+    // Di mode Qty, pengali yang sedang disusun berlaku untuk
+    // penambahan ini (ketuk katalog maupun hasil scan lewat
+    // sini), lalu pengali kembali belum diatur (efektif ×1).
+    // Di mode Nominal penambahan selalu ×1 seperti sebelumnya.
+    final qty = _qtyKeypadMode ? _effectiveQty : 1;
     setState(() {
       _lines = orderAddProduct(
         _lines,
@@ -406,14 +495,62 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
         unitPriceNusan: item.priceNusan,
         category: item.category,
         defaultDiscount: item.defaultDiscount,
+        qty: qty,
       );
+      if (_qtyKeypadMode) _qtyMultiplier = 0;
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(context.l10n.storeProductAdded(item.name)),
+        content: Text(
+          qty > 1
+              ? context.l10n.storeProductAddedQty(item.name, qty)
+              : context.l10n.storeProductAdded(item.name),
+        ),
         duration: const Duration(seconds: 1),
       ),
     );
+  }
+
+  // --- Keypad mode ganda: satu keypad fisik, dua sasaran ---
+
+  void _pressKeypadDigit(int digit) {
+    setState(() {
+      if (_qtyKeypadMode) {
+        _qtyMultiplier = qtyMultiplierPressDigit(_qtyMultiplier, digit);
+      } else {
+        _keypadNusan = keypadPressDigit(_keypadNusan, digit);
+      }
+    });
+  }
+
+  void _pressKeypadDoubleZero() {
+    setState(() {
+      if (_qtyKeypadMode) {
+        _qtyMultiplier = qtyMultiplierPressDoubleZero(_qtyMultiplier);
+      } else {
+        _keypadNusan = keypadPressDoubleZero(_keypadNusan);
+      }
+    });
+  }
+
+  void _pressKeypadBackspace() {
+    setState(() {
+      if (_qtyKeypadMode) {
+        _qtyMultiplier = keypadBackspace(_qtyMultiplier);
+      } else {
+        _keypadNusan = keypadBackspace(_keypadNusan);
+      }
+    });
+  }
+
+  void _pressKeypadClear() {
+    setState(() {
+      if (_qtyKeypadMode) {
+        _qtyMultiplier = 0;
+      } else {
+        _keypadNusan = 0;
+      }
+    });
   }
 
   void _addFreeAmount() {
@@ -489,6 +626,207 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
     }
   }
 
+  // ------------------------------------------------------------------
+  // Pesanan ditahan (tamu bayar belakangan — keputusan NUX 3 Nov)
+  // ------------------------------------------------------------------
+
+  /// Bersihkan panel pesanan penuh TANPA perayaan — pola reset
+  /// yang sama dengan _finishCelebration, dipakai sesudah
+  /// pesanan ditahan (dan tidak untuk hal lain).
+  void _resetOrderPanel() {
+    _lines = const [];
+    _orderDiscount = null;
+    _keypadNusan = 0;
+    _qtyMultiplier = 0;
+    _searchQuery = '';
+    _searchController.clear();
+    _freeTitleController.clear();
+  }
+
+  /// Tahan pesanan berjalan: parkir apa adanya ke daftar tahan
+  /// persisten, lalu panel dibersihkan untuk pelanggan berikut.
+  /// Terhalang selama ada invoice menunggu / perayaan berjalan /
+  /// invoice sedang dibuat (keluarga pagar Tutup Shift): kode
+  /// bayar yang sudah terbit harus diselesaikan atau dibatalkan
+  /// dulu — pesanan yang invoicenya menggantung tidak boleh
+  /// berpindah wujud diam-diam.
+  Future<void> _holdCurrentOrder() async {
+    if (_lines.isEmpty) return;
+    final l10n = context.l10n;
+    if (_invoice != null || _received || _creating) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.storeHoldBlocked)));
+      return;
+    }
+    final now = DateTime.now();
+    final held = HeldOrder(
+      id: '${now.microsecondsSinceEpoch}',
+      heldAt: now,
+      lines: List.of(_lines),
+      orderDiscount: _orderDiscount,
+    );
+    final next = [..._heldOrders, held];
+    await _holdStore.save(next);
+    if (!mounted) return;
+    setState(() {
+      _heldOrders = next;
+      _resetOrderPanel();
+    });
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.storeHeldSaved)));
+  }
+
+  /// Ringkasan satu entri tahan untuk daftar & dialog: label
+  /// baris pertama, ditambah "+sisa baris" bila lebih dari satu.
+  String _heldSummary(HeldOrder held) {
+    if (held.lines.isEmpty) return '';
+    final first = held.lines.first.label;
+    return held.lines.length == 1
+        ? first
+        : '$first +${held.lines.length - 1}';
+  }
+
+  /// Lembar daftar pesanan ditahan: ketuk entri = Lanjutkan
+  /// (muat kembali persis jadi pesanan berjalan), ikon hapus =
+  /// buang permanen lewat konfirmasi.
+  Future<void> _openHeldOrders() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.palette.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          final l10n = ctx.l10n;
+          return SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 16, 18, 6),
+                    child: Text(
+                      l10n.storeHeldTitle,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  if (_heldOrders.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 6, 18, 18),
+                      child: Text(
+                        l10n.storeHeldEmpty,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: ctx.palette.muted,
+                        ),
+                      ),
+                    )
+                  else
+                    for (final held in _heldOrders)
+                      ListTile(
+                        leading: const Icon(Icons.pause_circle_outline_rounded),
+                        title: Text(
+                          _heldSummary(held),
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: Text(
+                          l10n.storeHeldEntryMeta(
+                            _receiptTime(held.heldAt),
+                            held.totalQty,
+                            _fmtNusan(held.grandTotalNusan),
+                          ),
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete_outline, size: 21),
+                          onPressed: () async {
+                            final removed = await _confirmDeleteHeld(held);
+                            if (removed) setSheet(() {});
+                          },
+                        ),
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          _resumeHeldOrder(held);
+                        },
+                      ),
+                  const SizedBox(height: 10),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Lanjutkan satu pesanan ditahan: muat kembali persis
+  /// (baris + diskon order) jadi pesanan berjalan dan keluarkan
+  /// dari daftar tahan. HANYA bila pesanan berjalan kosong —
+  /// selain itu kasir disuruh menahan/menyelesaikan dulu yang
+  /// berjalan, supaya dua pesanan tidak pernah tercampur.
+  Future<void> _resumeHeldOrder(HeldOrder held) async {
+    final l10n = context.l10n;
+    if (_lines.isNotEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.storeHeldResumeBlocked)));
+      return;
+    }
+    final next = [for (final h in _heldOrders) if (h.id != held.id) h];
+    await _holdStore.save(next);
+    if (!mounted) return;
+    setState(() {
+      _heldOrders = next;
+      _lines = List.of(held.lines);
+      _orderDiscount = held.orderDiscount;
+    });
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.storeHeldResumed)));
+  }
+
+  /// Konfirmasi hapus satu entri tahan (pola dialog konfirmasi
+  /// yang sama dengan hapus baris). Mengembalikan true bila
+  /// entri sungguh terhapus.
+  Future<bool> _confirmDeleteHeld(HeldOrder held) async {
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ctx.palette.card,
+        title: Text(l10n.storeDeleteHeldTitle),
+        content: Text(l10n.storeDeleteHeldMessage(_heldSummary(held))),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(l10n.storeRemoveLineConfirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return false;
+    final next = [for (final h in _heldOrders) if (h.id != held.id) h];
+    await _holdStore.save(next);
+    if (!mounted) return false;
+    setState(() => _heldOrders = next);
+    return true;
+  }
+
   void _clearCatalogSearch() {
     _searchController.clear();
     if (_searchQuery.isNotEmpty) setState(() => _searchQuery = '');
@@ -556,6 +894,58 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
         result.cleared ? null : result.discount,
       );
     });
+  }
+
+  /// Edit catatan satu baris pesanan: dialog teks singkat;
+  /// simpan menerapkan teks sesudah trim (kosong = catatan
+  /// dihapus). Baris dicari ulang sesudah dialog (pola
+  /// _confirmRemoveLine) supaya aman dari pergeseran daftar.
+  Future<void> _editLineNote(int index) async {
+    if (index < 0 || index >= _lines.length) return;
+    final line = _lines[index];
+    final l10n = context.l10n;
+    final controller = TextEditingController(text: line.note);
+    final saved = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ctx.palette.card,
+        title: Text(l10n.storeLineNoteTitle),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLines: 2,
+          decoration: InputDecoration(
+            hintText: line.label,
+            filled: true,
+            fillColor: ctx.palette.cardAlt,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        actions: [
+          if (line.note.isNotEmpty)
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, ''),
+              child: Text(l10n.storeClearNote),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            child: Text(l10n.storeSaveNote),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (saved == null || !mounted) return;
+    final idx = _lines.indexOf(line);
+    if (idx < 0) return;
+    setState(() => _lines = orderSetLineNote(_lines, idx, saved));
   }
 
   Future<void> _editOrderDiscount() async {
@@ -907,6 +1297,9 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
         discountNusan: saleDiscountNusan,
         paymentHashHex: eventHash,
         isOrderSale: isOrderSale,
+        // Salin baris pesanan untuk rincian struk — pesanan
+        // berjalan sendiri dibersihkan di akhir perayaan.
+        lines: isOrderSale ? List.of(_lines) : const [],
       );
       _received = true;
       _receivedMsat = e.amountMsat;
@@ -934,6 +1327,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
         _lines = const [];
         _orderDiscount = null;
         _keypadNusan = 0;
+        _qtyMultiplier = 0;
         // Keadaan penyusun pesanan kembali bersih untuk
         // pelanggan berikutnya, satu bundel dengan pesanan:
         // saringan katalog dan judul bebas ikut direset.
@@ -998,13 +1392,24 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
         timeText: _receiptTime(sale.time),
         hashLabel: sale.paymentHashHex != null ? 'Hash' : null,
         hashValue: sale.paymentHashHex,
+        // Rincian item pesanan (nama, qty × harga = total baris
+        // sesudah diskon baris, catatan menjorok di bawah
+        // itemnya) — hanya penjualan berpesanan; pembayaran
+        // kode statis tanpa rincian seperti sebelumnya.
+        detailLines: sale.isOrderSale && sale.lines.isNotEmpty
+            ? orderReceiptDetailLines(
+                sale.lines,
+                formatNusan: _fmtNusan,
+                noteWord: l10n.storeNoteWord,
+              )
+            : null,
       ),
       typeLabel: l10n.txType,
       statusLabel: l10n.txStatus,
       timeLabel: l10n.txTime,
-      // PrintService tidak punya baris rincian bebas; keterangan
-      // diskon perjalanan lewat footer bawaan struk (teks bebas
-      // di kaki struk) bila penjualan ini punya diskon.
+      // Total diskon tetap perjalanan lewat footer bawaan struk
+      // (teks bebas di kaki struk) bila penjualan ini punya
+      // diskon — rincian per baris di atas tidak mengulanginya.
       defaultFooter: sale.discountNusan > 0
           ? l10n.storeReceiptDiscountNote(
               formatNusan(BigInt.from(sale.discountNusan) * BigInt.from(1000)),
@@ -1283,6 +1688,66 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
             ],
           ),
         const SizedBox(height: 18),
+        // --- Keypad mode ganda: Qty (bawaan) | Nominal ---
+        // Satu keypad fisik, dua sasaran (lihat handler
+        // _pressKeypad*): mode Qty menyusun pengali untuk item
+        // berikutnya dari katalog/scan; mode Nominal adalah
+        // perilaku lama persis (blok else di bawah tidak
+        // berubah isinya).
+        SegmentedButton<bool>(
+          segments: [
+            ButtonSegment(
+              value: true,
+              icon: const Icon(Icons.numbers_rounded, size: 18),
+              label: Text(l10n.storeKeypadModeQty),
+            ),
+            ButtonSegment(
+              value: false,
+              icon: const Icon(Icons.payments_outlined, size: 18),
+              label: Text(l10n.storeKeypadModeAmount),
+            ),
+          ],
+          selected: {_qtyKeypadMode},
+          onSelectionChanged: (s) => setState(() => _qtyKeypadMode = s.first),
+        ),
+        const SizedBox(height: 12),
+        if (_qtyKeypadMode) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: context.palette.cardAlt,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '×$_effectiveQty',
+                    style: const TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                Text(
+                  l10n.storeQtyMultiplierWord,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: context.palette.muted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          _buildKeypad(context),
+          const SizedBox(height: 6),
+          Text(
+            l10n.storeQtyModeHint,
+            style: TextStyle(fontSize: 12, color: context.palette.muted),
+          ),
+        ] else ...[
         // --- Nominal bebas (keypad) ---
         Text(
           l10n.storeFreeAmountLabel,
@@ -1375,11 +1840,27 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
             ),
           ),
         ),
+        ],
         const SizedBox(height: 20),
         // --- Pesanan ---
-        Text(
-          l10n.storeOrderTitle,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                l10n.storeOrderTitle,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            if (_heldOrders.isNotEmpty)
+              TextButton.icon(
+                onPressed: _openHeldOrders,
+                icon: const Icon(Icons.pause_circle_outline_rounded, size: 19),
+                label: Text(l10n.storeHeldBadge(_heldOrders.length)),
+              ),
+          ],
         ),
         const SizedBox(height: 8),
         if (_lines.isEmpty)
@@ -1504,6 +1985,24 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
                   ),
                 ),
         ),
+        const SizedBox(height: 10),
+        // Tahan pesanan (tamu bayar belakangan): parkir pesanan
+        // berjalan ke daftar tahan persisten; pagar invoice
+        // menunggu/perayaan ada di dalam _holdCurrentOrder.
+        OutlinedButton.icon(
+          onPressed: _lines.isNotEmpty ? _holdCurrentOrder : null,
+          icon: const Icon(Icons.pause_circle_outline_rounded, size: 20),
+          label: Text(
+            l10n.storeHoldOrder,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          ),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 13),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -1546,31 +2045,13 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
           Row(
             children: [
               for (final d in row)
-                key(
-                  d,
-                  () => setState(
-                    () => _keypadNusan = keypadPressDigit(
-                      _keypadNusan,
-                      int.parse(d),
-                    ),
-                  ),
-                ),
+                key(d, () => _pressKeypadDigit(int.parse(d))),
             ],
           ),
         Row(
           children: [
-            key(
-              '00',
-              () => setState(
-                () => _keypadNusan = keypadPressDoubleZero(_keypadNusan),
-              ),
-            ),
-            key(
-              '0',
-              () => setState(
-                () => _keypadNusan = keypadPressDigit(_keypadNusan, 0),
-              ),
-            ),
+            key('00', _pressKeypadDoubleZero),
+            key('0', () => _pressKeypadDigit(0)),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(3),
@@ -1579,9 +2060,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
                   borderRadius: BorderRadius.circular(14),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(14),
-                    onTap: () => setState(
-                      () => _keypadNusan = keypadBackspace(_keypadNusan),
-                    ),
+                    onTap: _pressKeypadBackspace,
                     child: Container(
                       height: 58,
                       alignment: Alignment.center,
@@ -1596,7 +2075,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
         Align(
           alignment: Alignment.centerRight,
           child: TextButton(
-            onPressed: () => setState(() => _keypadNusan = 0),
+            onPressed: _pressKeypadClear,
             child: Text(context.l10n.storeClearKeypad),
           ),
         ),
@@ -1639,6 +2118,49 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
                         ? l10n.storeSetDiscount
                         : '${l10n.storeDiscount} ${_discountBadge(line.discount!)} • ${l10n.storeSetDiscount}',
                     style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+                // Catatan baris: ikon terisi dibedakan warnanya;
+                // catatan tampil sebagai cuplikan di sini dan
+                // tercetak di struk di bawah itemnya. Ketuk
+                // membuka editor teks singkat.
+                InkWell(
+                  onTap: () => _editLineNote(index),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          line.note.isNotEmpty
+                              ? Icons.sticky_note_2_rounded
+                              : Icons.sticky_note_2_outlined,
+                          size: 15,
+                          color: line.note.isNotEmpty
+                              ? const Color(0xFF34D399)
+                              : context.palette.muted,
+                        ),
+                        const SizedBox(width: 5),
+                        Flexible(
+                          child: Text(
+                            line.note.isNotEmpty
+                                ? line.note
+                                : l10n.storeAddNote,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontStyle: line.note.isNotEmpty
+                                  ? FontStyle.italic
+                                  : FontStyle.normal,
+                              color: line.note.isNotEmpty
+                                  ? context.palette.label
+                                  : context.palette.muted,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -2294,6 +2816,7 @@ class _CatalogManagerSheetState extends State<_CatalogManagerSheet> {
             const SizedBox(height: 10),
             TextField(
               controller: _categoryController,
+              onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
                 labelText: l10n.storeProductCategory,
                 filled: true,
@@ -2303,6 +2826,41 @@ class _CatalogManagerSheetState extends State<_CatalogManagerSheet> {
                   borderSide: BorderSide.none,
                 ),
               ),
+            ),
+            // Saran kategori yang SUDAH ada (chip ketuk-untuk-isi):
+            // kasir tidak mengetik ulang dan ejaan kategori
+            // seragam untuk pengelompokan laporan. Mengetik
+            // kategori baru tetap bebas — chip hanya jalan
+            // pintas, bukan master terpisah. Saran menyaring
+            // mengikuti teks yang sedang diketik.
+            Builder(
+              builder: (context) {
+                final typed = _categoryController.text.trim().toLowerCase();
+                final suggestions = [
+                  for (final c in catalogCategories(_items))
+                    if (c.toLowerCase() != typed &&
+                        (typed.isEmpty || c.toLowerCase().contains(typed)))
+                      c,
+                ];
+                if (suggestions.isEmpty) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final c in suggestions)
+                        ActionChip(
+                          label: Text(c, style: const TextStyle(fontSize: 12)),
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () => setState(
+                            () => _categoryController.text = c,
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 10),
             Row(

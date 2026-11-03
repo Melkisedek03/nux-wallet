@@ -102,6 +102,39 @@ void main() {
     });
   });
 
+  group('kategori yang sudah ada (saran isian)', () {
+    CatalogItem withCategory(String code, String category) => CatalogItem(
+      code: code,
+      name: 'Item $code',
+      priceNusan: 1000,
+      category: category,
+    );
+
+    test('unik sesudah trim & tak peka huruf besar/kecil, urut abjad', () {
+      final items = [
+        withCategory('A', 'Minuman'),
+        withCategory('B', ' makanan '),
+        withCategory('C', 'MINUMAN'),
+        withCategory('D', 'Alat Tulis'),
+        withCategory('E', ''),
+        withCategory('F', '   '),
+      ];
+      // Bentuk pertama yang menang ('Minuman', bukan 'MINUMAN');
+      // urut abjad tak peka huruf: Alat Tulis < makanan < Minuman.
+      expect(catalogCategories(items), ['Alat Tulis', 'makanan', 'Minuman']);
+    });
+
+    test('katalog tanpa kategori menghasilkan daftar kosong', () {
+      expect(
+        catalogCategories([
+          const CatalogItem(code: 'A', name: 'Kopi', priceNusan: 5000),
+        ]),
+        isEmpty,
+      );
+      expect(catalogCategories(const []), isEmpty);
+    });
+  });
+
   group('store', () {
     test('roundtrip lewat SharedPreferences', () async {
       SharedPreferences.setMockInitialValues({});

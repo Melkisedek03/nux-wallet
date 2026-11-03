@@ -720,6 +720,81 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeRemoveLineConfirm => 'Remove';
 
   @override
+  String get storeAddNote => 'Add Note';
+
+  @override
+  String get storeLineNoteTitle => 'Item Note';
+
+  @override
+  String get storeNoteWord => 'Note';
+
+  @override
+  String get storeClearNote => 'Clear Note';
+
+  @override
+  String get storeSaveNote => 'Save';
+
+  @override
+  String get storeHoldOrder => 'Hold Order';
+
+  @override
+  String get storeHoldBlocked =>
+      'Finish or cancel the pending payment code first before holding the order.';
+
+  @override
+  String get storeHeldSaved =>
+      'Order held — resume it any time from the Held list.';
+
+  @override
+  String get storeHeldTitle => 'Held Orders';
+
+  @override
+  String storeHeldBadge(int count) {
+    return 'Held ($count)';
+  }
+
+  @override
+  String get storeHeldEmpty => 'No orders are on hold.';
+
+  @override
+  String storeHeldEntryMeta(String time, int count, String total) {
+    return '$time • $count item(s) • $total nusan';
+  }
+
+  @override
+  String get storeHeldResumeBlocked =>
+      'The current order is not empty — hold or finish the order being built first.';
+
+  @override
+  String get storeHeldResumed => 'Held order resumed.';
+
+  @override
+  String get storeDeleteHeldTitle => 'Delete Held Order?';
+
+  @override
+  String storeDeleteHeldMessage(String summary) {
+    return 'Delete the held order $summary? This can\'t be undone.';
+  }
+
+  @override
+  String get storeKeypadModeQty => 'Qty';
+
+  @override
+  String get storeKeypadModeAmount => 'Amount';
+
+  @override
+  String get storeQtyMultiplierWord => 'Multiplier';
+
+  @override
+  String get storeQtyModeHint =>
+      'Qty mode: tap digits as a multiplier, then tap a catalog product or scan its code — the product is added that many times.';
+
+  @override
+  String storeProductAddedQty(String name, int qty) {
+    return 'Added: $name ×$qty';
+  }
+
+  @override
   String get storeOrderTitle => 'Order';
 
   @override
@@ -868,6 +943,20 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get storeCloseShiftConfirmBody =>
       'Once closed, later sales go into a new shift.';
+
+  @override
+  String get storeCloseShiftHeldTitle => 'Held Orders Still Pending';
+
+  @override
+  String storeCloseShiftHeldBody(int count, String total) {
+    return 'There are $count held orders (total $total nusan) still unpaid. Held orders stay saved and can be resumed in the next shift.';
+  }
+
+  @override
+  String get storeCloseShiftHeldConfirm => 'Close Shift Anyway';
+
+  @override
+  String get storeBack => 'Back';
 
   @override
   String get storeShiftClosedTitle => 'Shift Closed';

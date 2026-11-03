@@ -301,6 +301,64 @@
     }
   },
   "storeRemoveLineConfirm": "Hapus",
+  "storeAddNote": "Tambah Catatan",
+  "storeLineNoteTitle": "Catatan Item",
+  "storeNoteWord": "Catatan",
+  "storeClearNote": "Hapus Catatan",
+  "storeSaveNote": "Simpan",
+  "storeHoldOrder": "Tahan Pesanan",
+  "storeHoldBlocked": "Selesaikan atau batalkan dulu kode bayar yang sedang menunggu sebelum menahan pesanan.",
+  "storeHeldSaved": "Pesanan ditahan — bisa dilanjutkan kapan saja dari daftar Ditahan.",
+  "storeHeldTitle": "Pesanan Ditahan",
+  "storeHeldBadge": "Ditahan ({count})",
+  "@storeHeldBadge": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "storeHeldEmpty": "Belum ada pesanan yang ditahan.",
+  "storeHeldEntryMeta": "{time} • {count} item • {total} nusan",
+  "@storeHeldEntryMeta": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "storeHeldResumeBlocked": "Pesanan berjalan belum kosong — tahan atau selesaikan dulu pesanan yang sedang disusun.",
+  "storeHeldResumed": "Pesanan ditahan dilanjutkan.",
+  "storeDeleteHeldTitle": "Hapus Pesanan Ditahan?",
+  "storeDeleteHeldMessage": "Hapus pesanan ditahan {summary}? Tindakan ini tidak bisa dibatalkan.",
+  "@storeDeleteHeldMessage": {
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "storeKeypadModeQty": "Qty",
+  "storeKeypadModeAmount": "Nominal",
+  "storeQtyMultiplierWord": "Pengali",
+  "storeQtyModeHint": "Mode Qty: ketuk angka sebagai pengali, lalu ketuk produk di katalog atau pindai kodenya — produk masuk sebanyak pengali itu.",
+  "storeProductAddedQty": "Ditambahkan: {name} ×{qty}",
+  "@storeProductAddedQty": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "qty": {
+        "type": "int"
+      }
+    }
+  },
   "storeOrderTitle": "Pesanan",
   "storeOrderEmpty": "Belum ada item — ketuk produk di katalog, pindai kode, atau tambah nominal bebas.",
   "storeSubtotal": "Subtotal",
@@ -383,6 +441,20 @@
   "storeCloseShiftBlocked": "Tidak bisa menutup shift: masih ada kode bayar yang menunggu pembayaran atau penerimaan yang sedang dirayakan. Selesaikan atau batalkan dulu.",
   "storeCloseShiftConfirmTitle": "Tutup Shift Ini?",
   "storeCloseShiftConfirmBody": "Sesudah ditutup, penjualan berikutnya masuk ke shift baru.",
+  "storeCloseShiftHeldTitle": "Masih Ada Pesanan Ditahan",
+  "storeCloseShiftHeldBody": "Ada {count} pesanan ditahan (total {total} nusan) yang belum dibayar. Pesanan ditahan tetap tersimpan dan bisa dilanjutkan pada shift berikutnya.",
+  "@storeCloseShiftHeldBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "storeCloseShiftHeldConfirm": "Tetap Tutup Shift",
+  "storeBack": "Kembali",
   "storeShiftClosedTitle": "Shift Ditutup",
   "storeShiftClosedBody": "Laporan shift ini sudah bisa dilihat, dicetak, atau dibagikan sebagai PDF.",
   "storeLater": "Nanti",

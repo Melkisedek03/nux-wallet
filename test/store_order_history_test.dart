@@ -63,6 +63,35 @@ void main() {
       expect(decodeOrderHistory(tampered).length, 1);
     });
 
+    test('catatan baris ikut tersimpan dan terbaca kembali', () {
+      final order = sample(
+        time: DateTime(2026, 11, 3, 9, 30),
+        lines: const [
+          OrderLine(
+            code: 'A1',
+            label: 'Kopi',
+            unitPriceNusan: 5000,
+            qty: 1,
+            note: 'tanpa gula',
+          ),
+        ],
+      );
+      final decoded = decodeOrderHistory(encodeOrderHistory([order]));
+      expect(decoded.single.lines.single.note, 'tanpa gula');
+      expect(decoded, [order]);
+    });
+
+    test('record lama tanpa field note terbaca catatan kosong', () {
+      // JSON mentah persis bentuk record sebelum ada fitur
+      // catatan (baris tanpa kunci "note").
+      const legacy =
+          '[{"timeMs":1793865600000,"lines":[{"code":"A1","label":"Kopi","unitPriceNusan":5000,"qty":2,"category":"","discount":{"kind":null,"value":null}}],"orderDiscount":{"kind":null,"value":null},"subtotalNusan":10000,"totalDiscountNusan":0,"grandTotalNusan":10000,"paymentHashHex":"ab12","status":"paid"}]';
+      final decoded = decodeOrderHistory(legacy);
+      expect(decoded.length, 1);
+      expect(decoded.single.lines.single.note, '');
+      expect(decoded.single.grandTotalNusan, 10000);
+    });
+
     test('store append + load lewat SharedPreferences', () async {
       SharedPreferences.setMockInitialValues({});
       final store = StoreOrderHistoryStore();
@@ -119,6 +148,42 @@ void main() {
       expect(bebas.netNusan, 2000 + 6000);
       // Urut nilai menurun: Kopi duluan.
       expect(report.perItem.first.label, 'Kopi');
+    });
+
+    test('catatan baris tidak memecah agregasi per item', () {
+      final orders = [
+        sample(
+          time: DateTime(2026, 11, 3, 9, 0),
+          lines: const [
+            OrderLine(
+              label: 'Kopi',
+              unitPriceNusan: 5000,
+              qty: 1,
+              note: 'tanpa gula',
+            ),
+          ],
+        ),
+        sample(
+          time: DateTime(2026, 11, 3, 10, 0),
+          lines: const [
+            OrderLine(
+              label: 'Kopi',
+              unitPriceNusan: 5000,
+              qty: 2,
+              note: 'gula sedikit',
+            ),
+          ],
+        ),
+      ];
+      final report = aggregateSales(
+        orders,
+        from: day,
+        to: day.add(const Duration(days: 1)),
+      );
+      // Satu entri 'Kopi' walau catatannya berbeda-beda.
+      expect(report.perItem.length, 1);
+      expect(report.perItem.single.qty, 3);
+      expect(report.perItem.single.netNusan, 15000);
     });
 
     test('rentang kosong menghasilkan nol semua', () {

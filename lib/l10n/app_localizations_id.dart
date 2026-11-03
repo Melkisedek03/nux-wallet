@@ -720,6 +720,81 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeRemoveLineConfirm => 'Hapus';
 
   @override
+  String get storeAddNote => 'Tambah Catatan';
+
+  @override
+  String get storeLineNoteTitle => 'Catatan Item';
+
+  @override
+  String get storeNoteWord => 'Catatan';
+
+  @override
+  String get storeClearNote => 'Hapus Catatan';
+
+  @override
+  String get storeSaveNote => 'Simpan';
+
+  @override
+  String get storeHoldOrder => 'Tahan Pesanan';
+
+  @override
+  String get storeHoldBlocked =>
+      'Selesaikan atau batalkan dulu kode bayar yang sedang menunggu sebelum menahan pesanan.';
+
+  @override
+  String get storeHeldSaved =>
+      'Pesanan ditahan — bisa dilanjutkan kapan saja dari daftar Ditahan.';
+
+  @override
+  String get storeHeldTitle => 'Pesanan Ditahan';
+
+  @override
+  String storeHeldBadge(int count) {
+    return 'Ditahan ($count)';
+  }
+
+  @override
+  String get storeHeldEmpty => 'Belum ada pesanan yang ditahan.';
+
+  @override
+  String storeHeldEntryMeta(String time, int count, String total) {
+    return '$time • $count item • $total nusan';
+  }
+
+  @override
+  String get storeHeldResumeBlocked =>
+      'Pesanan berjalan belum kosong — tahan atau selesaikan dulu pesanan yang sedang disusun.';
+
+  @override
+  String get storeHeldResumed => 'Pesanan ditahan dilanjutkan.';
+
+  @override
+  String get storeDeleteHeldTitle => 'Hapus Pesanan Ditahan?';
+
+  @override
+  String storeDeleteHeldMessage(String summary) {
+    return 'Hapus pesanan ditahan $summary? Tindakan ini tidak bisa dibatalkan.';
+  }
+
+  @override
+  String get storeKeypadModeQty => 'Qty';
+
+  @override
+  String get storeKeypadModeAmount => 'Nominal';
+
+  @override
+  String get storeQtyMultiplierWord => 'Pengali';
+
+  @override
+  String get storeQtyModeHint =>
+      'Mode Qty: ketuk angka sebagai pengali, lalu ketuk produk di katalog atau pindai kodenya — produk masuk sebanyak pengali itu.';
+
+  @override
+  String storeProductAddedQty(String name, int qty) {
+    return 'Ditambahkan: $name ×$qty';
+  }
+
+  @override
   String get storeOrderTitle => 'Pesanan';
 
   @override
@@ -867,6 +942,20 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get storeCloseShiftConfirmBody =>
       'Sesudah ditutup, penjualan berikutnya masuk ke shift baru.';
+
+  @override
+  String get storeCloseShiftHeldTitle => 'Masih Ada Pesanan Ditahan';
+
+  @override
+  String storeCloseShiftHeldBody(int count, String total) {
+    return 'Ada $count pesanan ditahan (total $total nusan) yang belum dibayar. Pesanan ditahan tetap tersimpan dan bisa dilanjutkan pada shift berikutnya.';
+  }
+
+  @override
+  String get storeCloseShiftHeldConfirm => 'Tetap Tutup Shift';
+
+  @override
+  String get storeBack => 'Kembali';
 
   @override
   String get storeShiftClosedTitle => 'Shift Ditutup';

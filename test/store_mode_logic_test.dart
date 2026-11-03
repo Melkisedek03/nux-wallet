@@ -235,6 +235,117 @@ void main() {
     });
   });
 
+  group('keypad mode qty (pengali)', () {
+    test('digit menyusun pengali di kanan', () {
+      var v = 0;
+      v = qtyMultiplierPressDigit(v, 1);
+      v = qtyMultiplierPressDigit(v, 2);
+      expect(v, 12);
+      // Digit pertama dari 0 langsung menjadi pengali itu.
+      expect(qtyMultiplierPressDigit(0, 2), 2);
+    });
+
+    test('pengali terpotong di plafon 999', () {
+      var v = 0;
+      for (final d in [9, 9, 9, 9]) {
+        v = qtyMultiplierPressDigit(v, d);
+      }
+      expect(v, storeMaxQtyMultiplier);
+      expect(qtyMultiplierPressDigit(99, 9), 999);
+      expect(qtyMultiplierPressDigit(999, 1), 999);
+    });
+
+    test('00 mengikuti aturan nominal tetapi plafonnya pengali', () {
+      expect(qtyMultiplierPressDoubleZero(0), 0);
+      expect(qtyMultiplierPressDoubleZero(5), 500);
+      expect(qtyMultiplierPressDoubleZero(50), 50); // 5000 > 999 diabaikan
+    });
+
+    test('tambah produk dengan qty pengali menggabung per kode', () {
+      var lines = orderAddProduct(
+        const [],
+        code: 'A1',
+        label: 'Kopi',
+        unitPriceNusan: 5000,
+        qty: 2,
+      );
+      expect(lines.single.qty, 2);
+      lines = orderAddProduct(
+        lines,
+        code: 'A1',
+        label: 'Kopi',
+        unitPriceNusan: 5000,
+        qty: 3,
+      );
+      expect(lines.single.qty, 5);
+      expect(orderGrandTotalNusan(lines, null), 25000);
+      // Tanpa parameter qty tetap 1 (perilaku lama).
+      lines = orderAddProduct(
+        lines,
+        code: 'B2',
+        label: 'Teh',
+        unitPriceNusan: 3000,
+      );
+      expect(lines.last.qty, 1);
+    });
+  });
+
+  group('catatan baris', () {
+    test('pasang, ganti (trim), dan hapus catatan', () {
+      var lines = orderAddProduct(
+        const [],
+        code: 'A1',
+        label: 'Kopi',
+        unitPriceNusan: 5000,
+      );
+      lines = orderSetLineNote(lines, 0, '  tanpa gula  ');
+      expect(lines.single.note, 'tanpa gula');
+      lines = orderSetLineNote(lines, 0, 'less sugar');
+      expect(lines.single.note, 'less sugar');
+      lines = orderSetLineNote(lines, 0, '   ');
+      expect(lines.single.note, '');
+      // Indeks di luar jangkauan aman.
+      expect(orderSetLineNote(lines, 5, 'x'), lines);
+    });
+
+    test('catatan ikut equality baris', () {
+      const a = OrderLine(label: 'Kopi', unitPriceNusan: 5000, qty: 1);
+      const b = OrderLine(
+        label: 'Kopi',
+        unitPriceNusan: 5000,
+        qty: 1,
+        note: 'tanpa gula',
+      );
+      expect(a == b, isFalse);
+      expect(b.copyWith(note: ''), a);
+    });
+
+    test('baris rincian struk: item, qty × harga = total, catatan', () {
+      final detail = orderReceiptDetailLines(
+        const [
+          OrderLine(
+            label: 'Kopi',
+            unitPriceNusan: 5000,
+            qty: 2,
+            discount: Discount.percent(10),
+            note: 'tanpa gula',
+          ),
+          OrderLine(label: 'Teh', unitPriceNusan: 3000, qty: 1),
+        ],
+        formatNusan: (n) => n.toString(),
+        noteWord: 'Catatan',
+      );
+      expect(detail, [
+        'Kopi',
+        // Total baris SESUDAH diskon baris (10.000 − 1.000).
+        '  2 x 5000 = 9000',
+        '  Catatan: tanpa gula',
+        'Teh',
+        '  1 x 3000 = 3000',
+      ]);
+    });
+  });
+
   group('ringkasan sesi', () {
     test('akumulator menjumlah transaksi dan msat', () {
       var s = StoreSessionSummary.empty;

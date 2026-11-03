@@ -301,6 +301,64 @@
     }
   },
   "storeRemoveLineConfirm": "Remove",
+  "storeAddNote": "Add Note",
+  "storeLineNoteTitle": "Item Note",
+  "storeNoteWord": "Note",
+  "storeClearNote": "Clear Note",
+  "storeSaveNote": "Save",
+  "storeHoldOrder": "Hold Order",
+  "storeHoldBlocked": "Finish or cancel the pending payment code first before holding the order.",
+  "storeHeldSaved": "Order held — resume it any time from the Held list.",
+  "storeHeldTitle": "Held Orders",
+  "storeHeldBadge": "Held ({count})",
+  "@storeHeldBadge": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "storeHeldEmpty": "No orders are on hold.",
+  "storeHeldEntryMeta": "{time} • {count} item(s) • {total} nusan",
+  "@storeHeldEntryMeta": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "storeHeldResumeBlocked": "The current order is not empty — hold or finish the order being built first.",
+  "storeHeldResumed": "Held order resumed.",
+  "storeDeleteHeldTitle": "Delete Held Order?",
+  "storeDeleteHeldMessage": "Delete the held order {summary}? This can't be undone.",
+  "@storeDeleteHeldMessage": {
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "storeKeypadModeQty": "Qty",
+  "storeKeypadModeAmount": "Amount",
+  "storeQtyMultiplierWord": "Multiplier",
+  "storeQtyModeHint": "Qty mode: tap digits as a multiplier, then tap a catalog product or scan its code — the product is added that many times.",
+  "storeProductAddedQty": "Added: {name} ×{qty}",
+  "@storeProductAddedQty": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "qty": {
+        "type": "int"
+      }
+    }
+  },
   "storeOrderTitle": "Order",
   "storeOrderEmpty": "No items yet — tap a catalog product, scan a code, or add a custom amount.",
   "storeSubtotal": "Subtotal",
@@ -383,6 +441,20 @@
   "storeCloseShiftBlocked": "Can't close the shift yet: a payment code is still waiting or a payment is being celebrated. Finish or cancel it first.",
   "storeCloseShiftConfirmTitle": "Close This Shift?",
   "storeCloseShiftConfirmBody": "Once closed, later sales go into a new shift.",
+  "storeCloseShiftHeldTitle": "Held Orders Still Pending",
+  "storeCloseShiftHeldBody": "There are {count} held orders (total {total} nusan) still unpaid. Held orders stay saved and can be resumed in the next shift.",
+  "@storeCloseShiftHeldBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "storeCloseShiftHeldConfirm": "Close Shift Anyway",
+  "storeBack": "Back",
   "storeShiftClosedTitle": "Shift Closed",
   "storeShiftClosedBody": "This shift's report is ready to view, print, or share as PDF.",
   "storeLater": "Later",

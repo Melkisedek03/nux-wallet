@@ -1388,6 +1388,132 @@ abstract class AppLocalizations {
   /// **'Hapus'**
   String get storeRemoveLineConfirm;
 
+  /// No description provided for @storeAddNote.
+  ///
+  /// In id, this message translates to:
+  /// **'Tambah Catatan'**
+  String get storeAddNote;
+
+  /// No description provided for @storeLineNoteTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Catatan Item'**
+  String get storeLineNoteTitle;
+
+  /// No description provided for @storeNoteWord.
+  ///
+  /// In id, this message translates to:
+  /// **'Catatan'**
+  String get storeNoteWord;
+
+  /// No description provided for @storeClearNote.
+  ///
+  /// In id, this message translates to:
+  /// **'Hapus Catatan'**
+  String get storeClearNote;
+
+  /// No description provided for @storeSaveNote.
+  ///
+  /// In id, this message translates to:
+  /// **'Simpan'**
+  String get storeSaveNote;
+
+  /// No description provided for @storeHoldOrder.
+  ///
+  /// In id, this message translates to:
+  /// **'Tahan Pesanan'**
+  String get storeHoldOrder;
+
+  /// No description provided for @storeHoldBlocked.
+  ///
+  /// In id, this message translates to:
+  /// **'Selesaikan atau batalkan dulu kode bayar yang sedang menunggu sebelum menahan pesanan.'**
+  String get storeHoldBlocked;
+
+  /// No description provided for @storeHeldSaved.
+  ///
+  /// In id, this message translates to:
+  /// **'Pesanan ditahan — bisa dilanjutkan kapan saja dari daftar Ditahan.'**
+  String get storeHeldSaved;
+
+  /// No description provided for @storeHeldTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Pesanan Ditahan'**
+  String get storeHeldTitle;
+
+  /// No description provided for @storeHeldBadge.
+  ///
+  /// In id, this message translates to:
+  /// **'Ditahan ({count})'**
+  String storeHeldBadge(int count);
+
+  /// No description provided for @storeHeldEmpty.
+  ///
+  /// In id, this message translates to:
+  /// **'Belum ada pesanan yang ditahan.'**
+  String get storeHeldEmpty;
+
+  /// No description provided for @storeHeldEntryMeta.
+  ///
+  /// In id, this message translates to:
+  /// **'{time} • {count} item • {total} nusan'**
+  String storeHeldEntryMeta(String time, int count, String total);
+
+  /// No description provided for @storeHeldResumeBlocked.
+  ///
+  /// In id, this message translates to:
+  /// **'Pesanan berjalan belum kosong — tahan atau selesaikan dulu pesanan yang sedang disusun.'**
+  String get storeHeldResumeBlocked;
+
+  /// No description provided for @storeHeldResumed.
+  ///
+  /// In id, this message translates to:
+  /// **'Pesanan ditahan dilanjutkan.'**
+  String get storeHeldResumed;
+
+  /// No description provided for @storeDeleteHeldTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Hapus Pesanan Ditahan?'**
+  String get storeDeleteHeldTitle;
+
+  /// No description provided for @storeDeleteHeldMessage.
+  ///
+  /// In id, this message translates to:
+  /// **'Hapus pesanan ditahan {summary}? Tindakan ini tidak bisa dibatalkan.'**
+  String storeDeleteHeldMessage(String summary);
+
+  /// No description provided for @storeKeypadModeQty.
+  ///
+  /// In id, this message translates to:
+  /// **'Qty'**
+  String get storeKeypadModeQty;
+
+  /// No description provided for @storeKeypadModeAmount.
+  ///
+  /// In id, this message translates to:
+  /// **'Nominal'**
+  String get storeKeypadModeAmount;
+
+  /// No description provided for @storeQtyMultiplierWord.
+  ///
+  /// In id, this message translates to:
+  /// **'Pengali'**
+  String get storeQtyMultiplierWord;
+
+  /// No description provided for @storeQtyModeHint.
+  ///
+  /// In id, this message translates to:
+  /// **'Mode Qty: ketuk angka sebagai pengali, lalu ketuk produk di katalog atau pindai kodenya — produk masuk sebanyak pengali itu.'**
+  String get storeQtyModeHint;
+
+  /// No description provided for @storeProductAddedQty.
+  ///
+  /// In id, this message translates to:
+  /// **'Ditambahkan: {name} ×{qty}'**
+  String storeProductAddedQty(String name, int qty);
+
   /// No description provided for @storeOrderTitle.
   ///
   /// In id, this message translates to:
@@ -1651,6 +1777,30 @@ abstract class AppLocalizations {
   /// In id, this message translates to:
   /// **'Sesudah ditutup, penjualan berikutnya masuk ke shift baru.'**
   String get storeCloseShiftConfirmBody;
+
+  /// No description provided for @storeCloseShiftHeldTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Masih Ada Pesanan Ditahan'**
+  String get storeCloseShiftHeldTitle;
+
+  /// No description provided for @storeCloseShiftHeldBody.
+  ///
+  /// In id, this message translates to:
+  /// **'Ada {count} pesanan ditahan (total {total} nusan) yang belum dibayar. Pesanan ditahan tetap tersimpan dan bisa dilanjutkan pada shift berikutnya.'**
+  String storeCloseShiftHeldBody(int count, String total);
+
+  /// No description provided for @storeCloseShiftHeldConfirm.
+  ///
+  /// In id, this message translates to:
+  /// **'Tetap Tutup Shift'**
+  String get storeCloseShiftHeldConfirm;
+
+  /// No description provided for @storeBack.
+  ///
+  /// In id, this message translates to:
+  /// **'Kembali'**
+  String get storeBack;
 
   /// No description provided for @storeShiftClosedTitle.
   ///

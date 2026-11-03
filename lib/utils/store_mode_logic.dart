@@ -52,6 +52,29 @@ int keypadQuickAdd(int current, int quick) {
   return next > storeKeypadMaxNusan ? storeKeypadMaxNusan : next;
 }
 
+/// Plafon pengali qty keypad mode Qty: 999 — pesanan toko ritel
+/// tidak pernah butuh pengali lebih besar dari itu, dan angka
+/// yang lebih besar hampir pasti salah ketuk.
+const storeMaxQtyMultiplier = 999;
+
+/// Tekan satu digit (0–9) pada keypad mode Qty: digit ditambahkan
+/// di kanan nilai pengali. Tekanan yang melewati
+/// [storeMaxQtyMultiplier] diabaikan. Nilai 0 berarti "belum
+/// diatur" — pengali efektifnya 1 (lihat layar kasir).
+int qtyMultiplierPressDigit(int current, int digit) {
+  final next = current * 10 + digit;
+  return next > storeMaxQtyMultiplier ? current : next;
+}
+
+/// Tekan "00" pada keypad mode Qty: dua nol sekaligus, aturan
+/// sama seperti nominal ([keypadPressDoubleZero]) tetapi dengan
+/// plafon pengali.
+int qtyMultiplierPressDoubleZero(int current) {
+  if (current == 0) return 0;
+  final next = current * 100;
+  return next > storeMaxQtyMultiplier ? current : next;
+}
+
 /// Bentuk diskon — kasir memilih salah satu per pemakaian.
 enum DiscountKind {
   /// Persen dari nilai yang didiskon (0–100).
@@ -125,6 +148,14 @@ class OrderLine {
   /// lalu bebas diubah/dihapus kasir di baris.
   final Discount? discount;
 
+  /// Catatan khusus kasir untuk baris ini (mis. "tanpa gula",
+  /// "bungkus terpisah") — teks bebas singkat, '' = tanpa catatan.
+  /// Tampil di bawah label baris di layar kasir dan tercetak di
+  /// struk pelanggan di bawah itemnya. Catatan TIDAK ikut
+  /// pengelompokan laporan (kelompok tetap (kategori, label,
+  /// harga satuan)) dan tidak memengaruhi hitungan apa pun.
+  final String note;
+
   const OrderLine({
     this.code,
     required this.label,
@@ -132,6 +163,7 @@ class OrderLine {
     required this.qty,
     this.category = '',
     this.discount,
+    this.note = '',
   });
 
   /// Harga × qty sebelum diskon baris.
@@ -147,6 +179,7 @@ class OrderLine {
     int? qty,
     Discount? discount,
     bool clearDiscount = false,
+    String? note,
   }) => OrderLine(
     code: code,
     label: label,
@@ -154,6 +187,7 @@ class OrderLine {
     qty: qty ?? this.qty,
     category: category,
     discount: clearDiscount ? null : (discount ?? this.discount),
+    note: note ?? this.note,
   );
 
   @override
@@ -164,18 +198,21 @@ class OrderLine {
       other.unitPriceNusan == unitPriceNusan &&
       other.qty == qty &&
       other.category == category &&
-      other.discount == discount;
+      other.discount == discount &&
+      other.note == note;
 
   @override
   int get hashCode =>
-      Object.hash(code, label, unitPriceNusan, qty, category, discount);
+      Object.hash(code, label, unitPriceNusan, qty, category, discount, note);
 }
 
 /// Tambah satu produk katalog ke pesanan: baris berkode sama yang
-/// sudah ada bertambah qty-nya 1 (urutan dipertahankan; diskon
-/// yang sudah diedit kasir di baris itu dipertahankan), selain itu
-/// baris baru qty 1 ditambahkan di akhir dengan [defaultDiscount]
-/// dari katalog (boleh null).
+/// sudah ada bertambah qty-nya sebesar [qty] (urutan
+/// dipertahankan; diskon yang sudah diedit kasir di baris itu
+/// dipertahankan), selain itu baris baru ditambahkan di akhir
+/// dengan qty sebesar [qty] dan [defaultDiscount] dari katalog
+/// (boleh null). [qty] bawaan 1 — perilaku lama; keypad mode Qty
+/// meneruskan pengali aktifnya ke sini. qty < 1 dijepit ke 1.
 List<OrderLine> orderAddProduct(
   List<OrderLine> lines, {
   required String code,
@@ -183,7 +220,9 @@ List<OrderLine> orderAddProduct(
   required int unitPriceNusan,
   String category = '',
   Discount? defaultDiscount,
+  int qty = 1,
 }) {
+  final addQty = qty < 1 ? 1 : qty;
   final idx = lines.indexWhere((l) => l.code == code);
   if (idx < 0) {
     return [
@@ -192,14 +231,24 @@ List<OrderLine> orderAddProduct(
         code: code,
         label: label,
         unitPriceNusan: unitPriceNusan,
-        qty: 1,
+        qty: addQty,
         category: category,
         discount: defaultDiscount,
       ),
     ];
   }
   final next = [...lines];
-  next[idx] = next[idx].copyWith(qty: next[idx].qty + 1);
+  next[idx] = next[idx].copyWith(qty: next[idx].qty + addQty);
+  return next;
+}
+
+/// Pasang/ganti catatan baris ke-[index] (teks sesudah trim;
+/// string kosong = catatan dihapus). Indeks di luar jangkauan
+/// diabaikan.
+List<OrderLine> orderSetLineNote(List<OrderLine> lines, int index, String note) {
+  if (index < 0 || index >= lines.length) return lines;
+  final next = [...lines];
+  next[index] = next[index].copyWith(note: note.trim());
   return next;
 }
 
@@ -307,6 +356,31 @@ int orderGrandTotalNusan(List<OrderLine> lines, Discount? orderDiscount) {
       orderSubtotalNusan(lines) -
       orderDiscountAmountNusan(lines, orderDiscount);
   return total < 0 ? 0 : total;
+}
+
+/// Baris-baris rincian struk pelanggan untuk satu pesanan lunas:
+/// per baris pesanan — label item, lalu "qty × harga satuan =
+/// total baris" (total SESUDAH diskon baris) menjorok dua spasi,
+/// dan catatan baris (bila ada) sebagai baris menjorok
+/// "<noteWord>: <catatan>" tepat di bawah itemnya. [formatNusan]
+/// adalah pemformat angka layar (pemisah ribuan aplikasi);
+/// [noteWord] kata "Catatan"/"Note" dari l10n. Teks mentah apa
+/// adanya — pemanggil (PrintService) yang membersihkan non-ASCII.
+List<String> orderReceiptDetailLines(
+  List<OrderLine> lines, {
+  required String Function(int nusan) formatNusan,
+  required String noteWord,
+}) {
+  final out = <String>[];
+  for (final line in lines) {
+    out.add(line.label);
+    out.add(
+      '  ${line.qty} x ${formatNusan(line.unitPriceNusan)}'
+      ' = ${formatNusan(line.lineTotalNusan)}',
+    );
+    if (line.note.isNotEmpty) out.add('  $noteWord: ${line.note}');
+  }
+  return out;
 }
 
 /// Ringkasan penjualan selama kasir berada di Mode Toko.

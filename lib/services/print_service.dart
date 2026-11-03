@@ -71,6 +71,13 @@ class ReceiptData {
   /// ESC/POS; null berarti tanpa QR.
   final String? invoice;
 
+  /// Baris rincian bebas (teks monospace apa adanya, satu baris
+  /// per entri) yang dicetak di badan struk sesudah baris
+  /// jenis/status/waktu — dipakai struk Mode Toko untuk rincian
+  /// item pesanan. Null (bawaan) = tanpa rincian: keluaran struk
+  /// pemanggil lain TIDAK berubah sama sekali.
+  final List<String>? detailLines;
+
   const ReceiptData({
     required this.typeText,
     required this.statusText,
@@ -79,6 +86,7 @@ class ReceiptData {
     this.hashLabel,
     this.hashValue,
     this.invoice,
+    this.detailLines,
   });
 }
 
@@ -158,6 +166,13 @@ class PrintService {
           PosColumn(text: timeLabel, width: 4),
           PosColumn(text: receipt.timeText, width: 8),
         ]);
+        final details = receipt.detailLines;
+        if (details != null && details.isNotEmpty) {
+          b += gen.hr();
+          for (final line in details) {
+            b += gen.text(_asciiSafe(line.isEmpty ? ' ' : line));
+          }
+        }
         if (receipt.hashValue != null) {
           b += gen.hr();
           if (receipt.hashLabel != null) b += gen.text(receipt.hashLabel!);
