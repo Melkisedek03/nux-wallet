@@ -9,6 +9,7 @@ import 'package:ldk_node/src/generated/api/types.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'config.dart';
 import 'locale_controller.dart';
@@ -28,6 +29,7 @@ import 'services/lsp_service.dart';
 import 'services/csv_export.dart';
 import 'services/history_filter.dart';
 import 'services/update_service.dart';
+import 'utils/community_links.dart';
 import 'utils/format.dart';
 import 'utils/coin_alert.dart';
 import 'utils/update_dialog.dart';
@@ -1320,7 +1322,7 @@ class _ProfilePage extends StatelessWidget {
   /// Cek pembaruan aplikasi secara manual (lihat _cekUpdateManual
   /// di HomeScreen) — dialog OTA nusan-catcher juga bisa dibuka
   /// manual dari pengaturan, bukan hanya cek otomatis.
-  final VoidCallback onCheckUpdate;
+  final Future<void> Function() onCheckUpdate;
 
   /// Buka Mode Toko (kasir PoS) — layar penuh di atas Profil,
   /// memakai node dompet yang sama.
@@ -1770,54 +1772,13 @@ class _ProfilePage extends StatelessWidget {
           // Baris Periksa Pembaruan — cek manual versi baru
           // (OTA); cek otomatis diam-diam berjalan saat aplikasi
           // dibuka, baris ini untuk pengguna yang ingin memastikan.
-          GestureDetector(
-            onTap: onCheckUpdate,
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: context.palette.card,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: context.palette.border),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      gradient: LinearGradient(colors: [
-                        const Color(0xFF10B981).withValues(alpha: 0.25),
-                        const Color(0xFF10B981).withValues(alpha: 0.08),
-                      ]),
-                    ),
-                    child: const Icon(Icons.system_update_alt_rounded,
-                        color: Color(0xFF34D399), size: 20),
-                  ),
-                  const SizedBox(width: 13),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(context.l10n.updateCheckTitle,
-                            style: TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 3),
-                        Text(
-                          context.l10n.updateCheckSubtitle,
-                          style: TextStyle(
-                              fontSize: 12, color: context.palette.muted),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.chevron_right_rounded,
-                      color: context.palette.muted),
-                ],
-              ),
-            ),
-          ),
+          // Selama cek berjalan tampil indikator loading supaya
+          // jeda jaringannya tidak terasa hang.
+          _UpdateCheckTile(onCheckUpdate: onCheckUpdate),
+          // Kartu Komunitas — alamat resmi komunitas Nusacoin di
+          // bawah Periksa Pembaruan; tautan dibuka di browser
+          // eksternal.
+          const _CommunityCard(),
           // Kartu dompet legacy: tawarkan buat ulang berfrasa
           if (legacyWallet)
             Container(
@@ -1911,6 +1872,205 @@ class _ProfilePage extends StatelessWidget {
 /// dari paket yang terpasang (package_info_plus). Selama infonya
 /// belum termuat — atau gagal dibaca — label tidak dirender sama
 /// sekali, supaya kaki halaman tidak menampilkan teks setengah jadi.
+/// Baris "Periksa Pembaruan" di Profil dengan keadaan loading:
+/// selama pemeriksaan berjalan, ikon berganti putaran kecil dan
+/// label keterangan menjadi "Memeriksa pembaruan…" sementara
+/// ketukan ulang diabaikan — jeda jaringan (timeout cek 15 detik)
+/// tidak lagi terasa seperti aplikasi hang.
+class _UpdateCheckTile extends StatefulWidget {
+  final Future<void> Function() onCheckUpdate;
+
+  const _UpdateCheckTile({required this.onCheckUpdate});
+
+  @override
+  State<_UpdateCheckTile> createState() => _UpdateCheckTileState();
+}
+
+class _UpdateCheckTileState extends State<_UpdateCheckTile> {
+  bool _checking = false;
+
+  Future<void> _handleTap() async {
+    if (_checking) return;
+    setState(() => _checking = true);
+    try {
+      await widget.onCheckUpdate();
+    } finally {
+      if (mounted) setState(() => _checking = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _checking ? null : _handleTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: context.palette.card,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: context.palette.border),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                gradient: LinearGradient(colors: [
+                  const Color(0xFF10B981).withValues(alpha: 0.25),
+                  const Color(0xFF10B981).withValues(alpha: 0.08),
+                ]),
+              ),
+              child: _checking
+                  ? const Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Color(0xFF34D399),
+                        ),
+                      ),
+                    )
+                  : const Icon(Icons.system_update_alt_rounded,
+                      color: Color(0xFF34D399), size: 20),
+            ),
+            const SizedBox(width: 13),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(context.l10n.updateCheckTitle,
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 3),
+                  Text(
+                    _checking
+                        ? context.l10n.updateChecking
+                        : context.l10n.updateCheckSubtitle,
+                    style: TextStyle(
+                        fontSize: 12, color: context.palette.muted),
+                  ),
+                ],
+              ),
+            ),
+            if (!_checking)
+              Icon(Icons.chevron_right_rounded,
+                  color: context.palette.muted),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Kartu Komunitas di Profil (tepat di bawah Periksa Pembaruan):
+/// alamat resmi komunitas Nusacoin — dua website dan grup
+/// Telegram — dan setiap tautan dibuka di browser eksternal
+/// lewat url_launcher. Data tautannya di utils/community_links.
+class _CommunityCard extends StatelessWidget {
+  const _CommunityCard();
+
+  Future<void> _open(BuildContext context, String url) async {
+    var opened = false;
+    try {
+      opened = await launchUrl(Uri.parse(url),
+          mode: LaunchMode.externalApplication);
+    } catch (_) {
+      opened = false;
+    }
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.communityOpenFailed)),
+      );
+    }
+  }
+
+  Widget _groupLabel(BuildContext context, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12, bottom: 2),
+      child: Text(
+        text,
+        style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: context.palette.muted),
+      ),
+    );
+  }
+
+  Widget _linkRow(BuildContext context,
+      {required IconData icon, required CommunityLink link}) {
+    return InkWell(
+      onTap: () => _open(context, link.url),
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 7),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: const Color(0xFF34D399)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(link.label,
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w600)),
+            ),
+            Icon(Icons.open_in_new_rounded,
+                size: 15, color: context.palette.muted),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.palette.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: context.palette.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  gradient: LinearGradient(colors: [
+                    const Color(0xFF10B981).withValues(alpha: 0.25),
+                    const Color(0xFF10B981).withValues(alpha: 0.08),
+                  ]),
+                ),
+                child: const Icon(Icons.groups_rounded,
+                    color: Color(0xFF34D399), size: 20),
+              ),
+              const SizedBox(width: 13),
+              Text(context.l10n.communityTitle,
+                  style: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w700)),
+            ],
+          ),
+          _groupLabel(context, context.l10n.communityWebsiteLabel),
+          for (final link in communityWebsiteLinks)
+            _linkRow(context, icon: Icons.public_rounded, link: link),
+          _groupLabel(context, context.l10n.communityTelegramGroup),
+          for (final link in communityTelegramLinks)
+            _linkRow(context, icon: Icons.telegram, link: link),
+        ],
+      ),
+    );
+  }
+}
+
 class _AppVersionLabel extends StatelessWidget {
   const _AppVersionLabel();
 

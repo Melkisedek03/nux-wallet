@@ -656,6 +656,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get updateCheckFailed => 'Couldn\'t check for updates right now.';
 
   @override
+  String get updateChecking => 'Checking for updates…';
+
+  @override
+  String get communityTitle => 'Community';
+
+  @override
+  String get communityWebsiteLabel => 'Website';
+
+  @override
+  String get communityTelegramGroup => 'Telegram Group';
+
+  @override
+  String get communityOpenFailed => 'Couldn\'t open the link.';
+
+  @override
   String get storeMode => 'Store Mode';
 
   @override

@@ -57,6 +57,10 @@ dependencies:
   # harus siap menerima; layar mati di tengah standby merepotkan user.
   wakelock_plus: ^1.8.2
 
+  # Buka tautan komunitas (website & Telegram) di browser eksternal
+  # dari kartu Komunitas di tab Profil.
+  url_launcher: ^6.3.2
+
   # Pemindai QR invoice lewat kamera (layar Kirim → tombol Scan QR).
   mobile_scanner: ^7.4.2
   image_picker: ^1.2.4

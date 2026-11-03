@@ -1268,6 +1268,36 @@ abstract class AppLocalizations {
   /// **'Tidak dapat memeriksa pembaruan saat ini.'**
   String get updateCheckFailed;
 
+  /// No description provided for @updateChecking.
+  ///
+  /// In id, this message translates to:
+  /// **'Memeriksa pembaruan…'**
+  String get updateChecking;
+
+  /// No description provided for @communityTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Komunitas'**
+  String get communityTitle;
+
+  /// No description provided for @communityWebsiteLabel.
+  ///
+  /// In id, this message translates to:
+  /// **'Website'**
+  String get communityWebsiteLabel;
+
+  /// No description provided for @communityTelegramGroup.
+  ///
+  /// In id, this message translates to:
+  /// **'Grup Telegram'**
+  String get communityTelegramGroup;
+
+  /// No description provided for @communityOpenFailed.
+  ///
+  /// In id, this message translates to:
+  /// **'Tidak dapat membuka tautan.'**
+  String get communityOpenFailed;
+
   /// No description provided for @storeMode.
   ///
   /// In id, this message translates to:

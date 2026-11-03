@@ -97,5 +97,13 @@
             <action android:name="android.intent.action.INSTALL_PACKAGE" />
             <data android:mimeType="application/vnd.android.package-archive" />
         </intent>
+        <!-- Visibilitas browser untuk tautan Komunitas di Profil
+             (Android 11+): url_launcher membuka URL https di
+             browser eksternal lewat intent VIEW+BROWSABLE. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" />
+        </intent>
     </queries>
 </manifest>

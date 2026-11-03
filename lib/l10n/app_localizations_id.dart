@@ -656,6 +656,21 @@ class AppLocalizationsId extends AppLocalizations {
   String get updateCheckFailed => 'Tidak dapat memeriksa pembaruan saat ini.';
 
   @override
+  String get updateChecking => 'Memeriksa pembaruan…';
+
+  @override
+  String get communityTitle => 'Komunitas';
+
+  @override
+  String get communityWebsiteLabel => 'Website';
+
+  @override
+  String get communityTelegramGroup => 'Grup Telegram';
+
+  @override
+  String get communityOpenFailed => 'Tidak dapat membuka tautan.';
+
+  @override
   String get storeMode => 'Mode Toko';
 
   @override
