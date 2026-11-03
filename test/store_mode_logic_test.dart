@@ -103,6 +103,45 @@ void main() {
     });
   });
 
+  group('label item bebas', () {
+    test('judul kustom terisi menjadi label baris (sesudah trim)', () {
+      expect(
+        resolveFreeItemLabel('  Jasa Fotokopi  ', fallbackLabel: 'Item Bebas'),
+        'Jasa Fotokopi',
+      );
+    });
+
+    test('judul kosong atau spasi saja jatuh ke label baku', () {
+      expect(resolveFreeItemLabel('', fallbackLabel: 'Item Bebas'), 'Item Bebas');
+      expect(
+        resolveFreeItemLabel('   ', fallbackLabel: 'Item Bebas'),
+        'Item Bebas',
+      );
+    });
+
+    test('judul berbeda membentuk baris berbeda, judul sama menggabung', () {
+      var lines = orderAddFreeAmount(
+        const [],
+        label: resolveFreeItemLabel('Parkir', fallbackLabel: 'Item Bebas'),
+        amountNusan: 2000,
+      );
+      lines = orderAddFreeAmount(
+        lines,
+        label: resolveFreeItemLabel('Parkir', fallbackLabel: 'Item Bebas'),
+        amountNusan: 2000,
+      );
+      lines = orderAddFreeAmount(
+        lines,
+        label: resolveFreeItemLabel('', fallbackLabel: 'Item Bebas'),
+        amountNusan: 2000,
+      );
+      expect(lines.length, 2);
+      expect(lines[0].label, 'Parkir');
+      expect(lines[0].qty, 2);
+      expect(lines[1].label, 'Item Bebas');
+    });
+  });
+
   group('diskon', () {
     test('persen dibulatkan ke bawah ke nusan bulat', () {
       // 10% dari 4.975 = 497,5 → 497.

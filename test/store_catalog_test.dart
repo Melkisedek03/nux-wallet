@@ -73,6 +73,35 @@ void main() {
     });
   });
 
+  group('saring katalog (kolom cari kasir)', () {
+    final items = [
+      const CatalogItem(code: '8991001', name: 'Kopi Sachet', priceNusan: 5000),
+      const CatalogItem(code: '8991002', name: 'Teh Botol', priceNusan: 4000),
+      const CatalogItem(code: 'QR-GULA', name: 'Gula 1kg', priceNusan: 15000),
+    ];
+
+    test('query kosong atau spasi saja mengembalikan seluruh katalog', () {
+      expect(filterCatalogItems(items, ''), items);
+      expect(filterCatalogItems(items, '   '), items);
+    });
+
+    test('cocok nama, tak peka huruf besar/kecil, boleh sebagian', () {
+      expect(filterCatalogItems(items, 'kopi').single.name, 'Kopi Sachet');
+      expect(filterCatalogItems(items, 'TEH').single.name, 'Teh Botol');
+      expect(filterCatalogItems(items, 'gula').single.name, 'Gula 1kg');
+    });
+
+    test('cocok kode, termasuk potongan kode', () {
+      expect(filterCatalogItems(items, '899100'), hasLength(2));
+      expect(filterCatalogItems(items, 'qr-gula').single.name, 'Gula 1kg');
+    });
+
+    test('tidak ada yang cocok menghasilkan daftar kosong', () {
+      expect(filterCatalogItems(items, 'susu'), isEmpty);
+      expect(filterCatalogItems(const [], 'kopi'), isEmpty);
+    });
+  });
+
   group('store', () {
     test('roundtrip lewat SharedPreferences', () async {
       SharedPreferences.setMockInitialValues({});

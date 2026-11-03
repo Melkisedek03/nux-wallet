@@ -1352,6 +1352,42 @@ abstract class AppLocalizations {
   /// **'Item Bebas'**
   String get storeFreeItem;
 
+  /// No description provided for @storeFreeTitleLabel.
+  ///
+  /// In id, this message translates to:
+  /// **'Nama Item (opsional)'**
+  String get storeFreeTitleLabel;
+
+  /// No description provided for @storeSearchHint.
+  ///
+  /// In id, this message translates to:
+  /// **'Cari nama atau kode produk…'**
+  String get storeSearchHint;
+
+  /// No description provided for @storeSearchNoResults.
+  ///
+  /// In id, this message translates to:
+  /// **'Tidak ada produk yang cocok dengan pencarian.'**
+  String get storeSearchNoResults;
+
+  /// No description provided for @storeRemoveLineTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Hapus dari Pesanan?'**
+  String get storeRemoveLineTitle;
+
+  /// No description provided for @storeRemoveLineMessage.
+  ///
+  /// In id, this message translates to:
+  /// **'Hapus {name} dari pesanan?'**
+  String storeRemoveLineMessage(String name);
+
+  /// No description provided for @storeRemoveLineConfirm.
+  ///
+  /// In id, this message translates to:
+  /// **'Hapus'**
+  String get storeRemoveLineConfirm;
+
   /// No description provided for @storeOrderTitle.
   ///
   /// In id, this message translates to:

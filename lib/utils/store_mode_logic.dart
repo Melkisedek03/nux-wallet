@@ -247,6 +247,19 @@ List<OrderLine> orderAddFreeAmount(
   return next;
 }
 
+/// Label baris untuk satu nominal bebas: judul kustom kasir
+/// (sesudah trim) bila ia mengisinya, selain itu [fallbackLabel]
+/// ("Item Bebas" dari l10n). Judul kustom adalah jalan untuk
+/// barang/jasa yang belum terinput di katalog — barisnya tetap
+/// terbaca jelas di pesanan, struk, dan laporan. Penggabungan
+/// baris bebas mengikuti aturan yang sudah ada di
+/// [orderAddFreeAmount] (label + nominal sama menggabung), jadi
+/// judul berbeda memang membentuk baris berbeda.
+String resolveFreeItemLabel(String rawTitle, {required String fallbackLabel}) {
+  final trimmed = rawTitle.trim();
+  return trimmed.isEmpty ? fallbackLabel : trimmed;
+}
+
 /// Ubah qty baris ke-[index] sebesar [delta] (+1/−1). Hasil qty
 /// <= 0 menghapus barisnya — kasir mengurangi sampai habis memang
 /// bermaksud membuang baris itu. Indeks di luar jangkauan diabaikan.

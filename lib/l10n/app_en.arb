@@ -288,6 +288,19 @@
   "storeFreeAmountLabel": "Custom Amount (nusan)",
   "storeAddFreeItem": "Add Custom Item",
   "storeFreeItem": "Custom Item",
+  "storeFreeTitleLabel": "Item Name (optional)",
+  "storeSearchHint": "Search by product name or code…",
+  "storeSearchNoResults": "No products match your search.",
+  "storeRemoveLineTitle": "Remove from Order?",
+  "storeRemoveLineMessage": "Remove {name} from the order?",
+  "@storeRemoveLineMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "storeRemoveLineConfirm": "Remove",
   "storeOrderTitle": "Order",
   "storeOrderEmpty": "No items yet — tap a catalog product, scan a code, or add a custom amount.",
   "storeSubtotal": "Subtotal",

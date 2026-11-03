@@ -700,6 +700,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeFreeItem => 'Custom Item';
 
   @override
+  String get storeFreeTitleLabel => 'Item Name (optional)';
+
+  @override
+  String get storeSearchHint => 'Search by product name or code…';
+
+  @override
+  String get storeSearchNoResults => 'No products match your search.';
+
+  @override
+  String get storeRemoveLineTitle => 'Remove from Order?';
+
+  @override
+  String storeRemoveLineMessage(String name) {
+    return 'Remove $name from the order?';
+  }
+
+  @override
+  String get storeRemoveLineConfirm => 'Remove';
+
+  @override
   String get storeOrderTitle => 'Order';
 
   @override

@@ -699,6 +699,27 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeFreeItem => 'Item Bebas';
 
   @override
+  String get storeFreeTitleLabel => 'Nama Item (opsional)';
+
+  @override
+  String get storeSearchHint => 'Cari nama atau kode produk…';
+
+  @override
+  String get storeSearchNoResults =>
+      'Tidak ada produk yang cocok dengan pencarian.';
+
+  @override
+  String get storeRemoveLineTitle => 'Hapus dari Pesanan?';
+
+  @override
+  String storeRemoveLineMessage(String name) {
+    return 'Hapus $name dari pesanan?';
+  }
+
+  @override
+  String get storeRemoveLineConfirm => 'Hapus';
+
+  @override
   String get storeOrderTitle => 'Pesanan';
 
   @override

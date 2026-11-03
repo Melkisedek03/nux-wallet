@@ -94,6 +94,13 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
   final _catalogStore = StoreCatalogStore();
   List<CatalogItem> _catalog = const [];
 
+  /// Kolom cari katalog (nama/kode) + kolom judul kustom untuk
+  /// baris nominal bebas. Keduanya dibersihkan mengikuti reset
+  /// pesanan sesudah pembayaran lunas (lihat _finishCelebration).
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+  final _freeTitleController = TextEditingController();
+
   // --- Shift kasir ---
   final _shiftStore = StoreShiftStore();
   List<StoreShift> _shifts = const [];
@@ -154,6 +161,8 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
     _eventTimer?.cancel();
     _celebrationTimer?.cancel();
     _watchGen++;
+    _searchController.dispose();
+    _freeTitleController.dispose();
     super.dispose();
   }
 
@@ -409,14 +418,80 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
 
   void _addFreeAmount() {
     if (_keypadNusan <= 0) return;
+    // Judul kustom opsional: terisi → jadi label baris (untuk
+    // barang yang belum terinput di katalog); kosong → label
+    // baku "Item Bebas". Kolom judul dibersihkan sesudah baris
+    // ditambahkan, sama seperti keypad kembali ke 0.
+    final label = resolveFreeItemLabel(
+      _freeTitleController.text,
+      fallbackLabel: context.l10n.storeFreeItem,
+    );
     setState(() {
       _lines = orderAddFreeAmount(
         _lines,
-        label: context.l10n.storeFreeItem,
+        label: label,
         amountNusan: _keypadNusan,
       );
       _keypadNusan = 0;
     });
+    _freeTitleController.clear();
+  }
+
+  /// Konfirmasi sebelum satu baris pesanan benar-benar dibuang —
+  /// dipakai DUA jalan: tombol hapus baris, dan tombol minus yang
+  /// akan membuat qty menjadi 0 (minus pada qty > 1 mengurangi
+  /// langsung tanpa dialog, lihat _decrementLine). Dialog menyebut
+  /// label itemnya; "Batal" membiarkan baris & qty apa adanya.
+  Future<void> _confirmRemoveLine(int index) async {
+    if (index < 0 || index >= _lines.length) return;
+    final line = _lines[index];
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ctx.palette.card,
+        title: Text(l10n.storeRemoveLineTitle),
+        content: Text(l10n.storeRemoveLineMessage(line.label)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(l10n.storeRemoveLineConfirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    // Cari ulang posisi baris yang sama (daftar bisa bergeser
+    // selama dialog terbuka); tidak ketemu = sudah tidak ada,
+    // tidak ada yang perlu dihapus.
+    final idx = _lines.indexOf(line);
+    if (idx < 0) return;
+    setState(() => _lines = orderRemoveLine(_lines, idx));
+  }
+
+  /// Tombol minus pada baris pesanan: qty > 1 langsung berkurang
+  /// satu; qty 1 berarti pengurangan berikutnya membuang baris —
+  /// itu lewat konfirmasi _confirmRemoveLine dulu.
+  void _decrementLine(int index) {
+    if (index < 0 || index >= _lines.length) return;
+    if (_lines[index].qty <= 1) {
+      _confirmRemoveLine(index);
+    } else {
+      setState(() => _lines = orderChangeQty(_lines, index, -1));
+    }
+  }
+
+  void _clearCatalogSearch() {
+    _searchController.clear();
+    if (_searchQuery.isNotEmpty) setState(() => _searchQuery = '');
   }
 
   /// Pindai QR/barcode produk: kode yang terdaftar langsung masuk
@@ -859,6 +934,12 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
         _lines = const [];
         _orderDiscount = null;
         _keypadNusan = 0;
+        // Keadaan penyusun pesanan kembali bersih untuk
+        // pelanggan berikutnya, satu bundel dengan pesanan:
+        // saringan katalog dan judul bebas ikut direset.
+        _searchQuery = '';
+        _searchController.clear();
+        _freeTitleController.clear();
       }
     });
     _syncWatcher();
@@ -1097,10 +1178,11 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
   Widget _buildCashier(BuildContext context) {
     if (_openShift == null) return _buildShiftGate(context);
     final l10n = context.l10n;
+    final visibleCatalog = filterCatalogItems(_catalog, _searchQuery);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // --- Katalog / item cepat + scan ---
+        // --- Katalog / item cepat + cari + scan ---
         Row(
           children: [
             Expanded(
@@ -1112,20 +1194,68 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
                 ),
               ),
             ),
-            TextButton.icon(
-              onPressed: _scanProductCode,
-              icon: const Icon(Icons.qr_code_scanner_rounded, size: 19),
-              label: Text(l10n.storeScanCode),
-            ),
             TextButton(
               onPressed: () => _openCatalogManager(),
               child: Text(l10n.storeManageCatalog),
             ),
           ],
         ),
+        const SizedBox(height: 6),
+        // Cari produk (nama/kode) menyaring chip secara langsung;
+        // tombol scan di sampingnya tetap jalur _scanProductCode:
+        // kode terdaftar langsung masuk pesanan (qty +1 bila
+        // barisnya sudah ada, dari orderAddProduct).
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _searchController,
+                onChanged: (v) => setState(() => _searchQuery = v),
+                decoration: InputDecoration(
+                  hintText: l10n.storeSearchHint,
+                  prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                  suffixIcon: _searchQuery.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.clear_rounded, size: 19),
+                          onPressed: _clearCatalogSearch,
+                        ),
+                  filled: true,
+                  fillColor: context.palette.cardAlt,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            OutlinedButton(
+              onPressed: _scanProductCode,
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Icon(Icons.qr_code_scanner_rounded, size: 22),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
         if (_catalog.isEmpty)
           Text(
             l10n.storeCatalogEmpty,
+            style: TextStyle(fontSize: 12, color: context.palette.muted),
+          )
+        else if (visibleCatalog.isEmpty)
+          Text(
+            l10n.storeSearchNoResults,
             style: TextStyle(fontSize: 12, color: context.palette.muted),
           )
         else
@@ -1133,7 +1263,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              for (final item in _catalog)
+              for (final item in visibleCatalog)
                 ActionChip(
                   label: Text(
                     item.defaultDiscount == null
@@ -1159,6 +1289,22 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
+        // Judul kustom opsional untuk baris bebas ini — jalan
+        // untuk barang/jasa yang belum terinput di katalog.
+        // Kosong berarti label baku "Item Bebas".
+        TextField(
+          controller: _freeTitleController,
+          decoration: InputDecoration(
+            labelText: l10n.storeFreeTitleLabel,
+            filled: true,
+            fillColor: context.palette.cardAlt,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
@@ -1500,8 +1646,9 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.remove_circle_outline, size: 22),
-            onPressed: () =>
-                setState(() => _lines = orderChangeQty(_lines, index, -1)),
+            // Minus ke qty 0 = buang baris → konfirmasi dulu;
+            // minus biasa mengurangi langsung (lihat _decrementLine).
+            onPressed: () => _decrementLine(index),
           ),
           Padding(
             padding: const EdgeInsets.only(top: 10),
@@ -1517,8 +1664,8 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline, size: 21),
-            onPressed: () =>
-                setState(() => _lines = orderRemoveLine(_lines, index)),
+            // Hapus baris selalu lewat konfirmasi dulu.
+            onPressed: () => _confirmRemoveLine(index),
           ),
           SizedBox(
             width: 86,

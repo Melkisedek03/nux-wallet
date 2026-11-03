@@ -129,6 +129,22 @@ CatalogItem? findCatalogItemByCode(List<CatalogItem> items, String code) {
   return null;
 }
 
+/// Saring katalog untuk kolom cari kasir: item lolos bila NAMA
+/// atau KODE-nya mengandung [query] (sesudah trim, tak peka huruf
+/// besar/kecil, cocok sebagian — bukan harus persis seperti
+/// pencarian scan). Query kosong/spasi saja → seluruh katalog
+/// apa adanya (urutan asli dipertahankan).
+List<CatalogItem> filterCatalogItems(List<CatalogItem> items, String query) {
+  final needle = query.trim().toLowerCase();
+  if (needle.isEmpty) return items;
+  return [
+    for (final item in items)
+      if (item.name.toLowerCase().contains(needle) ||
+          item.code.toLowerCase().contains(needle))
+        item,
+  ];
+}
+
 /// Penyimpanan katalog Mode Toko di SharedPreferences.
 ///
 /// Pola sama seperti Bolt12OfferStore/SavedInvoiceStore: kegagalan

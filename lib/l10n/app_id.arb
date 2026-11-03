@@ -288,6 +288,19 @@
   "storeFreeAmountLabel": "Nominal Bebas (nusan)",
   "storeAddFreeItem": "Tambah Item Bebas",
   "storeFreeItem": "Item Bebas",
+  "storeFreeTitleLabel": "Nama Item (opsional)",
+  "storeSearchHint": "Cari nama atau kode produk…",
+  "storeSearchNoResults": "Tidak ada produk yang cocok dengan pencarian.",
+  "storeRemoveLineTitle": "Hapus dari Pesanan?",
+  "storeRemoveLineMessage": "Hapus {name} dari pesanan?",
+  "@storeRemoveLineMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "storeRemoveLineConfirm": "Hapus",
   "storeOrderTitle": "Pesanan",
   "storeOrderEmpty": "Belum ada item — ketuk produk di katalog, pindai kode, atau tambah nominal bebas.",
   "storeSubtotal": "Subtotal",
