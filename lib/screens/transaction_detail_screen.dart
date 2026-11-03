@@ -4,10 +4,10 @@ import 'package:ldk_node/src/generated/api/types.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../locale_controller.dart';
+import '../unit_controller.dart';
 import '../services/print_service.dart';
 import '../services/saved_invoices.dart';
 import '../theme.dart';
-import '../utils/format.dart';
 
 /// Layar Detail Transaksi — dibuka dengan mengetuk baris di daftar
 /// Aktivitas/Riwayat.
@@ -114,7 +114,7 @@ class TransactionDetailScreen extends StatelessWidget {
     };
     final amountText = payment.amountMsat == null
         ? '-'
-        : '${isIn ? '+' : '-'}${formatNusan(payment.amountMsat!)} nusan';
+        : '${isIn ? '+' : '-'}${context.formatWalletAmount(payment.amountMsat!)}';
     final typeText =
         _isJit ? 'Lightning JIT' : _isOnchain ? 'On-chain' : 'Lightning';
     final txid = _txid;
@@ -159,7 +159,7 @@ class TransactionDetailScreen extends StatelessWidget {
     };
     final amountText = payment.amountMsat == null
         ? '—'
-        : '${isIn ? '+' : '−'}${formatNusan(payment.amountMsat!)} nusan';
+        : '${isIn ? '+' : '−'}${context.formatWalletAmount(payment.amountMsat!)}';
     final typeText = _isJit
         ? '⚡ JIT'
         : _isOnchain

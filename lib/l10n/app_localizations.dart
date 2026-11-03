@@ -128,6 +128,18 @@ abstract class AppLocalizations {
   /// **'Tema'**
   String get themeTitle;
 
+  /// No description provided for @unitTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Satuan'**
+  String get unitTitle;
+
+  /// No description provided for @unitSubtitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Satuan tampilan jumlah di saldo, kirim, terima, dan riwayat'**
+  String get unitSubtitle;
+
   /// No description provided for @themeSubtitle.
   ///
   /// In id, this message translates to:
@@ -575,7 +587,7 @@ abstract class AppLocalizations {
   /// No description provided for @receiveInvoiceDesc.
   ///
   /// In id, this message translates to:
-  /// **'Terima {amount} nusan'**
+  /// **'Terima {amount}'**
   String receiveInvoiceDesc(String amount);
 
   /// No description provided for @createInvoiceFailed.
@@ -605,7 +617,7 @@ abstract class AppLocalizations {
   /// No description provided for @amountLabel.
   ///
   /// In id, this message translates to:
-  /// **'Nominal (nusan)'**
+  /// **'Nominal'**
   String get amountLabel;
 
   /// No description provided for @createInvoice.
@@ -623,7 +635,7 @@ abstract class AppLocalizations {
   /// No description provided for @receivedAmount.
   ///
   /// In id, this message translates to:
-  /// **'+{amount} nusan'**
+  /// **'+{amount}'**
   String receivedAmount(String amount);
 
   /// No description provided for @fundsArrived.
@@ -695,7 +707,7 @@ abstract class AppLocalizations {
   /// No description provided for @sendOfferAmountLine.
   ///
   /// In id, this message translates to:
-  /// **'Nominal: {amount} nusan'**
+  /// **'Nominal: {amount}'**
   String sendOfferAmountLine(String amount);
 
   /// No description provided for @sendOfferVariableHint.
@@ -767,7 +779,7 @@ abstract class AppLocalizations {
   /// No description provided for @sendableLine.
   ///
   /// In id, this message translates to:
-  /// **'Bisa dikirim: {amount} nusan'**
+  /// **'Bisa dikirim: {amount}'**
   String sendableLine(String amount);
 
   /// No description provided for @sendInsufficientBalance.
@@ -779,7 +791,7 @@ abstract class AppLocalizations {
   /// No description provided for @sendReserveNote.
   ///
   /// In id, this message translates to:
-  /// **'Jumlah ini belum bisa dikirim. Dari saldomu, {reserve} nusan selalu disisakan sebagai cadangan pengaman jalur — tetap milikmu, bukan potongan, dan kembali utuh bila jalur ditutup. Yang bisa dikirim saat ini: {sendable} nusan.'**
+  /// **'Jumlah ini belum bisa dikirim. Dari saldomu, {reserve} selalu disisakan sebagai cadangan pengaman jalur — tetap milikmu, bukan potongan, dan kembali utuh bila jalur ditutup. Yang bisa dikirim saat ini: {sendable}.'**
   String sendReserveNote(String reserve, String sendable);
 
   /// No description provided for @sendZeroSendableHint.
@@ -827,7 +839,7 @@ abstract class AppLocalizations {
   /// No description provided for @confirmPayAmountLine.
   ///
   /// In id, this message translates to:
-  /// **'Nominal: {amount} nusan'**
+  /// **'Nominal: {amount}'**
   String confirmPayAmountLine(String amount);
 
   /// No description provided for @paymentSuccess.

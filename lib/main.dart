@@ -29,6 +29,7 @@ import 'services/lsp_service.dart';
 import 'services/csv_export.dart';
 import 'services/history_filter.dart';
 import 'services/update_service.dart';
+import 'unit_controller.dart';
 import 'utils/community_links.dart';
 import 'utils/format.dart';
 import 'utils/coin_alert.dart';
@@ -43,6 +44,8 @@ void main() async {
   await ThemeController.load();
   // Muat pilihan bahasa tersimpan (default Indonesia) sebelum jalan.
   await LocaleController.load();
+  // Muat satuan tampilan jumlah tersimpan (default nusan).
+  await UnitController.load();
   // Layar tetap menyala selama aplikasi hidup (permintaan NUX):
   // dompet harus siap menerima pembayaran, layar tidak boleh
   // mati sendiri. Diaktifkan lagi setiap aplikasi kembali ke depan.
@@ -59,8 +62,8 @@ class NuxWalletApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable:
-          Listenable.merge([ThemeController.mode, LocaleController.locale]),
+      listenable: Listenable.merge(
+          [ThemeController.mode, LocaleController.locale, UnitController.unit]),
       builder: (context, _) {
         return MaterialApp(
           title: 'NUX Wallet',
@@ -915,15 +918,16 @@ class _HomeScreenState extends State<HomeScreen>
                           Text(
                               _balanceMsat == null
                                   ? '\u2014'
-                                  : formatNusan(_balanceMsat!),
+                                  : context.formatWalletAmountNumber(
+                                      _balanceMsat!),
                               style: const TextStyle(
                                   fontSize: 44,
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: -1,
                                   color: Colors.white)),
                           const SizedBox(width: 6),
-                          const Text('nusan',
-                              style: TextStyle(
+                          Text(context.displayUnit.label,
+                              style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w600,
                                   color: Colors.white70)),
@@ -1186,7 +1190,7 @@ _quickAction(const Icon(Icons.add_rounded, size: 25), context.l10n.buy, false, (
             : '\u26A1';
     final amount = payment.amountMsat == null
         ? '\u2014'
-        : '${isIn ? '+' : '\u2212'}${formatNusan(payment.amountMsat!)}';
+        : '${isIn ? '+' : '\u2212'}${context.formatWalletAmountNumber(payment.amountMsat!)}';
     final time = formatTxTime(
         DateTime.fromMillisecondsSinceEpoch(
             payment.latestUpdateTimestamp.toInt() * 1000),
@@ -1494,6 +1498,73 @@ class _ProfilePage extends StatelessWidget {
                       color: context.palette.muted),
                 ],
               ),
+            ),
+          ),
+          // Baris Satuan — saklar satuan tampilan jumlah dompet
+          // (NUX | nusan), berlaku global di saldo, kirim, terima,
+          // dan riwayat. Murni tampilan: nilai simpanan & hitungan
+          // tetap msat; Mode Toko tidak ikut saklar ini.
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: context.palette.card,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: context.palette.border),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    gradient: LinearGradient(colors: [
+                      const Color(0xFF10B981).withValues(alpha: 0.25),
+                      const Color(0xFF10B981).withValues(alpha: 0.08),
+                    ]),
+                  ),
+                  child: const Icon(Icons.straighten_rounded,
+                      color: Color(0xFF34D399), size: 20),
+                ),
+                const SizedBox(width: 13),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(context.l10n.unitTitle,
+                          style: const TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 3),
+                      Text(
+                        context.l10n.unitSubtitle,
+                        style: TextStyle(
+                            fontSize: 12, color: context.palette.muted),
+                      ),
+                    ],
+                  ),
+                ),
+                ValueListenableBuilder<DisplayUnit>(
+                  valueListenable: UnitController.unit,
+                  builder: (context, unit, _) => SegmentedButton<DisplayUnit>(
+                    segments: const [
+                      ButtonSegment(
+                          value: DisplayUnit.nux, label: Text('NUX')),
+                      ButtonSegment(
+                          value: DisplayUnit.nusan, label: Text('nusan')),
+                    ],
+                    selected: {unit},
+                    onSelectionChanged: (picked) =>
+                        UnitController.setUnit(picked.first),
+                    showSelectedIcon: false,
+                    style: SegmentedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      textStyle: const TextStyle(
+                          fontSize: 12.5, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           // Baris Backup Wallet

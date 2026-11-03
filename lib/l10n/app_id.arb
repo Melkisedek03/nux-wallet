@@ -5,6 +5,8 @@
   "languageIndonesian": "Bahasa Indonesia",
   "languageEnglish": "English",
   "themeTitle": "Tema",
+  "unitTitle": "Satuan",
+  "unitSubtitle": "Satuan tampilan jumlah di saldo, kirim, terima, dan riwayat",
   "themeSubtitle": "Gelap atau terang, sesuai selera",
   "changeThemeTooltip": "Ganti tema",
   "greetingMorning": "Selamat pagi",
@@ -99,7 +101,7 @@
   "backupConfirmed": "Saya sudah menulis kata-kata ini di tempat aman",
   "done": "Selesai",
   "invalidAmount": "Masukkan nominal yang valid",
-  "receiveInvoiceDesc": "Terima {amount} nusan",
+  "receiveInvoiceDesc": "Terima {amount}",
   "@receiveInvoiceDesc": {
     "placeholders": {
       "amount": {
@@ -111,10 +113,10 @@
   "receiveJitMinimumNote": "Untuk penerimaan pertama (sekaligus membuatkan jalur penerimaanmu), jumlah terkecilnya 1.000 nusan. Setelah jalurmu jadi, kamu bisa menerima berapa pun, termasuk di bawah 1.000 nusan.",
   "receiveTitle": "Terima NUX",
   "jitInfo": "Invoice Lightning dengan channel instan (JIT). Tidak perlu tunggu konfirmasi block.",
-  "amountLabel": "Nominal (nusan)",
+  "amountLabel": "Nominal",
   "createInvoice": "Buat Invoice",
   "paymentReceived": "Pembayaran Diterima",
-  "receivedAmount": "+{amount} nusan",
+  "receivedAmount": "+{amount}",
   "@receivedAmount": {
     "placeholders": {
       "amount": {
@@ -133,7 +135,7 @@
   "staticCodeFailed": "Gagal membuat kode bayar. Coba lagi.",
   "staticOfferDescription": "Kode bayar ELNUX",
   "confirmPayOfferTitle": "Bayar kode bayar ini?",
-  "sendOfferAmountLine": "Nominal: {amount} nusan",
+  "sendOfferAmountLine": "Nominal: {amount}",
   "@sendOfferAmountLine": {
     "placeholders": {
       "amount": {
@@ -152,7 +154,7 @@
   "payStillPending": "Pembayaran masih diproses melewati batas tunggu. Hasil akhirnya akan tampil di Riwayat — jangan bayar ulang invoice yang sama sebelum statusnya jelas.",
   "sendTitle": "Kirim NUX",
   "sendInfo": "Tempel atau scan invoice Lightning dari penerima. Pembayaran instan via channel.",
-  "sendableLine": "Bisa dikirim: {amount} nusan",
+  "sendableLine": "Bisa dikirim: {amount}",
   "@sendableLine": {
     "placeholders": {
       "amount": {
@@ -161,7 +163,7 @@
     }
   },
   "sendInsufficientBalance": "Saldo tidak cukup untuk membayar invoice ini.",
-  "sendReserveNote": "Jumlah ini belum bisa dikirim. Dari saldomu, {reserve} nusan selalu disisakan sebagai cadangan pengaman jalur — tetap milikmu, bukan potongan, dan kembali utuh bila jalur ditutup. Yang bisa dikirim saat ini: {sendable} nusan.",
+  "sendReserveNote": "Jumlah ini belum bisa dikirim. Dari saldomu, {reserve} selalu disisakan sebagai cadangan pengaman jalur — tetap milikmu, bukan potongan, dan kembali utuh bila jalur ditutup. Yang bisa dikirim saat ini: {sendable}.",
   "@sendReserveNote": {
     "placeholders": {
       "reserve": {
@@ -179,7 +181,7 @@
   "pay": "Bayar",
   "confirmPayTitle": "Bayar invoice ini?",
   "confirmPayBody": "Pembayaran Lightning bersifat instan dan tidak bisa dibatalkan. Periksa lagi invoice di bawah sebelum lanjut.",
-  "confirmPayAmountLine": "Nominal: {amount} nusan",
+  "confirmPayAmountLine": "Nominal: {amount}",
   "@confirmPayAmountLine": {
     "placeholders": {
       "amount": {

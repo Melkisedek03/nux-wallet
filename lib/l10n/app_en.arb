@@ -5,6 +5,8 @@
   "languageIndonesian": "Bahasa Indonesia",
   "languageEnglish": "English",
   "themeTitle": "Theme",
+  "unitTitle": "Unit",
+  "unitSubtitle": "Display unit for amounts in balance, send, receive, and history",
   "themeSubtitle": "Dark or light, as you like",
   "changeThemeTooltip": "Change theme",
   "greetingMorning": "Good morning",
@@ -99,7 +101,7 @@
   "backupConfirmed": "I have written these words somewhere safe",
   "done": "Done",
   "invalidAmount": "Enter a valid amount",
-  "receiveInvoiceDesc": "Receive {amount} nusan",
+  "receiveInvoiceDesc": "Receive {amount}",
   "@receiveInvoiceDesc": {
     "placeholders": {
       "amount": {
@@ -111,10 +113,10 @@
   "receiveJitMinimumNote": "For your first receive (which also creates your receiving channel), the smallest amount is 1,000 nusan. Once your channel is ready, you can receive any amount, including less than 1,000 nusan.",
   "receiveTitle": "Receive NUX",
   "jitInfo": "Lightning invoice with an instant channel (JIT). No need to wait for block confirmation.",
-  "amountLabel": "Amount (nusan)",
+  "amountLabel": "Amount",
   "createInvoice": "Create Invoice",
   "paymentReceived": "Payment Received",
-  "receivedAmount": "+{amount} nusan",
+  "receivedAmount": "+{amount}",
   "@receivedAmount": {
     "placeholders": {
       "amount": {
@@ -133,7 +135,7 @@
   "staticCodeFailed": "Couldn't create your payment code. Try again.",
   "staticOfferDescription": "ELNUX payment code",
   "confirmPayOfferTitle": "Pay this payment code?",
-  "sendOfferAmountLine": "Amount: {amount} nusan",
+  "sendOfferAmountLine": "Amount: {amount}",
   "@sendOfferAmountLine": {
     "placeholders": {
       "amount": {
@@ -152,7 +154,7 @@
   "payStillPending": "The payment is still being processed past the wait limit. Its final result will appear in History — do not pay the same invoice again until its status is clear.",
   "sendTitle": "Send NUX",
   "sendInfo": "Paste or scan a Lightning invoice from the recipient. Instant payment via channel.",
-  "sendableLine": "Available to send: {amount} nusan",
+  "sendableLine": "Available to send: {amount}",
   "@sendableLine": {
     "placeholders": {
       "amount": {
@@ -161,7 +163,7 @@
     }
   },
   "sendInsufficientBalance": "Your balance is not enough to pay this invoice.",
-  "sendReserveNote": "This amount can't be sent yet. Of your balance, {reserve} nusan is always kept aside as a safety reserve for your payment channel — it stays yours, it is not a fee, and it returns in full if the channel is closed. You can currently send: {sendable} nusan.",
+  "sendReserveNote": "This amount can't be sent yet. Of your balance, {reserve} is always kept aside as a safety reserve for your payment channel — it stays yours, it is not a fee, and it returns in full if the channel is closed. You can currently send: {sendable}.",
   "@sendReserveNote": {
     "placeholders": {
       "reserve": {
@@ -179,7 +181,7 @@
   "pay": "Pay",
   "confirmPayTitle": "Pay this invoice?",
   "confirmPayBody": "Lightning payments are instant and cannot be cancelled. Double-check the invoice below before continuing.",
-  "confirmPayAmountLine": "Amount: {amount} nusan",
+  "confirmPayAmountLine": "Amount: {amount}",
   "@confirmPayAmountLine": {
     "placeholders": {
       "amount": {

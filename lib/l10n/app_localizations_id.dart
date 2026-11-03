@@ -25,6 +25,13 @@ class AppLocalizationsId extends AppLocalizations {
   String get themeTitle => 'Tema';
 
   @override
+  String get unitTitle => 'Satuan';
+
+  @override
+  String get unitSubtitle =>
+      'Satuan tampilan jumlah di saldo, kirim, terima, dan riwayat';
+
+  @override
   String get themeSubtitle => 'Gelap atau terang, sesuai selera';
 
   @override
@@ -266,7 +273,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String receiveInvoiceDesc(String amount) {
-    return 'Terima $amount nusan';
+    return 'Terima $amount';
   }
 
   @override
@@ -284,7 +291,7 @@ class AppLocalizationsId extends AppLocalizations {
       'Invoice Lightning dengan channel instan (JIT). Tidak perlu tunggu konfirmasi block.';
 
   @override
-  String get amountLabel => 'Nominal (nusan)';
+  String get amountLabel => 'Nominal';
 
   @override
   String get createInvoice => 'Buat Invoice';
@@ -294,7 +301,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String receivedAmount(String amount) {
-    return '+$amount nusan';
+    return '+$amount';
   }
 
   @override
@@ -335,7 +342,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String sendOfferAmountLine(String amount) {
-    return 'Nominal: $amount nusan';
+    return 'Nominal: $amount';
   }
 
   @override
@@ -377,7 +384,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String sendableLine(String amount) {
-    return 'Bisa dikirim: $amount nusan';
+    return 'Bisa dikirim: $amount';
   }
 
   @override
@@ -386,7 +393,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String sendReserveNote(String reserve, String sendable) {
-    return 'Jumlah ini belum bisa dikirim. Dari saldomu, $reserve nusan selalu disisakan sebagai cadangan pengaman jalur — tetap milikmu, bukan potongan, dan kembali utuh bila jalur ditutup. Yang bisa dikirim saat ini: $sendable nusan.';
+    return 'Jumlah ini belum bisa dikirim. Dari saldomu, $reserve selalu disisakan sebagai cadangan pengaman jalur — tetap milikmu, bukan potongan, dan kembali utuh bila jalur ditutup. Yang bisa dikirim saat ini: $sendable.';
   }
 
   @override
@@ -414,7 +421,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String confirmPayAmountLine(String amount) {
-    return 'Nominal: $amount nusan';
+    return 'Nominal: $amount';
   }
 
   @override

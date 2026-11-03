@@ -25,6 +25,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeTitle => 'Theme';
 
   @override
+  String get unitTitle => 'Unit';
+
+  @override
+  String get unitSubtitle =>
+      'Display unit for amounts in balance, send, receive, and history';
+
+  @override
   String get themeSubtitle => 'Dark or light, as you like';
 
   @override
@@ -266,7 +273,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String receiveInvoiceDesc(String amount) {
-    return 'Receive $amount nusan';
+    return 'Receive $amount';
   }
 
   @override
@@ -284,7 +291,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Lightning invoice with an instant channel (JIT). No need to wait for block confirmation.';
 
   @override
-  String get amountLabel => 'Amount (nusan)';
+  String get amountLabel => 'Amount';
 
   @override
   String get createInvoice => 'Create Invoice';
@@ -294,7 +301,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String receivedAmount(String amount) {
-    return '+$amount nusan';
+    return '+$amount';
   }
 
   @override
@@ -336,7 +343,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String sendOfferAmountLine(String amount) {
-    return 'Amount: $amount nusan';
+    return 'Amount: $amount';
   }
 
   @override
@@ -378,7 +385,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String sendableLine(String amount) {
-    return 'Available to send: $amount nusan';
+    return 'Available to send: $amount';
   }
 
   @override
@@ -387,7 +394,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String sendReserveNote(String reserve, String sendable) {
-    return 'This amount can\'t be sent yet. Of your balance, $reserve nusan is always kept aside as a safety reserve for your payment channel — it stays yours, it is not a fee, and it returns in full if the channel is closed. You can currently send: $sendable nusan.';
+    return 'This amount can\'t be sent yet. Of your balance, $reserve is always kept aside as a safety reserve for your payment channel — it stays yours, it is not a fee, and it returns in full if the channel is closed. You can currently send: $sendable.';
   }
 
   @override
@@ -415,7 +422,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String confirmPayAmountLine(String amount) {
-    return 'Amount: $amount nusan';
+    return 'Amount: $amount';
   }
 
   @override

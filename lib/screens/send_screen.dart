@@ -3,6 +3,7 @@ import 'package:ldk_node/src/generated/api/types.dart';
 import 'package:vibration/vibration.dart';
 import '../config.dart';
 import '../locale_controller.dart';
+import '../unit_controller.dart';
 import '../theme.dart';
 import 'package:flutter/services.dart';
 import '../services/lsp_service.dart';
@@ -85,6 +86,12 @@ class _SendScreenState extends State<SendScreen> {
   /// sama berulang kali.
   String _offerInfoText = '';
 
+  /// Nominal invoice Bolt11 yang terbaca dari isi kolom kode saat
+  /// ini (null bila bukan invoice bernominal / isinya offer).
+  /// Bahan baris nominal + konversi satuan di formulir — jumlah
+  /// yang sama yang dinilai pemeriksaan pra-bayar & dialog.
+  BigInt? _bolt11AmountMsat;
+
   bool _loading = false;
   String? _error;
   bool _paid = false;
@@ -148,8 +155,14 @@ class _SendScreenState extends State<SendScreen> {
     if (text == _offerInfoText) return;
     _offerInfoText = text;
     final info = isBolt12Offer(text) ? parseOfferInfo(text) : null;
-    if (info != _offerInfo && mounted) {
-      setState(() => _offerInfo = info);
+    final bolt11Amount =
+        info == null ? parseBolt11AmountMsat(text) : null;
+    if ((info != _offerInfo || bolt11Amount != _bolt11AmountMsat) &&
+        mounted) {
+      setState(() {
+        _offerInfo = info;
+        _bolt11AmountMsat = bolt11Amount;
+      });
     }
   }
 
@@ -255,9 +268,14 @@ class _SendScreenState extends State<SendScreen> {
             if (amountMsat != null) ...[
               const SizedBox(height: 12),
               Text(
-                context.l10n
-                    .confirmPayAmountLine(formatNusan(amountMsat)),
+                context.l10n.confirmPayAmountLine(
+                    context.formatWalletAmount(amountMsat)),
                 style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                context.formatWalletConversion(amountMsat),
+                style: const TextStyle(fontSize: 12.5),
               ),
             ],
             const SizedBox(height: 12),
@@ -351,7 +369,12 @@ class _SendScreenState extends State<SendScreen> {
     if (fixedAmount) {
       amountMsat = info.amountMsat!;
     } else {
-      final parsed = parseNusanInputToMsat(_offerAmountController.text);
+      // Isian nominal offer variable diketik dalam satuan
+      // tampilan aktif — parse eksak ke msat oleh parser
+      // terpusat (tanpa floating point).
+      final parsed = parseAmountInputToMsat(
+          _offerAmountController.text, UnitController.unit.value,
+          locale: LocaleController.locale.value.languageCode);
       if (parsed == null) {
         setState(() => _error = context.l10n.invalidAmount);
         return;
@@ -372,8 +395,14 @@ class _SendScreenState extends State<SendScreen> {
             Text(context.l10n.confirmPayBody),
             const SizedBox(height: 12),
             Text(
-              context.l10n.sendOfferAmountLine(formatNusan(amountMsat)),
+              context.l10n.sendOfferAmountLine(
+                  context.formatWalletAmount(amountMsat)),
               style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              context.formatWalletConversion(amountMsat),
+              style: const TextStyle(fontSize: 12.5),
             ),
             if (info.description != null) ...[
               const SizedBox(height: 6),
@@ -487,7 +516,8 @@ class _SendScreenState extends State<SendScreen> {
         children: [
           Text(
             context.l10n.sendReserveNote(
-                formatNusan(reserveMsat), formatNusan(sendableMsat)),
+                context.formatWalletAmount(reserveMsat),
+                context.formatWalletAmount(sendableMsat)),
             style:
                 TextStyle(fontSize: 13, color: context.palette.label),
             textAlign: TextAlign.center,
@@ -555,7 +585,8 @@ class _SendScreenState extends State<SendScreen> {
             if (_sendableMsat != null) ...[
               const SizedBox(height: 14),
               Text(
-                context.l10n.sendableLine(formatNusan(_sendableMsat!)),
+                context.l10n
+                    .sendableLine(context.formatWalletAmount(_sendableMsat!)),
                 style: TextStyle(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w600,
@@ -677,22 +708,49 @@ class _SendScreenState extends State<SendScreen> {
                 ),
               ],
             ),
+            // Panel nominal invoice Bolt11 — tampil bila nominal
+            // terbaca dari invoice di kolom kode: jumlah yang akan
+            // dikirim dalam satuan aktif + konversi ke satuan
+            // lawan (baris konversi selalu tampil di kolom kirim).
+            if (_offerInfo == null && _bolt11AmountMsat != null) ...[
+              const SizedBox(height: 20),
+              Text(
+                context.l10n.sendOfferAmountLine(
+                    context.formatWalletAmount(_bolt11AmountMsat!)),
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: context.palette.label),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                context.formatWalletConversion(_bolt11AmountMsat!),
+                style:
+                    TextStyle(fontSize: 12.5, color: context.palette.muted),
+              ),
+            ],
             // Panel offer Bolt12 — hanya tampil bila isi kolom
             // kode terbaca sebagai offer. Nominal tetap cukup
             // ditampilkan; nominal variable butuh kolom isian
             // pembayar (pola kolom nominal layar Terima).
             if (_offerInfo != null) ...[
               const SizedBox(height: 20),
-              if (_offerInfo!.isFixedAmount)
+              if (_offerInfo!.isFixedAmount) ...[
                 Text(
-                  context.l10n
-                      .sendOfferAmountLine(formatNusan(_offerInfo!.amountMsat!)),
+                  context.l10n.sendOfferAmountLine(
+                      context.formatWalletAmount(_offerInfo!.amountMsat!)),
                   style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: context.palette.label),
-                )
-              else ...[
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  context.formatWalletConversion(_offerInfo!.amountMsat!),
+                  style:
+                      TextStyle(fontSize: 12.5, color: context.palette.muted),
+                ),
+              ] else ...[
                 Text(context.l10n.sendOfferVariableHint,
                     style: TextStyle(
                         fontSize: 13, color: context.palette.muted)),
@@ -716,12 +774,32 @@ class _SendScreenState extends State<SendScreen> {
                       borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide.none,
                     ),
-                    suffixText: 'nusan',
+                    suffixText: context.displayUnit.label,
                     suffixStyle: TextStyle(
                         fontSize: 16,
                         color: context.palette.muted,
                         fontWeight: FontWeight.w600),
                   ),
+                ),
+                // Konversi ke satuan lawan dari nominal yang
+                // diketik — tampil hanya bila isian terbaca sah.
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _offerAmountController,
+                  builder: (context, value, _) {
+                    final parsed = parseAmountInputToMsat(value.text,
+                        UnitController.unit.value,
+                        locale:
+                            LocaleController.locale.value.languageCode);
+                    if (parsed == null) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        context.formatWalletConversion(parsed),
+                        style: TextStyle(
+                            fontSize: 12.5, color: context.palette.muted),
+                      ),
+                    );
+                  },
                 ),
               ],
             ],
