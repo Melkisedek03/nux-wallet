@@ -768,6 +768,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeHeldResumed => 'Held order resumed.';
 
   @override
+  String get storeExitHoldTitle => 'Order Not Finished';
+
+  @override
+  String get storeExitHoldBody =>
+      'The order you are putting together is not finished. If you leave now, it will be held automatically and can be resumed any time from the Held list.';
+
+  @override
+  String get storeExitStay => 'Stay Here';
+
+  @override
+  String get storeExitHoldLeave => 'Hold & Exit';
+
+  @override
+  String get storeExitHoldFailed =>
+      'Could not hold the order — staying on this screen so the order is not lost.';
+
+  @override
+  String get storeDraftRestored =>
+      'Your last order draft was restored — pick up right where you left off.';
+
+  @override
   String get storeDeleteHeldTitle => 'Delete Held Order?';
 
   @override

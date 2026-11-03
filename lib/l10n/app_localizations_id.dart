@@ -769,6 +769,27 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeHeldResumed => 'Pesanan ditahan dilanjutkan.';
 
   @override
+  String get storeExitHoldTitle => 'Pesanan Belum Selesai';
+
+  @override
+  String get storeExitHoldBody =>
+      'Pesanan yang sedang disusun belum selesai. Bila keluar sekarang, pesanan ini ditahan otomatis dan bisa dilanjutkan kapan saja dari daftar Ditahan.';
+
+  @override
+  String get storeExitStay => 'Tetap di Sini';
+
+  @override
+  String get storeExitHoldLeave => 'Tahan & Keluar';
+
+  @override
+  String get storeExitHoldFailed =>
+      'Pesanan gagal ditahan — tetap di layar ini supaya pesanan tidak hilang.';
+
+  @override
+  String get storeDraftRestored =>
+      'Draf pesanan terakhir dipulihkan — lanjutkan dari tempat terakhir.';
+
+  @override
   String get storeDeleteHeldTitle => 'Hapus Pesanan Ditahan?';
 
   @override

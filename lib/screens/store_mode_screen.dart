@@ -11,6 +11,7 @@ import '../theme.dart';
 import '../services/lsp_service.dart';
 import '../services/print_service.dart';
 import '../services/store_catalog.dart';
+import '../services/store_draft.dart';
 import '../services/store_hold.dart';
 import '../services/store_order_history.dart';
 import '../services/store_settings.dart';
@@ -84,7 +85,8 @@ class StoreModeScreen extends StatefulWidget {
   State<StoreModeScreen> createState() => _StoreModeScreenState();
 }
 
-class _StoreModeScreenState extends State<StoreModeScreen> {
+class _StoreModeScreenState extends State<StoreModeScreen>
+    with WidgetsBindingObserver {
   // --- Pesanan berjalan ---
   int _keypadRp = 0;
   List<OrderLine> _lines = const [];
@@ -106,6 +108,9 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
   // --- Pesanan ditahan (tamu bayar belakangan) ---
   final _holdStore = HeldOrderStore();
   List<HeldOrder> _heldOrders = const [];
+
+  // --- Draf pesanan (jaring pengaman background) ---
+  final _draftStore = StoreDraftStore();
 
   // --- Katalog (store v2, harga rupiah) ---
   final _catalogStore = StoreCatalogStore();
@@ -150,15 +155,39 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _init();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _celebrationTimer?.cancel();
     _searchController.dispose();
     _freeTitleController.dispose();
     super.dispose();
+  }
+
+  /// Jaring pengaman background (temuan NUX 4 Nov 2026): saat
+  /// aplikasi masuk background (paused — mis. tombol Home
+  /// tertekan tak sengaja) atau hendak dilepas sistem
+  /// (detached), salin pesanan berjalan ke slot draf. Pesanan
+  /// kosong justru MEMBERSIHKAN draf: tidak ada lagi yang perlu
+  /// diselamatkan, dan draf lama tidak boleh bangkit sebagai
+  /// pesanan hantu.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.paused &&
+        state != AppLifecycleState.detached) {
+      return;
+    }
+    if (_lines.isEmpty) {
+      unawaited(_draftStore.clear());
+      return;
+    }
+    unawaited(
+      _draftStore.save(lines: List.of(_lines), orderDiscount: _orderDiscount),
+    );
   }
 
   /// Muat semua keadaan lokal, lalu jalankan migrasi v1 → v2
@@ -202,6 +231,28 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
         ),
       );
     }
+    await _restoreDraftIfAny();
+  }
+
+  /// Pulihkan draf pesanan dari jaring pengaman background
+  /// (temuan NUX 4 Nov 2026): hanya bila pesanan berjalan
+  /// kosong dan draf ada. Draf dikembalikan persis seperti
+  /// semula (baris + diskon order), slotnya dikosongkan, dan
+  /// kasir diberi tahu singkat — kasir tidak boleh menginput
+  /// ulang pesanan yang sudah disusun.
+  Future<void> _restoreDraftIfAny() async {
+    if (_lines.isNotEmpty) return;
+    final draft = await _draftStore.load();
+    if (draft == null || !mounted) return;
+    await _draftStore.clear();
+    if (!mounted) return;
+    setState(() {
+      _lines = List.of(draft.lines);
+      _orderDiscount = draft.orderDiscount;
+    });
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.l10n.storeDraftRestored)));
   }
 
   /// Eksekusi migrasi era satu kali; mengembalikan teks
@@ -687,7 +738,14 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
   /// Bersihkan panel pesanan penuh TANPA perayaan — pola reset
   /// yang sama dengan sesudah penjualan lunas, dipakai sesudah
   /// pesanan ditahan.
+  ///
+  /// Ini CORONG tunggal berakhirnya pesanan berjalan dengan
+  /// disengaja (lunas, dibatalkan/VOID, ditahan manual maupun
+  /// otomatis) — karena itu slot draf background juga
+  /// dibersihkan di sini: pesanan yang sudah berakhir tidak
+  /// boleh bangkit lagi sebagai draf hantu.
   void _resetOrderPanel() {
+    unawaited(_draftStore.clear());
     _lines = const [];
     _orderDiscount = null;
     _keypadRp = 0;
@@ -697,27 +755,82 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
     _freeTitleController.clear();
   }
 
-  /// Tahan pesanan berjalan: parkir apa adanya ke daftar tahan
-  /// persisten, lalu panel dibersihkan untuk pelanggan berikut.
-  Future<void> _holdCurrentOrder() async {
-    if (_lines.isEmpty) return;
-    final now = DateTime.now();
-    final held = HeldOrder(
-      id: '${now.microsecondsSinceEpoch}',
-      heldAt: now,
-      lines: List.of(_lines),
+  /// Inti tahan pesanan — SATU jalur untuk tombol Tahan Pesanan
+  /// manual maupun tahan otomatis saat keluar layar: susun
+  /// entri lewat [buildHeldOrder], simpan ke daftar tahan yang
+  /// sama, lalu bersihkan panel. Mengembalikan true hanya bila
+  /// entri sungguh tersimpan — pagar keluar bergantung padanya:
+  /// simpanan gagal berarti kasir TIDAK boleh keluar.
+  Future<bool> _parkCurrentOrder() async {
+    if (_lines.isEmpty) return false;
+    final held = buildHeldOrder(
+      now: DateTime.now(),
+      lines: _lines,
       orderDiscount: _orderDiscount,
     );
     final next = [..._heldOrders, held];
-    await _holdStore.save(next);
-    if (!mounted) return;
-    setState(() {
-      _heldOrders = next;
-      _resetOrderPanel();
-    });
+    final saved = await _holdStore.saveChecked(next);
+    if (!saved) return false;
+    if (mounted) {
+      setState(() {
+        _heldOrders = next;
+        _resetOrderPanel();
+      });
+    }
+    return true;
+  }
+
+  /// Tahan pesanan berjalan: parkir apa adanya ke daftar tahan
+  /// persisten, lalu panel dibersihkan untuk pelanggan berikut.
+  Future<void> _holdCurrentOrder() async {
+    final parked = await _parkCurrentOrder();
+    if (!parked || !mounted) return;
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(context.l10n.storeHeldSaved)));
+  }
+
+  /// Pagar keluar layar Mode Toko (temuan NUX 4 Nov 2026),
+  /// dipanggil PopScope bila pesanan berjalan terisi: tawarkan
+  /// dialog — "Tetap di Sini" membatalkan keluar (pesanan utuh
+  /// di layar); "Tahan & Keluar" menahan pesanan lewat jalur
+  /// yang sama persis dengan tahan manual, lalu keluar.
+  /// Simpanan tahan yang GAGAL membatalkan keluar: kasir tetap
+  /// di layar dengan pesan, pesanannya tidak hilang.
+  Future<void> _confirmExitWithOpenOrder() async {
+    if (storeExitDecisionFor(_lines) == StoreExitDecision.leaveFreely) {
+      Navigator.of(context).pop();
+      return;
+    }
+    final l10n = context.l10n;
+    final holdAndLeave = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ctx.palette.card,
+        title: Text(l10n.storeExitHoldTitle),
+        content: Text(l10n.storeExitHoldBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.storeExitStay),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.storeExitHoldLeave),
+          ),
+        ],
+      ),
+    );
+    if (holdAndLeave != true || !mounted) return;
+    final parked = await _parkCurrentOrder();
+    if (!mounted) return;
+    if (parked) {
+      Navigator.of(context).pop();
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.storeExitHoldFailed)));
+    }
   }
 
   /// Ringkasan satu entri tahan untuk daftar & dialog: label
@@ -1552,13 +1665,27 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(context.l10n.storeMode),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: LayoutBuilder(
+    // Pagar keluar (temuan NUX 4 Nov 2026): selama pesanan
+    // berjalan terisi, pop rute ini — tombol back AppBar maupun
+    // back sistem — ditahan PopScope dan dialihkan ke dialog
+    // tahan-otomatis (_confirmExitWithOpenOrder). Pesanan kosong
+    // keluar bebas tanpa dialog. Rute di ATAS layar ini (halaman
+    // pembayaran, pemindai, dll.) tidak terpengaruh: pop mereka
+    // tidak menyentuh pagar rute ini, jadi kembali dari halaman
+    // pembayaran ke Mode Toko tidak pernah memicu dialog.
+    return PopScope(
+      canPop: _lines.isEmpty,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        unawaited(_confirmExitWithOpenOrder());
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(context.l10n.storeMode),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+        ),
+        body: LayoutBuilder(
         builder: (context, constraints) {
           if (storeModeUsesTwoPanels(constraints.maxWidth)) {
             return Row(
@@ -1594,6 +1721,7 @@ class _StoreModeScreenState extends State<StoreModeScreen> {
             ),
           );
         },
+        ),
       ),
     );
   }

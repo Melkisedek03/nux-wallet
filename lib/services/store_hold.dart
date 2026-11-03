@@ -93,6 +93,23 @@ class HeldOrder {
   );
 }
 
+/// Susun satu entri tahan dari pesanan berjalan — SATU jalur
+/// susun untuk tahan manual (tombol Tahan Pesanan) maupun tahan
+/// otomatis saat keluar layar Mode Toko (temuan NUX 4 Nov
+/// 2026), supaya format & semantik keduanya tidak pernah
+/// berbeda: baris disalin apa adanya (diskon baris + catatan
+/// ikut), diskon order dibawa, id dari jam mikrodetik [now].
+HeldOrder buildHeldOrder({
+  required DateTime now,
+  required List<OrderLine> lines,
+  required Discount? orderDiscount,
+}) => HeldOrder(
+  id: '${now.microsecondsSinceEpoch}',
+  heldAt: now,
+  lines: List.of(lines),
+  orderDiscount: orderDiscount,
+);
+
 bool _heldLinesEqual(List<OrderLine> a, List<OrderLine> b) {
   if (a.length != b.length) return false;
   for (var i = 0; i < a.length; i++) {
@@ -145,14 +162,25 @@ class HeldOrderStore {
   }
 
   Future<void> save(List<HeldOrder> orders) async {
+    // Abaikan hasil — daftar tahan di layar tetap yang berlaku
+    // sesi ini (perilaku lama jalur manual).
+    await saveChecked(orders);
+  }
+
+  /// Seperti [save] tetapi MELAPORKAN keberhasilan tulis.
+  /// Dipakai pagar keluar Mode Toko (tahan otomatis): bila
+  /// simpanan gagal, kasir TIDAK boleh keluar — pesanan yang
+  /// sedang disusun akan hilang. Batas [maxRecords] entri
+  /// terbaru berlaku sama.
+  Future<bool> saveChecked(List<HeldOrder> orders) async {
     try {
       final trimmed = orders.length > maxRecords
           ? orders.sublist(orders.length - maxRecords)
           : orders;
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(storageKey, encodeHeldOrders(trimmed));
+      return await prefs.setString(storageKey, encodeHeldOrders(trimmed));
     } catch (_) {
-      // Abaikan — daftar tahan di layar tetap yang berlaku sesi ini.
+      return false;
     }
   }
 }

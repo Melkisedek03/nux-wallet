@@ -528,3 +528,22 @@ class StoreSessionSummary {
   @override
   int get hashCode => Object.hash(saleCount, totalRp);
 }
+
+/// Keputusan keluar dari layar Mode Toko (temuan NUX 4 Nov
+/// 2026): pesanan yang sedang disusun TIDAK BOLEH hilang hanya
+/// karena kasir keluar ke Profil. Keputusan murninya di sini;
+/// layar yang menampilkan dialog & mengeksekusi tahan-otomatis.
+enum StoreExitDecision {
+  /// Pesanan berjalan kosong — keluar bebas, tanpa dialog.
+  leaveFreely,
+
+  /// Pesanan berjalan terisi — keluar wajib lewat dialog
+  /// konfirmasi: pesanan ditahan otomatis dulu, baru keluar.
+  confirmHoldAndLeave,
+}
+
+/// Keputusan keluar untuk daftar baris pesanan [lines] saat ini.
+StoreExitDecision storeExitDecisionFor(List<OrderLine> lines) =>
+    lines.isEmpty
+        ? StoreExitDecision.leaveFreely
+        : StoreExitDecision.confirmHoldAndLeave;

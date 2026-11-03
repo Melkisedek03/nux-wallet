@@ -341,6 +341,12 @@
   },
   "storeHeldResumeBlocked": "Pesanan berjalan belum kosong — tahan atau selesaikan dulu pesanan yang sedang disusun.",
   "storeHeldResumed": "Pesanan ditahan dilanjutkan.",
+  "storeExitHoldTitle": "Pesanan Belum Selesai",
+  "storeExitHoldBody": "Pesanan yang sedang disusun belum selesai. Bila keluar sekarang, pesanan ini ditahan otomatis dan bisa dilanjutkan kapan saja dari daftar Ditahan.",
+  "storeExitStay": "Tetap di Sini",
+  "storeExitHoldLeave": "Tahan & Keluar",
+  "storeExitHoldFailed": "Pesanan gagal ditahan — tetap di layar ini supaya pesanan tidak hilang.",
+  "storeDraftRestored": "Draf pesanan terakhir dipulihkan — lanjutkan dari tempat terakhir.",
   "storeDeleteHeldTitle": "Hapus Pesanan Ditahan?",
   "storeDeleteHeldMessage": "Hapus pesanan ditahan {summary}? Tindakan ini tidak bisa dibatalkan.",
   "@storeDeleteHeldMessage": {

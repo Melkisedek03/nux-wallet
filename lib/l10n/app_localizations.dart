@@ -1466,6 +1466,42 @@ abstract class AppLocalizations {
   /// **'Pesanan ditahan dilanjutkan.'**
   String get storeHeldResumed;
 
+  /// No description provided for @storeExitHoldTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Pesanan Belum Selesai'**
+  String get storeExitHoldTitle;
+
+  /// No description provided for @storeExitHoldBody.
+  ///
+  /// In id, this message translates to:
+  /// **'Pesanan yang sedang disusun belum selesai. Bila keluar sekarang, pesanan ini ditahan otomatis dan bisa dilanjutkan kapan saja dari daftar Ditahan.'**
+  String get storeExitHoldBody;
+
+  /// No description provided for @storeExitStay.
+  ///
+  /// In id, this message translates to:
+  /// **'Tetap di Sini'**
+  String get storeExitStay;
+
+  /// No description provided for @storeExitHoldLeave.
+  ///
+  /// In id, this message translates to:
+  /// **'Tahan & Keluar'**
+  String get storeExitHoldLeave;
+
+  /// No description provided for @storeExitHoldFailed.
+  ///
+  /// In id, this message translates to:
+  /// **'Pesanan gagal ditahan — tetap di layar ini supaya pesanan tidak hilang.'**
+  String get storeExitHoldFailed;
+
+  /// No description provided for @storeDraftRestored.
+  ///
+  /// In id, this message translates to:
+  /// **'Draf pesanan terakhir dipulihkan — lanjutkan dari tempat terakhir.'**
+  String get storeDraftRestored;
+
   /// No description provided for @storeDeleteHeldTitle.
   ///
   /// In id, this message translates to:

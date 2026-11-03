@@ -341,6 +341,12 @@
   },
   "storeHeldResumeBlocked": "The current order is not empty — hold or finish the order being built first.",
   "storeHeldResumed": "Held order resumed.",
+  "storeExitHoldTitle": "Order Not Finished",
+  "storeExitHoldBody": "The order you are putting together is not finished. If you leave now, it will be held automatically and can be resumed any time from the Held list.",
+  "storeExitStay": "Stay Here",
+  "storeExitHoldLeave": "Hold & Exit",
+  "storeExitHoldFailed": "Could not hold the order — staying on this screen so the order is not lost.",
+  "storeDraftRestored": "Your last order draft was restored — pick up right where you left off.",
   "storeDeleteHeldTitle": "Delete Held Order?",
   "storeDeleteHeldMessage": "Delete the held order {summary}? This can't be undone.",
   "@storeDeleteHeldMessage": {
