@@ -17,6 +17,7 @@
   "splashTagline": "Your money, your control.",
   "bootFailedTitle": "Failed to connect node",
   "bootFailedRetry": "Try again",
+  "bootOfflineButton": "Continue without internet",
   "bootGenericError": "Something went wrong while starting the wallet.",
   "lspNodeIdMissing": "lspNodeId is not set in lib/config.dart — ask the operator for the LSP node id.",
   "seedCorrupt": "Seed file corrupted (length {length}, must be 64). Delete {path} to regenerate (OLD FUNDS WILL BE LOST).",

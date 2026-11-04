@@ -149,6 +149,14 @@ class _HomeScreenState extends State<HomeScreen>
   /// Penyegar berkala dashboard selama aplikasi terbuka.
   Timer? _pollTimer;
 
+  /// Heartbeat deteksi internet selama sesi boot offline.
+  Timer? _offlineWatchTimer;
+
+  /// Jumlah probe heartbeat sukses berurutan — restart node ke mode
+  /// normal baru dilakukan setelah dua sukses berurutan supaya
+  /// jaringan yang naik-turun tidak mengocok node.
+  int _probeSuccessStreak = 0;
+
   @override
   void initState() {
     super.initState();
@@ -159,6 +167,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void dispose() {
     _pollTimer?.cancel();
+    _offlineWatchTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -369,7 +378,7 @@ class _HomeScreenState extends State<HomeScreen>
   /// Dompet lama (seed ada, frasa tidak ada) ditandai legacy.
   /// CATATAN MVP: berkas disimpan sebagai file biasa. Untuk produksi,
   /// pindah ke flutter_secure_storage (Keychain/Keystore).
-  Future<void> _boot() async {
+  Future<void> _boot({bool offlineMode = false}) async {
     try {
       // Profil LSP aktif: pilihan user yang tersimpan bila sah dan
       // jaringannya cocok, selain itu profil bawaan dari AppConfig.
@@ -459,9 +468,11 @@ class _HomeScreenState extends State<HomeScreen>
         lspToken: lspProfile.lspToken,
         electrumUrl: lspProfile.electrumUrl,
         isTestnet: lspProfile.isTestnet,
+        offlineMode: offlineMode,
       );
       await _refreshDashboard();
       if (mounted) setState(() => _booting = false);
+      _aturHeartbeatOffline(offlineMode);
       // Segarkan berkala selama aplikasi terbuka: saldo + riwayat
       // selalu mutakhir, dan koin masuk terdeteksi untuk peringatan
       // bunyi + getar (lihat _refreshPayments).
@@ -499,6 +510,37 @@ class _HomeScreenState extends State<HomeScreen>
         });
       }
     }
+  }
+
+  /// Kelola heartbeat deteksi internet setelah boot berhasil.
+  ///
+  /// Hanya aktif selama sesi boot offline. Setiap 20 detik host LSP
+  /// di-probe lewat resolusi DNS; dua sukses berurutan berarti
+  /// internet kemungkinan sudah kembali, jadi node di-restart DI
+  /// DALAM aplikasi ke mode normal (LSPS2 aktif lagi) — user tidak
+  /// perlu menutup-buka aplikasi. Boot normal mematikan heartbeat.
+  void _aturHeartbeatOffline(bool offlineMode) {
+    _offlineWatchTimer?.cancel();
+    _offlineWatchTimer = null;
+    _probeSuccessStreak = 0;
+    if (!offlineMode) return;
+    _offlineWatchTimer =
+        Timer.periodic(const Duration(seconds: 20), (_) async {
+      if (!mounted || _booting) return;
+      final reachable = await lspService.probeLspReachable();
+      if (!mounted) return;
+      if (!reachable) {
+        _probeSuccessStreak = 0;
+        return;
+      }
+      _probeSuccessStreak++;
+      if (_probeSuccessStreak < 2) return;
+      _offlineWatchTimer?.cancel();
+      _offlineWatchTimer = null;
+      if (mounted) setState(() => _booting = true);
+      await lspService.stop();
+      await _boot();
+    });
   }
 
   /// Bagikan berkas log node jaringan aktif (ldk_node.log) lewat share
@@ -804,6 +846,31 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                   child: Text(context.l10n.bootFailedRetry),
                 ),
+                // Kondisi ekstrem tanpa internet (spike offline,
+                // testnet saja): boot ulang dalam mode offline — node
+                // berjalan tanpa LSP/LSPS2 supaya peering lokal dan
+                // pembayaran lewat channel yang sudah ada tetap bisa.
+                if (AppConfig.isTestnet) ...[
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: () {
+                      setState(() {
+                        _booting = true;
+                        _bootError = null;
+                      });
+                      _boot(offlineMode: true);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF10B981),
+                      side: const BorderSide(color: Color(0xFF10B981)),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Text(context.l10n.bootOfflineButton),
+                  ),
+                ],
               ],
             ),
           ),

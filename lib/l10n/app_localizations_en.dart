@@ -62,6 +62,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bootFailedRetry => 'Try again';
 
   @override
+  String get bootOfflineButton => 'Continue without internet';
+
+  @override
   String get bootGenericError =>
       'Something went wrong while starting the wallet.';
 
