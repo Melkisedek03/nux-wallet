@@ -209,6 +209,53 @@ class LspService {
     return _node!.listPeers();
   }
 
+  /// Buka channel privat (tidak diumumkan) ke peer [nodeIdHex]
+  /// sebesar [amountSats] nusan, didanai dari dompet on-chain
+  /// internal node. Alamat [host]:[port] hanya dipakai ldk-node
+  /// untuk menyambung bila peer belum tersambung; bila koneksi
+  /// peer sudah berdiri (mis. lewat jembatan offline), alamat
+  /// tidak didial dan channel dibuka di atas koneksi yang ada.
+  /// Mengembalikan ID channel sementara dari node.
+  Future<UserChannelId> openChannelToPeer(
+    String nodeIdHex,
+    String host,
+    int port,
+    BigInt amountSats,
+  ) async {
+    _ensureRunning();
+    final parts = host.split('.').map(int.parse).toList();
+    if (parts.length != 4 || parts.any((p) => p < 0 || p > 255)) {
+      throw ArgumentError('Host harus IPv4 dotted: "$host"');
+    }
+    return await _node!.openChannel(
+      nodeId: PublicKey(hex: nodeIdHex),
+      socketAddress: SocketAddress.tcpIpV4(
+        addr: U8Array4(Uint8List.fromList(parts)),
+        port: port,
+      ),
+      channelAmountSats: amountSats,
+    );
+  }
+
+  /// Alamat terima on-chain dompet internal node (SegWit bech32,
+  /// diturunkan dari seed dompet yang sama, jalur BIP84). Inilah
+  /// alamat yang diisi dana untuk mendanai pembukaan channel
+  /// manual seperti [openChannelToPeer].
+  Future<String> onchainAddress() async {
+    _ensureRunning();
+    final onchain = await FfiNode.onChainPayment(ptr: _node!);
+    final address = await onchain.newAddress();
+    return address.s;
+  }
+
+  /// Saldo on-chain internal node yang bisa dibelanjakan saat ini
+  /// (nusan utuh) — dana yang tersedia untuk mendanai channel.
+  Future<BigInt> spendableOnchainBalanceSats() async {
+    _ensureRunning();
+    final balances = await _node!.listBalances();
+    return balances.spendableOnchainBalanceSats;
+  }
+
   /// Buat offer Bolt12 statis: nominal bebas (ditentukan pembayar)
   /// dan TANPA kedaluwarsa — satu string `lno1…` yang bisa dibayar
   /// berulang kali, fondasi kode bayar Mode Toko.

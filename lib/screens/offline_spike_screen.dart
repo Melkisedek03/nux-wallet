@@ -4,12 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ldk_node/src/generated/api/types.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../config.dart';
 import '../l10n/app_localizations.dart';
 import '../locale_controller.dart';
 import '../services/lsp_service.dart';
 import '../services/offline_bridge.dart';
+import '../services/offline_spike_utils.dart';
 import '../theme.dart';
+import 'scan_screen.dart';
+import '../utils/format.dart';
 
 /// Layar Uji Offline Lightning (spike tahap 1) — membuktikan dua
 /// node ELNUX bisa tersambung sebagai peer lewat jembatan
@@ -25,6 +31,14 @@ import '../theme.dart';
 /// 4. Bukti keberhasilan: daftar Peer Lightning di kedua HP
 ///    menampilkan pihak seberang berstatus Terhubung.
 ///
+/// Tahap 2 menambah: penyambungan node dengan coba-ulang otomatis
+/// dan ingatan peer seberang, kartu Channel (alamat + saldo
+/// on-chain dompet internal untuk provisioning, buka channel
+/// langsung ke peer seberang dari peran mana pun, daftar channel
+/// langsung beserta konfirmasinya), dan kartu Pembayaran Uji
+/// (invoice polos + bayar) untuk membuktikan pembayaran Lightning
+/// saat kedua HP offline penuh.
+///
 /// Layar ini eksperimental dan hanya berguna di testnet; ia tidak
 /// mengubah alur dompet normal sama sekali.
 class OfflineSpikeScreen extends StatefulWidget {
@@ -37,13 +51,26 @@ class OfflineSpikeScreen extends StatefulWidget {
 }
 
 class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
+  static const String _rememberedPeerKey = 'offline_spike_peer_id';
+
   late final OfflineBridgeService _bridge;
   final _hostNodeIdController = TextEditingController();
+  final _channelAmountController = TextEditingController();
+  final _invoiceAmountController = TextEditingController();
+  final _payInvoiceController = TextEditingController();
   final List<String> _log = [];
   String? _ownNodeId;
   List<PeerDetails> _peers = const [];
+  List<ChannelDetails> _channels = const [];
+  String? _rememberedPeerId;
+  String? _onchainAddress;
+  BigInt? _onchainSats;
+  String? _createdInvoice;
   Timer? _peerTimer;
   bool _connectingNode = false;
+  bool _openingChannel = false;
+  bool _creatingInvoice = false;
+  bool _paying = false;
 
   @override
   void initState() {
@@ -55,11 +82,13 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
       onLog: _addLog,
     );
     _loadOwnNodeId();
+    _loadRememberedPeer();
+    _loadOnchain();
     _refreshPeers();
-    _peerTimer = Timer.periodic(
-      const Duration(seconds: 3),
-      (_) => _refreshPeers(),
-    );
+    _peerTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      _refreshPeers();
+      _refreshChannels();
+    });
   }
 
   @override
@@ -67,6 +96,9 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
     _peerTimer?.cancel();
     _bridge.stop();
     _hostNodeIdController.dispose();
+    _channelAmountController.dispose();
+    _invoiceAmountController.dispose();
+    _payInvoiceController.dispose();
     super.dispose();
   }
 
@@ -96,10 +128,83 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
     try {
       final peers = await widget.lspService.listPeerDetails();
       if (mounted) setState(() => _peers = peers);
+      // Sisi host tidak pernah menempel ID tamu; pelajari ID peer
+      // seberang dari daftar peer (satu-satunya peer tersambung
+      // yang bukan LSP) lalu ingat untuk sesi berikutnya.
+      final detected = bridgeCounterpartId(peers, AppConfig.lspNodeId);
+      if (detected != null && detected != _rememberedPeerId) {
+        await _rememberPeer(detected);
+      }
     } catch (_) {
       // Node bisa berhenti di tengah jalan; daftar terakhir
       // dibiarkan apa adanya.
     }
+  }
+
+  Future<void> _loadRememberedPeer() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_rememberedPeerKey);
+    if (saved == null || !mounted) return;
+    setState(() => _rememberedPeerId = saved);
+    if (_hostNodeIdController.text.trim().isEmpty) {
+      _hostNodeIdController.text = saved;
+    }
+  }
+
+  Future<void> _rememberPeer(String nodeIdHex) async {
+    if (mounted) setState(() => _rememberedPeerId = nodeIdHex);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_rememberedPeerKey, nodeIdHex);
+  }
+
+  /// Alamat + saldo on-chain dompet internal node untuk kartu
+  /// Channel: alamat diambil sekali per kunjungan layar (setiap
+  /// panggilan newAddress menurunkan alamat baru), saldo dibaca
+  /// ulang di _refreshChannels.
+  Future<void> _loadOnchain() async {
+    if (!widget.lspService.isRunning) return;
+    try {
+      final address = await widget.lspService.onchainAddress();
+      final sats = await widget.lspService.spendableOnchainBalanceSats();
+      if (mounted) {
+        setState(() {
+          _onchainAddress = address;
+          _onchainSats = sats;
+        });
+      }
+    } catch (e) {
+      _addLog('Gagal membaca dompet on-chain internal: $e');
+    }
+  }
+
+  Future<void> _refreshChannels() async {
+    if (!widget.lspService.isRunning) return;
+    try {
+      final all = await widget.lspService.listChannels();
+      final sats = await widget.lspService.spendableOnchainBalanceSats();
+      if (mounted) {
+        setState(() {
+          _channels = directChannels(all, AppConfig.lspNodeId);
+          _onchainSats = sats;
+        });
+      }
+    } catch (_) {
+      // Sama seperti daftar peer: diamkan nilai terakhir.
+    }
+  }
+
+  /// Peer tujuan untuk buka channel: ID yang diketik/diingat lebih
+  /// dulu, lalu peer jembatan yang terdeteksi dari daftar peer.
+  String? get _targetPeerId {
+    final entered = _hostNodeIdController.text.trim();
+    if (entered.length == 66) return entered;
+    return _rememberedPeerId ??
+        bridgeCounterpartId(_peers, AppConfig.lspNodeId);
+  }
+
+  bool _peerConnected(String nodeIdHex) {
+    final id = nodeIdHex.toLowerCase();
+    return _peers.any((p) => p.nodeId.hex.toLowerCase() == id && p.isConnected);
   }
 
   /// Nama yang diiklankan/dicari lewat Nearby: cukup pendek untuk
@@ -144,6 +249,27 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
     await _bridge.startDiscovery(_localName);
   }
 
+  /// Pindai QR ID node host dari HP seberang (kartu ID node di
+  /// layarnya menampilkan QR-nya) dan isi kolom ID tujuan.
+  Future<void> _scanHostNodeId() async {
+    final result = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const ScanScreen()),
+    );
+    if (result == null || !mounted) return;
+    final hex = result.trim();
+    if (hex.length != 66) {
+      _addLog('Hasil pindai bukan ID node (harus 66 karakter hex).');
+      return;
+    }
+    setState(() => _hostNodeIdController.text = hex);
+    _addLog('ID node host terisi dari pindaian QR.');
+  }
+
+  /// Sambungkan node ke peer host dengan coba-ulang: kegagalan
+  /// tahap 1 yang paling sering adalah connect ditekan sebelum
+  /// tautan jembatan benar-benar siap, jadi percobaan diulang
+  /// sampai peer tampil tersambung (maks. 10 kali, jeda 2 detik).
   Future<void> _connectNode() async {
     final hex = _hostNodeIdController.text.trim();
     if (hex.length != 66) {
@@ -152,17 +278,139 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
     }
     setState(() => _connectingNode = true);
     try {
-      await widget.lspService.connectToPeer(
-        hex,
-        '127.0.0.1',
-        OfflineBridgeService.guestBridgePort,
-      );
-      _addLog('Perintah connect terkirim; menunggu handshake peer…');
-    } catch (e) {
-      _addLog('Connect node gagal: $e');
+      for (var attempt = 1; attempt <= 10; attempt++) {
+        try {
+          await widget.lspService.connectToPeer(
+            hex,
+            '127.0.0.1',
+            OfflineBridgeService.guestBridgePort,
+          );
+        } catch (e) {
+          _addLog('Percobaan connect $attempt gagal: $e');
+        }
+        await Future<void>.delayed(const Duration(seconds: 2));
+        await _refreshPeers();
+        if (_peerConnected(hex)) {
+          _addLog('Peer Lightning tersambung.');
+          await _rememberPeer(hex);
+          return;
+        }
+        _addLog('Percobaan connect $attempt: peer belum tersambung…');
+      }
+      _addLog('Connect node gagal setelah 10 percobaan.');
     } finally {
       if (mounted) setState(() => _connectingNode = false);
     }
+  }
+
+  Future<void> _openChannel() async {
+    final target = _targetPeerId;
+    if (target == null || !_peerConnected(target)) {
+      _addLog('Peer seberang belum tersambung; buka channel ditunda.');
+      return;
+    }
+    final msat = parseNusanToMsat(_channelAmountController.text);
+    if (msat == null || msat <= BigInt.zero || msat % BigInt.from(1000) != BigInt.zero) {
+      _addLog('Jumlah channel tidak valid (nusan bulat, tanpa pecahan).');
+      return;
+    }
+    final sats = msat ~/ BigInt.from(1000);
+    final spendable = _onchainSats;
+    if (spendable != null && sats > spendable) {
+      _addLog(
+        'Saldo on-chain internal tidak cukup: butuh ${formatNusan(msat)} nusan, tersedia ${formatNusan(spendable * BigInt.from(1000))} nusan.',
+      );
+      return;
+    }
+    setState(() => _openingChannel = true);
+    try {
+      await widget.lspService.openChannelToPeer(
+        target,
+        '127.0.0.1',
+        OfflineBridgeService.guestBridgePort,
+        sats,
+      );
+      _addLog(
+        'Pembukaan channel ${formatNusan(msat)} nusan terkirim; menunggu konfirmasi on-chain…',
+      );
+      await _refreshChannels();
+    } catch (e) {
+      _addLog('Buka channel gagal: $e');
+    } finally {
+      if (mounted) setState(() => _openingChannel = false);
+    }
+  }
+
+  Future<void> _createInvoice() async {
+    final msat = parseNusanToMsat(_invoiceAmountController.text);
+    if (msat == null || msat <= BigInt.zero) {
+      _addLog('Nominal invoice tidak valid.');
+      return;
+    }
+    setState(() => _creatingInvoice = true);
+    try {
+      final invoice = await widget.lspService.createRegularInvoice(
+        amountMsat: msat,
+        description: 'ELNUX offline test',
+      );
+      if (mounted) setState(() => _createdInvoice = invoice);
+      _addLog('Invoice uji ${formatNusan(msat)} nusan dibuat.');
+    } catch (e) {
+      _addLog('Buat invoice gagal: $e');
+    } finally {
+      if (mounted) setState(() => _creatingInvoice = false);
+    }
+  }
+
+  Future<void> _payInvoice() async {
+    final text = _payInvoiceController.text.trim();
+    if (text.isEmpty) {
+      _addLog('Tempel invoice dulu sebelum membayar.');
+      return;
+    }
+    setState(() => _paying = true);
+    try {
+      final id = await widget.lspService.payInvoice(text);
+      _addLog('Pembayaran terkirim; menunggu hasil akhir…');
+      final status = await widget.lspService.waitForPaymentOutcome(
+        id,
+        timeout: const Duration(seconds: 45),
+      );
+      if (status == PaymentStatus.succeeded) {
+        _addLog('Pembayaran uji SUKSES.');
+      } else {
+        _addLog('Pembayaran uji belum berhasil (status: $status).');
+      }
+      await _refreshChannels();
+    } catch (e) {
+      _addLog('Bayar invoice gagal: $e');
+    } finally {
+      if (mounted) setState(() => _paying = false);
+    }
+  }
+
+  bool get _canOpenChannel {
+    final target = _targetPeerId;
+    return target != null && _peerConnected(target);
+  }
+
+  static String _shortId(String hex) {
+    if (hex.length <= 20) return hex;
+    return '${hex.substring(0, 10)}…${hex.substring(hex.length - 6)}';
+  }
+
+  String _channelStatus(AppLocalizations l10n, ChannelDetails ch) {
+    if (!ch.isChannelReady) {
+      final conf = ch.confirmations;
+      final req = ch.confirmationsRequired;
+      if (conf != null && req != null) {
+        return '${l10n.offlineChannelPending} • ${l10n.offlineConfirmations} $conf/$req';
+      }
+      return l10n.offlineChannelPending;
+    }
+    return ch.isUsable
+        ? l10n.offlineChannelReady
+        : l10n.offlineChannelReadyPeerDown;
   }
 
   String _phaseLabel(AppLocalizations l10n) {
@@ -241,6 +489,28 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
                       },
                       icon: const Icon(Icons.copy_rounded, size: 16),
                       label: Text(l10n.offlineCopy),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // QR ID node sendiri: HP seberang memindainya untuk
+                  // mengisi kolom ID tujuan tanpa salin-tempel. ID
+                  // node memang wajib diketahui sebelum connect —
+                  // handshake Noise Lightning mengautentikasi peer
+                  // dari ID ini, jadi datanya tidak bisa dibuang,
+                  // hanya cara memindahkannya yang dipermudah.
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: QrImageView(
+                        data: _ownNodeId!,
+                        version: QrVersions.auto,
+                        size: 180,
+                        backgroundColor: Colors.white,
+                      ),
                     ),
                   ),
                 ],
@@ -332,6 +602,11 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
                       labelText: l10n.offlineHostNodeIdLabel,
                       hintText: l10n.offlineHostNodeIdHint,
                       border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.qr_code_scanner_rounded),
+                        tooltip: l10n.offlineScan,
+                        onPressed: _scanHostNodeId,
+                      ),
                     ),
                     style: const TextStyle(
                       fontSize: 11.5,
@@ -405,6 +680,203 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
                       ],
                     ),
                   ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          _card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.offlineChannelTitle,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '${l10n.offlineTargetPeer}: ${_targetPeerId == null ? l10n.offlineNoTargetPeer : _shortId(_targetPeerId!)}',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: context.palette.muted,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  l10n.offlineOnchainAddress,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                SelectableText(
+                  _onchainAddress ?? '—',
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '${l10n.offlineOnchainBalance}: ${_onchainSats == null ? '—' : '${formatNusan(_onchainSats! * BigInt.from(1000))} nusan'}',
+                  style: const TextStyle(fontSize: 12.5),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _channelAmountController,
+                  decoration: InputDecoration(
+                    labelText: l10n.offlineChannelAmount,
+                    border: const OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: (_openingChannel || !_canOpenChannel)
+                        ? null
+                        : _openChannel,
+                    child: Text(l10n.offlineOpenChannel),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (_channels.isEmpty)
+                  Text(
+                    l10n.offlineNoDirectChannels,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: context.palette.muted,
+                    ),
+                  ),
+                for (final ch in _channels)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.circle,
+                              size: 9,
+                              color: ch.isUsable
+                                  ? const Color(0xFF34D399)
+                                  : const Color(0xFFF59E0B),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _shortId(ch.counterpartyNodeId.hex),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontFamily: 'monospace',
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _channelStatus(l10n, ch),
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${l10n.offlineChannelValue} ${formatNusan(ch.channelValueSats * BigInt.from(1000))} • ${l10n.offlineOutbound} ${formatNusan(ch.outboundCapacityMsat)} • ${l10n.offlineInbound} ${formatNusan(ch.inboundCapacityMsat)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: context.palette.muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          _card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.offlinePayTestTitle,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _invoiceAmountController,
+                  decoration: InputDecoration(
+                    labelText: l10n.offlineInvoiceAmount,
+                    border: const OutlineInputBorder(),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _creatingInvoice ? null : _createInvoice,
+                    child: Text(l10n.offlineCreateInvoice),
+                  ),
+                ),
+                if (_createdInvoice != null) ...[
+                  const SizedBox(height: 10),
+                  SelectableText(
+                    _createdInvoice!,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: () async {
+                        await Clipboard.setData(
+                          ClipboardData(text: _createdInvoice!),
+                        );
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(l10n.offlineCopied)),
+                        );
+                      },
+                      icon: const Icon(Icons.copy_rounded, size: 16),
+                      label: Text(l10n.offlineCopy),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _payInvoiceController,
+                  decoration: InputDecoration(
+                    labelText: l10n.offlineInvoiceToPay,
+                    border: const OutlineInputBorder(),
+                  ),
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontFamily: 'monospace',
+                  ),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _paying ? null : _payInvoice,
+                    child: Text(l10n.offlinePayNow),
+                  ),
+                ),
               ],
             ),
           ),
