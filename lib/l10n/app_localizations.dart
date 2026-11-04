@@ -2695,6 +2695,168 @@ abstract class AppLocalizations {
   /// In id, this message translates to:
   /// **'Poin Ditukar'**
   String get storeReportPointsRedeemed;
+
+  /// No description provided for @offlineSpike.
+  ///
+  /// In id, this message translates to:
+  /// **'Uji Offline Lightning'**
+  String get offlineSpike;
+
+  /// No description provided for @offlineSpikeSubtitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Sambung dua HP lewat Bluetooth (eksperimental)'**
+  String get offlineSpikeSubtitle;
+
+  /// No description provided for @offlineIntro.
+  ///
+  /// In id, this message translates to:
+  /// **'Uji tahap 1: dua node ELNUX tersambung sebagai peer lewat jembatan Bluetooth, tanpa internet. Channel dan pembayaran menyusul di tahap berikutnya. Nyalakan Bluetooth dan layanan Lokasi di kedua HP sebelum mulai.'**
+  String get offlineIntro;
+
+  /// No description provided for @offlineOwnNodeId.
+  ///
+  /// In id, this message translates to:
+  /// **'ID Node HP Ini'**
+  String get offlineOwnNodeId;
+
+  /// No description provided for @offlineNodeNotRunning.
+  ///
+  /// In id, this message translates to:
+  /// **'Node belum berjalan'**
+  String get offlineNodeNotRunning;
+
+  /// No description provided for @offlineCopy.
+  ///
+  /// In id, this message translates to:
+  /// **'Salin'**
+  String get offlineCopy;
+
+  /// No description provided for @offlineCopied.
+  ///
+  /// In id, this message translates to:
+  /// **'ID node tersalin'**
+  String get offlineCopied;
+
+  /// No description provided for @offlineChooseRole.
+  ///
+  /// In id, this message translates to:
+  /// **'Peran HP Ini'**
+  String get offlineChooseRole;
+
+  /// No description provided for @offlineRoleHost.
+  ///
+  /// In id, this message translates to:
+  /// **'Host (menunggu tamu)'**
+  String get offlineRoleHost;
+
+  /// No description provided for @offlineRoleGuest.
+  ///
+  /// In id, this message translates to:
+  /// **'Tamu (mencari host)'**
+  String get offlineRoleGuest;
+
+  /// No description provided for @offlineStop.
+  ///
+  /// In id, this message translates to:
+  /// **'Berhenti'**
+  String get offlineStop;
+
+  /// No description provided for @offlineDiscoveredHosts.
+  ///
+  /// In id, this message translates to:
+  /// **'Host Ditemukan'**
+  String get offlineDiscoveredHosts;
+
+  /// No description provided for @offlineConnect.
+  ///
+  /// In id, this message translates to:
+  /// **'Sambung'**
+  String get offlineConnect;
+
+  /// No description provided for @offlineHostNodeIdLabel.
+  ///
+  /// In id, this message translates to:
+  /// **'ID Node Host'**
+  String get offlineHostNodeIdLabel;
+
+  /// No description provided for @offlineHostNodeIdHint.
+  ///
+  /// In id, this message translates to:
+  /// **'Tempel ID node dari HP host'**
+  String get offlineHostNodeIdHint;
+
+  /// No description provided for @offlineConnectNode.
+  ///
+  /// In id, this message translates to:
+  /// **'Sambungkan Node Lightning'**
+  String get offlineConnectNode;
+
+  /// No description provided for @offlinePeersTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Peer Lightning'**
+  String get offlinePeersTitle;
+
+  /// No description provided for @offlinePeerConnected.
+  ///
+  /// In id, this message translates to:
+  /// **'Terhubung'**
+  String get offlinePeerConnected;
+
+  /// No description provided for @offlinePeerDisconnected.
+  ///
+  /// In id, this message translates to:
+  /// **'Putus'**
+  String get offlinePeerDisconnected;
+
+  /// No description provided for @offlineNoPeers.
+  ///
+  /// In id, this message translates to:
+  /// **'Belum ada peer.'**
+  String get offlineNoPeers;
+
+  /// No description provided for @offlineLogTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Catatan Uji'**
+  String get offlineLogTitle;
+
+  /// No description provided for @offlineStatusIdle.
+  ///
+  /// In id, this message translates to:
+  /// **'Belum mulai'**
+  String get offlineStatusIdle;
+
+  /// No description provided for @offlineStatusAdvertising.
+  ///
+  /// In id, this message translates to:
+  /// **'Mengiklankan sebagai host…'**
+  String get offlineStatusAdvertising;
+
+  /// No description provided for @offlineStatusDiscovering.
+  ///
+  /// In id, this message translates to:
+  /// **'Mencari host…'**
+  String get offlineStatusDiscovering;
+
+  /// No description provided for @offlineStatusConnecting.
+  ///
+  /// In id, this message translates to:
+  /// **'Menyambungkan jembatan…'**
+  String get offlineStatusConnecting;
+
+  /// No description provided for @offlineStatusLinked.
+  ///
+  /// In id, this message translates to:
+  /// **'Jembatan terhubung'**
+  String get offlineStatusLinked;
+
+  /// No description provided for @offlineStatusError.
+  ///
+  /// In id, this message translates to:
+  /// **'Kesalahan'**
+  String get offlineStatusError;
 }
 
 class _AppLocalizationsDelegate

@@ -65,6 +65,14 @@ dependencies:
   mobile_scanner: ^7.4.2
   image_picker: ^1.2.4
 
+  # Jembatan offline antar-HP (spike): transport Google Nearby
+  # Connections (Bluetooth/Wi-Fi Direct) untuk meneruskan koneksi
+  # peer Lightning lewat localhost, plus permintaan izin runtime
+  # Android 12+ (BLUETOOTH_SCAN/ADVERTISE/CONNECT, lokasi).
+  # Lihat lib/services/offline_bridge.dart.
+  nearby_connections: ^4.3.0
+  permission_handler: ^11.3.1
+
   # Cetak struk 58mm Bluetooth (ESC/POS mode teks): transport
   # Bluetooth Classic + pembangkit perintah ESC/POS.
   print_bluetooth_thermal: ^1.2.5

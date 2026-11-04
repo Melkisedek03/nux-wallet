@@ -1,10 +1,13 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:ldk_node/ldk_node.dart';
 import 'package:ldk_node/src/generated/api/types.dart';
 import 'package:ldk_node/src/generated/api/builder.dart';
 import 'package:ldk_node/src/generated/api/node.dart';
 import 'package:ldk_node/src/utils/frb.dart';
+
+import 'offline_bridge.dart';
 
 /// Service untuk koneksi ke LSP Nusacoin via LSPS2 (bLIP-52).
 class LspService {
@@ -52,6 +55,20 @@ class LspService {
       // dan sync header dari electrs gagal.
       network: isTestnet ? Network.nusacoinTestnet : Network.nusacoin,
       storageDirPath: storagePath,
+      // Khusus testnet (spike offline): node juga mendengarkan di
+      // localhost supaya jembatan Bluetooth bisa menyambungkan
+      // peer masuk dari HP lain di dekatnya (lihat
+      // offline_bridge.dart). Tanpa announcementAddresses alamat
+      // ini tidak diumumkan ke jaringan gossip, dan mainnet tidak
+      // berubah sama sekali.
+      listeningAddresses: isTestnet
+          ? [
+              SocketAddress.tcpIpV4(
+                addr: U8Array4(Uint8List.fromList([127, 0, 0, 1])),
+                port: OfflineBridgeService.nodeListenPort,
+              ),
+            ]
+          : null,
       trustedPeers0Conf: [PublicKey(hex: lspNodeId)],
       probingLiquidityLimitMultiplier: BigInt.from(3),
     );
@@ -128,6 +145,42 @@ class LspService {
     _ensureRunning();
     final peers = await _node!.listPeers();
     return peers.where((p) => p.isConnected).length;
+  }
+
+  /// ID node Lightning dompet ini (hex 66 karakter) — dibagikan
+  /// ke HP lain yang mau menyambung sebagai peer, misalnya lewat
+  /// jembatan offline.
+  Future<String> ownNodeId() async {
+    _ensureRunning();
+    final id = await _node!.nodeId();
+    return id.hex;
+  }
+
+  /// Sambungkan node ke peer [nodeIdHex] di alamat IPv4
+  /// [host]:[port]. Untuk jembatan offline, host adalah
+  /// 127.0.0.1 dan port adalah port listener jembatan di HP ini;
+  /// byte-nya diteruskan jembatan ke HP seberang.
+  Future<void> connectToPeer(String nodeIdHex, String host, int port) async {
+    _ensureRunning();
+    final parts = host.split('.').map(int.parse).toList();
+    if (parts.length != 4 || parts.any((p) => p < 0 || p > 255)) {
+      throw ArgumentError('Host harus IPv4 dotted: "$host"');
+    }
+    await _node!.connect(
+      nodeId: PublicKey(hex: nodeIdHex),
+      address: SocketAddress.tcpIpV4(
+        addr: U8Array4(Uint8List.fromList(parts)),
+        port: port,
+      ),
+      persist: true,
+    );
+  }
+
+  /// Daftar lengkap peer beserta status koneksinya — bahan
+  /// pembuktian layar uji offline (peer tampil isConnected).
+  Future<List<PeerDetails>> listPeerDetails() async {
+    _ensureRunning();
+    return _node!.listPeers();
   }
 
   /// Buat offer Bolt12 statis: nominal bebas (ditentukan pembayar)
