@@ -150,6 +150,7 @@ void main() {
         'Bayar${' ' * 19}Rp20.000',
         'Tunai${' ' * 19}Rp50.000',
         'Kembalian${' ' * 15}Rp30.000',
+        '+20.000 nusan',
         '1 nusan = pot. Rp1',
         '',
         '     Terima kasih & silakan',
@@ -157,8 +158,8 @@ void main() {
       ]);
     });
 
-    test('tanpa nama pelanggan tidak ada baris Customer; baris '
-        'perolehan poin tidak dicetak walau ada poin tertunda', () {
+    test('tanpa nama pelanggan tidak ada baris Customer; info '
+        'perolehan ringkas tampil walau poin tertunda', () {
       final record = buildCompletedOrder(
         time: DateTime(2026, 11, 3, 9, 0),
         lines: const [OrderLine(label: 'Teh', unitPriceRp: 3000, qty: 1)],
@@ -188,9 +189,9 @@ void main() {
           .whereType<ReceiptTextLine>()
           .map((e) => e.text)
           .toList();
-      // Satu-satunya baris kalimat = keterangan nilai potongan;
-      // perolehan poin (terbit maupun tertunda) tak dicetak.
-      expect(texts, ['1 nusan = pot. Rp1']);
+      // Baris kalimat = info perolehan ringkas (tanpa status,
+      // walau poinnya tertunda) + keterangan nilai potongan.
+      expect(texts, ['+3.000 nusan', '1 nusan = pot. Rp1']);
     });
   });
 

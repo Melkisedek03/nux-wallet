@@ -13,9 +13,11 @@
 /// tetap wajib): baris diskon (baris/order), baris diskon poin
 /// nusan, "Bayar" sebagai Grand Total, Tunai/Kembalian atau
 /// metode QRIS, dan baris ketentuan nilai potongan per poin.
-/// (Baris perolehan poin tidak lagi dicetak — keputusan NUX
-/// 4 Nov 2026; perolehan tetap tampil di aplikasi saat
-/// penerbitan.) Dan struk WAJIB selalu rekonsiliasi:
+/// Perolehan poin tampil ringkas saja ("+20.000 nusan") di
+/// bawah baris pembayaran bila pelanggan memang memperoleh
+/// poin — tanpa label & tanpa status terbit (keputusan NUX
+/// 4 Nov 2026; status penerbitan hidup di aplikasi).
+/// Dan struk WAJIB selalu rekonsiliasi:
 /// Σ item (kotor) − diskon baris − diskon order − diskon poin
 /// = Grand Total (cacat contoh — Grand Total tak sama dengan
 /// jumlah item — tidak ditiru).
@@ -505,9 +507,13 @@ List<StoreReceiptElement> buildStoreReceiptElements(
   } else {
     out.add(ReceiptRow(labels.promoLabel, _rp(0)));
   }
-  // Baris perolehan poin TIDAK dicetak di struk (keputusan
-  // NUX 4 Nov 2026) — perolehan tetap tampil di aplikasi
-  // pada panel penerbitan sesudah lunas.
+  if (data.pointsEnabled && data.pointsEarned > 0) {
+    // Info perolehan ringkas tepat di bawah baris pembayaran
+    // (di bawah Kembalian): "+20.000 nusan" — cukup itu saja,
+    // tanpa label dan tanpa status terbit (keputusan NUX
+    // 4 Nov 2026).
+    out.add(ReceiptTextLine('+${formatRupiah(data.pointsEarned)} nusan'));
+  }
   if (data.pointsEnabled) {
     out.add(
       ReceiptTextLine(
