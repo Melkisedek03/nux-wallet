@@ -3173,7 +3173,9 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
           elevation: 0,
         ),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(18, 4, 18, 18),
+          // Ruang atas disamakan sisi lain (18) agar label melayang
+          // field pertama (Nama Pelanggan) tidak tertutup AppBar.
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -3297,6 +3299,10 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
+                      ActionChip(
+                        label: const Text('Rp0'),
+                        onPressed: () => _setCash(0),
+                      ),
                       ActionChip(
                         label: Text(l10n.storeCashExact),
                         onPressed: () => _setCash(remaining),
