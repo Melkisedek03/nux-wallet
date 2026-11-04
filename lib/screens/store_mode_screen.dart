@@ -29,6 +29,7 @@ import '../utils/store_report.dart';
 import 'scan_screen.dart';
 import 'store_receipt_preview.dart';
 import 'store_point_rules_screen.dart';
+import 'store_sales_history_screen.dart';
 import 'store_settings_screen.dart';
 import 'store_shift_report_screen.dart';
 
@@ -1647,6 +1648,8 @@ class _StoreModeScreenState extends State<StoreModeScreen>
       qrisLabel: l10n.storeQris,
       promoLabel: l10n.storeReceiptPromo,
       noteWord: l10n.storeNoteWord,
+      reprintBanner: l10n.storeReceiptReprintBanner,
+      reprintLabel: l10n.storeReceiptReprintLabel,
       pointsDiscountLabel: (points) =>
           l10n.storeReceiptPointsDiscountLabel(_fmtRp(points)),
       pointsRuleText: (rate) => l10n.storeReceiptPointsRule(rate),
@@ -1660,8 +1663,9 @@ class _StoreModeScreenState extends State<StoreModeScreen>
   /// dompet pelanggan — pedoman §4).
   StoreReceiptData _receiptData(
     CompletedOrder record,
-    PrinterSettings printerSettings,
-  ) {
+    PrinterSettings printerSettings, {
+    DateTime? reprintAt,
+  }) {
     final shopName = _settings.storeName.isNotEmpty
         ? _settings.storeName
         : printerSettings.headerText.trim().isNotEmpty
@@ -1676,6 +1680,26 @@ class _StoreModeScreenState extends State<StoreModeScreen>
       shopName: shopName,
       footerText: footer,
       outletId: _outletId,
+      reprintAt: reprintAt,
+    );
+  }
+
+  /// Buka Riwayat Penjualan: daftar transaksi selesai yang bisa
+  /// ditinjau satu per satu — salinan struknya (cetak ulang /
+  /// bagikan) selalu bertanda REPRINT.
+  Future<void> _openSalesHistory() async {
+    final printerSettings = await PrintService.loadSettings();
+    if (!mounted) return;
+    final labels = _receiptLabels();
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StoreSalesHistoryScreen(
+          receiptLabels: labels,
+          receiptDataFor: (record, reprintAt) =>
+              _receiptData(record, printerSettings, reprintAt: reprintAt),
+        ),
+      ),
     );
   }
 
@@ -2664,6 +2688,18 @@ class _StoreModeScreenState extends State<StoreModeScreen>
           ),
           const SizedBox(height: 10),
           OutlinedButton.icon(
+            onPressed: _openSalesHistory,
+            icon: const Icon(Icons.receipt_long_rounded, size: 19),
+            label: Text(l10n.storeSalesHistory),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
             onPressed: _requestCloseShift,
             icon: const Icon(Icons.stop_circle_outlined, size: 19),
             label: Text(l10n.storeShiftClose),
@@ -2708,6 +2744,18 @@ class _StoreModeScreenState extends State<StoreModeScreen>
           onPressed: () => _pickDayReport(),
           icon: const Icon(Icons.calendar_month_rounded, size: 19),
           label: Text(l10n.storeReportByDate),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 13),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: _openSalesHistory,
+          icon: const Icon(Icons.receipt_long_rounded, size: 19),
+          label: Text(l10n.storeSalesHistory),
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 13),
             shape: RoundedRectangleBorder(

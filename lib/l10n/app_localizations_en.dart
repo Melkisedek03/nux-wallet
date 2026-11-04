@@ -997,6 +997,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeSalesReport => 'Sales Report';
 
   @override
+  String get storeSalesHistory => 'Sales History';
+
+  @override
+  String get storeSalesHistoryEmpty => 'No sales recorded yet.';
+
+  @override
+  String get storeSaleDetailTitle => 'Sale Details';
+
+  @override
+  String get storeSalePaymentLabel => 'Payment';
+
+  @override
+  String get storeSaleReceiptUnavailable =>
+      'Receipt not available for this record.';
+
+  @override
+  String get storeReprintReceipt => 'Reprint Receipt';
+
+  @override
+  String get storePreviewShareReceipt => 'Preview & Share';
+
+  @override
   String get storeReportCurrentShift => 'Current Shift';
 
   @override
@@ -1319,6 +1341,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get storeReceiptGrandTotal => 'Pay';
+
+  @override
+  String get storeReceiptReprintBanner => '*** REPRINT ***';
+
+  @override
+  String get storeReceiptReprintLabel => 'Reprint';
 
   @override
   String storeReceiptPointsDiscountLabel(String points) {

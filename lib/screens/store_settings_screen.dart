@@ -165,7 +165,11 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
               child: CircularProgressIndicator(color: Color(0xFF34D399)),
             )
           : ListView(
-              padding: const EdgeInsets.fromLTRB(18, 4, 18, 18),
+              // Atas 18 (bukan 4): field pertama tidak tertutup
+              // AppBar transparan — pelajaran yang sama seperti
+              // halaman Penyelesaian Pembayaran (temuan NUX
+              // 4 Nov 2026).
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
               children: [
                 TextField(
                   controller: _nameController,

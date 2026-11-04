@@ -1868,6 +1868,48 @@ abstract class AppLocalizations {
   /// **'Laporan Penjualan'**
   String get storeSalesReport;
 
+  /// No description provided for @storeSalesHistory.
+  ///
+  /// In id, this message translates to:
+  /// **'Riwayat Penjualan'**
+  String get storeSalesHistory;
+
+  /// No description provided for @storeSalesHistoryEmpty.
+  ///
+  /// In id, this message translates to:
+  /// **'Belum ada penjualan yang tercatat.'**
+  String get storeSalesHistoryEmpty;
+
+  /// No description provided for @storeSaleDetailTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Detail Penjualan'**
+  String get storeSaleDetailTitle;
+
+  /// No description provided for @storeSalePaymentLabel.
+  ///
+  /// In id, this message translates to:
+  /// **'Pembayaran'**
+  String get storeSalePaymentLabel;
+
+  /// No description provided for @storeSaleReceiptUnavailable.
+  ///
+  /// In id, this message translates to:
+  /// **'Struk tidak tersedia untuk record ini.'**
+  String get storeSaleReceiptUnavailable;
+
+  /// No description provided for @storeReprintReceipt.
+  ///
+  /// In id, this message translates to:
+  /// **'Cetak Ulang'**
+  String get storeReprintReceipt;
+
+  /// No description provided for @storePreviewShareReceipt.
+  ///
+  /// In id, this message translates to:
+  /// **'Pratinjau & Bagikan'**
+  String get storePreviewShareReceipt;
+
   /// No description provided for @storeReportCurrentShift.
   ///
   /// In id, this message translates to:
@@ -2431,6 +2473,18 @@ abstract class AppLocalizations {
   /// In id, this message translates to:
   /// **'Bayar'**
   String get storeReceiptGrandTotal;
+
+  /// No description provided for @storeReceiptReprintBanner.
+  ///
+  /// In id, this message translates to:
+  /// **'*** REPRINT ***'**
+  String get storeReceiptReprintBanner;
+
+  /// No description provided for @storeReceiptReprintLabel.
+  ///
+  /// In id, this message translates to:
+  /// **'Reprint'**
+  String get storeReceiptReprintLabel;
 
   /// No description provided for @storeReceiptPointsDiscountLabel.
   ///

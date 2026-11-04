@@ -473,6 +473,13 @@
   "storeLater": "Nanti",
   "storeViewReport": "Lihat Laporan",
   "storeSalesReport": "Laporan Penjualan",
+  "storeSalesHistory": "Riwayat Penjualan",
+  "storeSalesHistoryEmpty": "Belum ada penjualan yang tercatat.",
+  "storeSaleDetailTitle": "Detail Penjualan",
+  "storeSalePaymentLabel": "Pembayaran",
+  "storeSaleReceiptUnavailable": "Struk tidak tersedia untuk record ini.",
+  "storeReprintReceipt": "Cetak Ulang",
+  "storePreviewShareReceipt": "Pratinjau & Bagikan",
   "storeReportCurrentShift": "Shift Berjalan",
   "storeReportByDate": "Per Tanggal",
   "storeReportPastShifts": "Shift Lampau",
@@ -684,6 +691,8 @@
   "storeReceiptOrderDiscount": "Diskon Order",
   "storeReceiptLineDiscount": "Diskon Item",
   "storeReceiptGrandTotal": "Bayar",
+  "storeReceiptReprintBanner": "*** REPRINT ***",
+  "storeReceiptReprintLabel": "Reprint",
   "storeReceiptPointsDiscountLabel": "Pot. ({points} nusan)",
   "@storeReceiptPointsDiscountLabel": {
     "placeholders": {

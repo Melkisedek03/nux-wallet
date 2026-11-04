@@ -20,6 +20,8 @@ StoreReceiptLabels idLabels() => StoreReceiptLabels(
   qrisLabel: 'QRIS',
   promoLabel: 'Tanpa pembayaran (promosi)',
   noteWord: 'Cat.',
+  reprintBanner: '*** REPRINT ***',
+  reprintLabel: 'Reprint',
   pointsDiscountLabel: (p) => 'Pot. (${formatRupiah(p)} nusan)',
   pointsRuleText: (rate) => '1 nusan = pot. Rp$rate',
 );
@@ -54,7 +56,10 @@ CompletedOrder richRecord() {
   return base.withReceiptMeta(billNo: 1, tokenNo: 15);
 }
 
-StoreReceiptData richData({StoreSettings settings = StoreSettings.defaults}) {
+StoreReceiptData richData({
+  StoreSettings settings = StoreSettings.defaults,
+  DateTime? reprintAt,
+}) {
   return buildStoreReceiptData(
     record: richRecord(),
     settings: settings.copyWith(
@@ -64,6 +69,7 @@ StoreReceiptData richData({StoreSettings settings = StoreSettings.defaults}) {
     shopName: 'Kafe Nusantara',
     footerText: 'Terima kasih & silakan berkunjung kembali',
     outletId: '02a3c4',
+    reprintAt: reprintAt,
   );
 }
 
@@ -117,6 +123,18 @@ void main() {
       expect(plain.showBillNo, isFalse);
       expect(plain.showTokenNo, isFalse);
     });
+
+    test('reprintAt mengisi reprintText; tanpa itu null', () {
+      final reprinted = richData(reprintAt: DateTime(2026, 11, 4, 20, 15));
+      expect(reprinted.reprintText, '04/11/2026 20:15');
+      expect(richData().reprintText, isNull);
+    });
+
+    test('receiptMetaHead: kolom 10, label panjang satu spasi', () {
+      expect(receiptMetaHead('Tanggal'), 'Tanggal:  ');
+      expect(receiptMetaHead('No. Bill'), 'No. Bill: ');
+      expect(receiptMetaHead('Order/Outlet'), 'Order/Outlet: ');
+    });
   });
 
   group('snapshot baris teks struk', () {
@@ -131,8 +149,8 @@ void main() {
         '-' * 32,
         'Pelanggan:${' ' * 11}Advika Mate',
         '-' * 32,
-        'Tanggal:    03/11/2026 13:45',
-        'No. Bill:   INV261103-0001',
+        'Tanggal:  03/11/2026 13:45',
+        'No. Bill: INV261103-0001',
         'Order/Outlet: 15/02a3c4',
         '-' * 32,
         'Item${' ' * 22}Jumlah',
@@ -156,6 +174,27 @@ void main() {
         '     Terima kasih & silakan',
         '       berkunjung kembali',
       ]);
+    });
+
+    test('salinan reprint: banner + waktu cetak ulang tepat '
+        'di bawah kop, sebelum Pelanggan', () {
+      final lines = storeReceiptTextLines(
+        buildStoreReceiptElements(
+          richData(reprintAt: DateTime(2026, 11, 4, 20, 15)),
+          idLabels(),
+        ),
+      );
+      // Kop 3 baris + garis, lalu banner terpusat & baris
+      // Reprint, baru blok Pelanggan seperti struk asli.
+      expect(lines[3], '-' * 32);
+      expect(lines[4], '        *** REPRINT ***');
+      expect(lines[5], 'Reprint:  04/11/2026 20:15');
+      expect(lines[6], 'Pelanggan:${' ' * 11}Advika Mate');
+      // Struk asli (tanpa reprintAt) tidak punya banner.
+      final original = storeReceiptTextLines(
+        buildStoreReceiptElements(richData(), idLabels()),
+      );
+      expect(original.any((l) => l.contains('REPRINT')), isFalse);
     });
 
     test('tanpa nama pelanggan tidak ada baris Customer; info '

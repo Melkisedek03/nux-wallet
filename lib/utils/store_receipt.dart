@@ -82,6 +82,12 @@ class StoreReceiptLabels {
   final String promoLabel;
   final String noteWord;
 
+  /// Banner penanda cetak ulang: '*** REPRINT ***'.
+  final String reprintBanner;
+
+  /// Label baris waktu cetak ulang: 'Reprint'.
+  final String reprintLabel;
+
   /// Label baris diskon poin: "Pot. (2.000 nusan)".
   final String Function(int points) pointsDiscountLabel;
 
@@ -105,6 +111,8 @@ class StoreReceiptLabels {
     required this.qrisLabel,
     required this.promoLabel,
     required this.noteWord,
+    required this.reprintBanner,
+    required this.reprintLabel,
     required this.pointsDiscountLabel,
     required this.pointsRuleText,
   });
@@ -147,6 +155,13 @@ class StoreReceiptData {
   /// Tanggal transaksi terformat 'dd/MM/yyyy HH:mm'
   /// (jam:menit disertakan — permintaan NUX 4 Nov 2026).
   final String dateText;
+
+  /// Waktu CETAK ULANG terformat sama seperti [dateText];
+  /// null = struk asli (bukan salinan). Bila terisi, pembangun
+  /// elemen menyisipkan banner REPRINT + baris waktu ini —
+  /// penanda anti-penyalahgunaan salinan nota (permintaan
+  /// NUX 4 Nov 2026).
+  final String? reprintText;
   final int billNo;
 
   /// Nomor Bill terformat tampil ('INV261103-0002') — dari
@@ -213,6 +228,7 @@ class StoreReceiptData {
     required this.pointsEnabled,
     required this.redeemRateRp,
     required this.footerText,
+    this.reprintText,
   });
 }
 
@@ -221,12 +237,20 @@ class StoreReceiptData {
 /// pemanggil (nama toko, atau panggilan cadangan dari
 /// pengaturan printer); [footerText] teks penutup yang sudah
 /// diputuskan (pengaturan toko, atau bawaan bahasa aplikasi).
+/// Format cap waktu struk: 'dd/MM/yyyy HH:mm'.
+String receiptTimestampText(DateTime t) =>
+    '${t.day.toString().padLeft(2, '0')}/'
+    '${t.month.toString().padLeft(2, '0')}/${t.year} '
+    '${t.hour.toString().padLeft(2, '0')}:'
+    '${t.minute.toString().padLeft(2, '0')}';
+
 StoreReceiptData buildStoreReceiptData({
   required CompletedOrder record,
   required StoreSettings settings,
   required String shopName,
   required String footerText,
   required String outletId,
+  DateTime? reprintAt,
 }) {
   final items = [
     for (final line in record.lines)
@@ -248,17 +272,15 @@ StoreReceiptData buildStoreReceiptData({
       record.totalDiscountRp - lineDiscount - record.pointsDiscountRp;
   if (orderDiscount < 0) orderDiscount = 0;
   final t = record.time;
-  final dateText =
-      '${t.day.toString().padLeft(2, '0')}/'
-      '${t.month.toString().padLeft(2, '0')}/${t.year} '
-      '${t.hour.toString().padLeft(2, '0')}:'
-      '${t.minute.toString().padLeft(2, '0')}';
+  final dateText = receiptTimestampText(t);
   return StoreReceiptData(
     shopName: shopName,
     shopAddress: settings.storeAddress,
     shopCity: settings.storeCity,
     customerName: record.customerName,
     dateText: dateText,
+    reprintText:
+        reprintAt == null ? null : receiptTimestampText(reprintAt),
     billNo: record.billNo,
     billNoText: formatBillNo(t, record.billNo),
     tokenNo: record.tokenNo,
@@ -412,6 +434,17 @@ class ReceiptSpacer extends StoreReceiptElement {
 
 String _rp(int rp) => 'Rp${formatRupiah(rp)}';
 
+/// Kepala baris meta struk untuk perender teks & cetak:
+/// "Tanggal:" / "No. Bill:" / "Order/Outlet:" diikuti nilainya.
+/// Label + ':' dirapatkan ke kolom 10 (permintaan NUX 4 Nov
+/// 2026 — kolom 12 sebelumnya menyisakan spasi terlalu banyak
+/// sebelum nilai); label yang sudah ≥ 10 karakter (Order/
+/// Outlet) cukup satu spasi.
+String receiptMetaHead(String label) {
+  final raw = '$label:';
+  return raw.length >= 10 ? '$raw ' : raw.padRight(10);
+}
+
 /// Susun urutan elemen struk dari [data] + [labels] — urutan
 /// ini yang dirender ketiga keluaran, kata per kata sama.
 List<StoreReceiptElement> buildStoreReceiptElements(
@@ -427,6 +460,13 @@ List<StoreReceiptElement> buildStoreReceiptElements(
     out.add(ReceiptCenterText(data.shopCity));
   }
   out.add(const ReceiptDashedRule());
+  if (data.reprintText != null) {
+    // Penanda salinan (permintaan NUX 4 Nov 2026): banner
+    // tegas + waktu cetak ulangnya, tepat di bawah kop —
+    // salinan tidak boleh bisa berlagak nota asli.
+    out.add(ReceiptCenterText(labels.reprintBanner, bold: true));
+    out.add(ReceiptMetaRow(labels.reprintLabel, data.reprintText!));
+  }
   if (data.customerName.isNotEmpty) {
     out.add(
       ReceiptMetaRow(labels.customerLabel, data.customerName, spread: true),
@@ -594,11 +634,7 @@ List<String> storeReceiptTextLines(List<StoreReceiptElement> elements) {
         if (spread) {
           out.add(_spread('$label:', value, width));
         } else {
-          // Label panjang (mis. "No. Token/Outlet ID:") melewati
-          // kolom label 12: beri SATU spasi, jangan rapat ke nilai.
-          final raw = '$label:';
-          final head = raw.length >= 12 ? '$raw ' : raw.padRight(12);
-          final line = '$head$value';
+          final line = '${receiptMetaHead(label)}$value';
           out.add(line.length > width ? line.substring(0, width) : line);
         }
       case ReceiptItemsHeader(:final itemLabel, :final amountLabel):

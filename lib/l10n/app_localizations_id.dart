@@ -997,6 +997,28 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeSalesReport => 'Laporan Penjualan';
 
   @override
+  String get storeSalesHistory => 'Riwayat Penjualan';
+
+  @override
+  String get storeSalesHistoryEmpty => 'Belum ada penjualan yang tercatat.';
+
+  @override
+  String get storeSaleDetailTitle => 'Detail Penjualan';
+
+  @override
+  String get storeSalePaymentLabel => 'Pembayaran';
+
+  @override
+  String get storeSaleReceiptUnavailable =>
+      'Struk tidak tersedia untuk record ini.';
+
+  @override
+  String get storeReprintReceipt => 'Cetak Ulang';
+
+  @override
+  String get storePreviewShareReceipt => 'Pratinjau & Bagikan';
+
+  @override
   String get storeReportCurrentShift => 'Shift Berjalan';
 
   @override
@@ -1321,6 +1343,12 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get storeReceiptGrandTotal => 'Bayar';
+
+  @override
+  String get storeReceiptReprintBanner => '*** REPRINT ***';
+
+  @override
+  String get storeReceiptReprintLabel => 'Reprint';
 
   @override
   String storeReceiptPointsDiscountLabel(String points) {

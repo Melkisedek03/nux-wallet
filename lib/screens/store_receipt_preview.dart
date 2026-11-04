@@ -20,9 +20,20 @@ import '../utils/store_receipt.dart';
 /// sistem lewat SharePlus (pola berbagi yang sudah dipakai
 /// aplikasi).
 class StoreReceiptPreviewDialog extends StatefulWidget {
-  const StoreReceiptPreviewDialog({super.key, required this.elements});
+  const StoreReceiptPreviewDialog({
+    super.key,
+    required this.elements,
+    this.watermark,
+  });
 
   final List<StoreReceiptElement> elements;
+
+  /// Teks watermark diagonal tembus pandang di atas struk
+  /// (mis. 'REPRINT' untuk salinan dari Riwayat Penjualan);
+  /// null = struk asli tanpa watermark. Watermark ikut
+  /// tertangkap ke gambar yang dibagikan — memang itu
+  /// tujuannya: salinan yang beredar tetap bertanda.
+  final String? watermark;
 
   @override
   State<StoreReceiptPreviewDialog> createState() =>
@@ -71,7 +82,10 @@ class _StoreReceiptPreviewDialogState
       content: SingleChildScrollView(
         child: RepaintBoundary(
           key: _boundaryKey,
-          child: _ReceiptCard(elements: widget.elements),
+          child: _ReceiptCard(
+            elements: widget.elements,
+            watermark: widget.watermark,
+          ),
         ),
       ),
       actions: [
@@ -99,9 +113,10 @@ class _StoreReceiptPreviewDialogState
 /// tetap wajar. Nama toko tampil besar proporsional (peran
 /// double-height pada cetak kertas); Grand Total paling besar.
 class _ReceiptCard extends StatelessWidget {
-  const _ReceiptCard({required this.elements});
+  const _ReceiptCard({required this.elements, this.watermark});
 
   final List<StoreReceiptElement> elements;
+  final String? watermark;
 
   static const _base = TextStyle(
     fontFamily: 'monospace',
@@ -145,11 +160,12 @@ class _ReceiptCard extends StatelessWidget {
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Label panjang ("No. Token/Outlet ID:") mendapat
-            // kotak lebih lebar — label pendek tetap sejajar
-            // seperti sebelumnya.
+            // Kotak label dirapatkan mengikuti kolom meta
+            // perender teks/cetak (10 karakter): label panjang
+            // ("Order/Outlet:") mendapat kotak lebih lebar,
+            // label pendek tetap sejajar seperti sebelumnya.
             SizedBox(
-              width: label.length >= 12 ? 164 : 98,
+              width: label.length >= 10 ? 112 : 76,
               child: Text('$label:', style: _base, maxLines: 1),
             ),
             Expanded(child: Text(value, style: _base)),
@@ -231,10 +247,33 @@ class _ReceiptCard extends StatelessWidget {
       width: 320,
       color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [for (final e in elements) _forElement(e)],
+      child: Stack(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [for (final e in elements) _forElement(e)],
+          ),
+          if (watermark != null)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Center(
+                  child: Transform.rotate(
+                    angle: -0.42,
+                    child: Text(
+                      watermark!,
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 44,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.black.withValues(alpha: 0.10),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

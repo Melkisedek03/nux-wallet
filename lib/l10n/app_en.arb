@@ -473,6 +473,13 @@
   "storeLater": "Later",
   "storeViewReport": "View Report",
   "storeSalesReport": "Sales Report",
+  "storeSalesHistory": "Sales History",
+  "storeSalesHistoryEmpty": "No sales recorded yet.",
+  "storeSaleDetailTitle": "Sale Details",
+  "storeSalePaymentLabel": "Payment",
+  "storeSaleReceiptUnavailable": "Receipt not available for this record.",
+  "storeReprintReceipt": "Reprint Receipt",
+  "storePreviewShareReceipt": "Preview & Share",
   "storeReportCurrentShift": "Current Shift",
   "storeReportByDate": "By Date",
   "storeReportPastShifts": "Past Shifts",
@@ -684,6 +691,8 @@
   "storeReceiptOrderDiscount": "Order Discount",
   "storeReceiptLineDiscount": "Item Disc.",
   "storeReceiptGrandTotal": "Pay",
+  "storeReceiptReprintBanner": "*** REPRINT ***",
+  "storeReceiptReprintLabel": "Reprint",
   "storeReceiptPointsDiscountLabel": "Disc. ({points} nusan)",
   "@storeReceiptPointsDiscountLabel": {
     "placeholders": {
