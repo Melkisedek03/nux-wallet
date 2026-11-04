@@ -97,6 +97,14 @@ class _SendScreenState extends State<SendScreen> {
   String? _error;
   bool _paid = false;
 
+  /// Penggulir badan + kunci panel sukses: sesudah pembayaran
+  /// berhasil, layar digulir sampai panel perayaan terlihat —
+  /// panel tinggal di bawah formulir, tanpa gulir ia sering
+  /// terlewat user (temuan NUX 4 Nov 2026). Panel ditutup
+  /// manual dengan tombol Selesai, sama seperti layar Terima.
+  final _scrollController = ScrollController();
+  final _successKey = GlobalKey();
+
   /// True selama perintah kirim sudah diterima node dan aplikasi
   /// sedang menunggu status final pembayaran.
   bool _waitingOutcome = false;
@@ -144,7 +152,32 @@ class _SendScreenState extends State<SendScreen> {
     _invoiceController.removeListener(_syncOfferInfo);
     _invoiceController.dispose();
     _offerAmountController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  /// Gulir halus sampai panel sukses terlihat (sesudah frame
+  /// panel ter-render). Panel tak terpasang → gulir ke bawah
+  /// sekali sebagai cadangan.
+  void _scrollToSuccess() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final targetContext = _successKey.currentContext;
+      if (targetContext != null) {
+        Scrollable.ensureVisible(
+          targetContext,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeOut,
+          alignment: 0.1,
+        );
+      } else if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   /// Sinkronkan [_offerInfo] dengan isi kolom kode terbaru.
@@ -505,6 +538,7 @@ class _SendScreenState extends State<SendScreen> {
         // peringatan koin masuk di sisi penerima.
         CoinAlert.vibrateSuccess();
         setState(() => _paid = true);
+        _scrollToSuccess();
       } else if (outcome == PaymentStatus.failed) {
         setState(() => _error = context.l10n.payFailedFinal);
       } else {
@@ -589,6 +623,7 @@ class _SendScreenState extends State<SendScreen> {
         elevation: 0,
       ),
       body: SingleChildScrollView(
+        controller: _scrollController,
         padding: const EdgeInsets.all(22),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -905,6 +940,7 @@ class _SendScreenState extends State<SendScreen> {
             if (_paid) ...[
               const SizedBox(height: 20),
               Container(
+                key: _successKey,
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: const Color(0xFF10B981).withValues(alpha: 0.15),
@@ -922,6 +958,24 @@ class _SendScreenState extends State<SendScreen> {
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             color: Color(0xFF34D399))),
+                    const SizedBox(height: 12),
+                    // Penutup manual, sama seperti perayaan
+                    // layar Terima (keputusan NUX 4 Nov 2026).
+                    ElevatedButton(
+                      onPressed: () => setState(() => _paid = false),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 28,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(context.l10n.done),
+                    ),
                   ],
                 ),
               ),

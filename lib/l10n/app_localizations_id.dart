@@ -1129,6 +1129,40 @@ class AppLocalizationsId extends AppLocalizations {
       'Diskon manual di atas ambang ini wajib disetujui PIN admin.';
 
   @override
+  String get storeCustomerTitle => 'Pelanggan';
+
+  @override
+  String get storeCustomerChoose => 'Pilih Pelanggan';
+
+  @override
+  String get storeCustomerAdd => 'Tambah Pelanggan';
+
+  @override
+  String get storeCustomerNameLabel => 'Nama Pelanggan (opsional)';
+
+  @override
+  String get storeCustomerOfferLabel => 'Kode Bayar Statis (Bolt12)';
+
+  @override
+  String get storeCustomerScan => 'Pindai';
+
+  @override
+  String get storeCustomerInvalidOffer =>
+      'Kode bayar tidak sah — harus offer Bolt12 (lno1…).';
+
+  @override
+  String get storeCustomerEmpty => 'Belum ada pelanggan tersimpan.';
+
+  @override
+  String get storeCustomerEdit => 'Ubah';
+
+  @override
+  String get storeCustomerDelete => 'Hapus';
+
+  @override
+  String get storeCustomerManage => 'Kelola Pelanggan';
+
+  @override
   String get storeAuditLogin => 'Login';
 
   @override
@@ -1491,6 +1525,16 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeReceiptCashier => 'Kasir';
 
   @override
+  String get staticCodeLabelTitle => 'Label Kode Bayar';
+
+  @override
+  String get staticCodeLabelEdit => 'Ubah Label';
+
+  @override
+  String get staticCodeLabelHint =>
+      'Label ini tertulis di dalam kode bayar dan dilihat pembayar. Mengganti label membuat kode bayar BARU — bagikan ulang kode yang baru. Kosongkan untuk kembali ke label bawaan.';
+
+  @override
   String storeReceiptPointsDiscountLabel(String points) {
     return 'Pot. ($points nusan)';
   }
@@ -1507,9 +1551,6 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get storeShareReceiptFailed => 'Tidak dapat membuat gambar struk.';
-
-  @override
-  String get storeCustomerNameLabel => 'Nama Pelanggan (opsional)';
 
   @override
   String get storeSettingsAddress => 'Alamat Toko (baris kop struk)';

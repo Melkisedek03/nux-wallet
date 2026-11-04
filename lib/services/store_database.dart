@@ -7,6 +7,19 @@ import 'store_catalog.dart';
 import 'store_order_history.dart';
 import 'store_shift.dart';
 
+/// Skema tabel pelanggan Mode Toko (dipakai onCreate &
+/// onUpgrade — satu-satunya definisi). Pelanggan: nama +
+/// offer Bolt12 statis miliknya, bahan halaman penyelesaian
+/// memilih pelanggan alih-alih memindai berulang (permintaan
+/// NUX 4 Nov 2026).
+const String _customersTableSql = '''
+CREATE TABLE customers(
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  offer TEXT NOT NULL,
+  created_ms INTEGER NOT NULL
+)''';
+
 /// Skema tabel operator Fase A (dipakai onCreate & onUpgrade —
 /// satu-satunya definisi).
 const String _operatorsTableSql = '''
@@ -76,7 +89,7 @@ class StoreDatabase {
     final path = await (_dbPathProvider?.call() ?? _defaultDbPath());
     final db = await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onUpgrade: (db, oldVersion, newVersion) async {
         // v2: kolom jurnal poin pada orders — offer penerima
         // penerbitan & offer penukaran (penukaran model jurnal
@@ -113,6 +126,15 @@ class StoreDatabase {
           await db.execute(_auditTableSql);
           await db.execute(
             'CREATE INDEX idx_audit_time ON audit_log(time_ms)',
+          );
+        }
+        // v4: tabel pelanggan Mode Toko (nama + offer Bolt12
+        // statis) untuk pemilih pelanggan di penyelesaian
+        // pembayaran.
+        if (oldVersion < 4) {
+          await db.execute(_customersTableSql);
+          await db.execute(
+            'CREATE INDEX idx_customers_name ON customers(name)',
           );
         }
       },
@@ -190,6 +212,10 @@ CREATE TABLE store_kv(
         await db.execute(_auditTableSql);
         await db.execute(
           'CREATE INDEX idx_audit_time ON audit_log(time_ms)',
+        );
+        await db.execute(_customersTableSql);
+        await db.execute(
+          'CREATE INDEX idx_customers_name ON customers(name)',
         );
       },
     );

@@ -34,7 +34,7 @@ CompletedOrder sampleOrder({
 
 void main() {
   group('skema basis data', () {
-    test('tabel Mode Toko terbentuk & versi skema 3', () async {
+    test('tabel Mode Toko terbentuk & versi skema 4', () async {
       SharedPreferences.setMockInitialValues({});
       final storeDb = newTestStoreDatabase();
       final db = await storeDb.database;
@@ -52,10 +52,11 @@ void main() {
           'store_kv',
           'operators',
           'audit_log',
+          'customers',
         ]),
       );
       final versionRows = await db.rawQuery('PRAGMA user_version');
-      expect(versionRows.first['user_version'], 3);
+      expect(versionRows.first['user_version'], 4);
       await storeDb.close();
     });
   });

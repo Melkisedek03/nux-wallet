@@ -72,11 +72,6 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   bool _received = false;
   BigInt? _receivedMsat;
 
-  /// Timer jeda tampil panel sukses: sesudah
-  /// [receiveCelebrationDuration] layar mereset panel dan
-  /// pengawas dipersenjatai untuk penerimaan berikutnya.
-  Timer? _celebrationTimer;
-
   /// Penggulir body: penerimaan mengantar layar ke atas supaya
   /// panel sukses terlihat tanpa scroll manual dari user.
   final _scrollController = ScrollController();
@@ -87,6 +82,20 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   /// walau user sedang tergulir jauh ke bawah (mis. di panel
   /// Kode Bayar Statis) saat pembayaran masuk.
   final _celebrationKey = GlobalKey();
+
+  /// Kunci blok QR invoice Bolt11 & blok QR Kode Bayar Statis:
+  /// sasaran gulir sesudah invoice/offer selesai dibuat, supaya
+  /// QR yang baru lahir langsung terlihat tanpa scroll manual
+  /// (temuan NUX 4 Nov 2026: gulir momen pembuatan belum ada —
+  /// yang ada hanya gulir perayaan penerimaan).
+  final _invoiceKey = GlobalKey();
+  final _staticKey = GlobalKey();
+
+  /// Label/deskripsi offer statis pilihan user (kosong/null =
+  /// teks bawaan bahasa aplikasi). Tersimpan di
+  /// [Bolt12OfferStore]; menggantinya membuat offer dibuat
+  /// ulang karena deskripsi adalah bagian dari offer.
+  String? _customOfferDescription;
 
   /// True bila [_invoice] berasal dari simpanan lokal (invoice
   /// pending terakhir dipulihkan saat layar dibuka), bukan baru
@@ -122,9 +131,19 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   /// peer" dan kegagalan ditelan diam-diam di sini — usaha yang
   /// sesungguhnya (dengan pesan ke user) terjadi saat panel dibuka,
   /// dan saat itu node mungkin sudah tersambung.
+  /// Deskripsi offer yang berlaku: label kustom user bila
+  /// dipasang, selain itu teks bawaan bahasa aplikasi.
+  String get _offerDescription =>
+      _customOfferDescription ?? context.l10n.staticOfferDescription;
+
   Future<void> _prefetchStaticOffer() async {
+    // Label kustom dibaca lebih dulu: offer yang dibuat/
+    // dipakai harus yang berlabel berlaku, bukan bawaan.
+    _customOfferDescription =
+        await Bolt12OfferStore().loadCustomDescription();
+    if (!mounted) return;
     final result = await _bolt12Service.ensureOffer(
-        description: context.l10n.staticOfferDescription);
+        description: _offerDescription);
     if (result.outcome == StaticOfferOutcome.ready && mounted) {
       setState(() => _staticOffer = result.offer);
     }
@@ -147,6 +166,9 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
     setState(() => _staticOpen = !_staticOpen);
     if (_staticOpen && _staticOffer == null && !_staticLoading) {
       _loadStaticOffer();
+    } else if (_staticOpen && _staticOffer != null) {
+      // Panel dibuka dengan offer sudah siap: gulir ke QR-nya.
+      _scrollToKey(_staticKey);
     }
     _syncWatcher();
   }
@@ -157,7 +179,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
       _staticError = null;
     });
     final result = await _bolt12Service.ensureOffer(
-        description: context.l10n.staticOfferDescription);
+        description: _offerDescription);
     if (!mounted) return;
     setState(() {
       _staticLoading = false;
@@ -171,6 +193,77 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
           _staticError = context.l10n.staticCodeFailed;
       }
     });
+    // Offer baru tampil: gulir ke QR-nya (permintaan NUX —
+    // sesudah Create Static layar mengantar ke kodenya).
+    if (result.outcome == StaticOfferOutcome.ready) {
+      _scrollToKey(_staticKey);
+    }
+  }
+
+  /// Ubah label (deskripsi) offer statis: dialog teks; simpan
+  /// memasang label kustom (kosong = kembali ke bawaan),
+  /// membuang offer tersimpan, lalu offer dibuat ulang dengan
+  /// label baru — kode bayar yang beredar berganti, jadi
+  /// bagikan ulang kode barunya sesudah mengganti label.
+  Future<void> _editOfferLabel() async {
+    final controller = TextEditingController(
+      text: _customOfferDescription ?? '',
+    );
+    final saved = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ctx.palette.card,
+        title: Text(ctx.l10n.staticCodeLabelTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: controller,
+              autofocus: true,
+              maxLength: 100,
+              decoration: InputDecoration(
+                hintText: ctx.l10n.staticOfferDescription,
+                filled: true,
+                fillColor: ctx.palette.cardAlt,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              ctx.l10n.staticCodeLabelHint,
+              style: TextStyle(fontSize: 12, color: ctx.palette.muted),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(ctx.l10n.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            child: Text(ctx.l10n.storeSettingsSave),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (saved == null || !mounted) return;
+    final trimmed = saved.trim();
+    final store = Bolt12OfferStore();
+    await store.saveCustomDescription(trimmed.isEmpty ? null : trimmed);
+    await store.clearOffer();
+    if (!mounted) return;
+    setState(() {
+      _customOfferDescription = trimmed.isEmpty ? null : trimmed;
+      _staticOffer = null;
+      _staticError = null;
+    });
+    _loadStaticOffer();
   }
 
   /// Pulihkan invoice pending terakhir yang belum kedaluwarsa dari
@@ -223,7 +316,6 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   void dispose() {
     _disposed = true;
     _stopWatching();
-    _celebrationTimer?.cancel();
     _amountController.dispose();
     _noteController.dispose();
     _scrollController.dispose();
@@ -245,7 +337,6 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
     }
 
     _stopWatching();
-    _celebrationTimer?.cancel();
     setState(() {
       _loading = true;
       _error = null;
@@ -289,6 +380,9 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
               description: description,
             );
       setState(() => _invoice = invoice);
+      // Invoice baru lahir: gulir ke blok QR-nya supaya user
+      // langsung melihat kode yang harus dibagikan.
+      _scrollToKey(_invoiceKey);
       // Simpan invoice di HP (string + hash + kedaluwarsa) supaya
       // tetap bisa dilihat/disalin kembali dari Riwayat atau saat
       // aplikasi dibuka lagi, selama belum kedaluwarsa. Catatan
@@ -414,12 +508,14 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   /// Bolt12 — cabang ini buta-jenis; untuk offer [_invoice] memang
   /// null sehingga pembersihan simpanan terlewati dengan aman).
   ///
-  /// Panel sukses tampil dengan nominal penerimaan INI, layar
-  /// digulir ke atas supaya panel terlihat, dan timer perayaan
-  /// (di)mulai: penerimaan lain yang tiba selama jendela tampil
-  /// menggantikan nominal panel dan memulai ulang jedanya, jadi
-  /// tidak ada penerimaan yang hilang diam-diam. Pengawas TIDAK
-  /// dimatikan di sini — ia terus membaca selama layar aktif.
+  /// Panel sukses tampil dengan nominal penerimaan INI dan layar
+  /// digulir sampai panel terlihat. Panel TIDAK menutup sendiri:
+  /// user menutupnya dengan tombol Selesai (keputusan NUX
+  /// 4 Nov 2026 — perayaan yang menutup otomatis bisa hilang
+  /// sebelum sempat dibaca). Penerimaan lain yang tiba selama
+  /// panel tampil menggantikan nominal panel, jadi tidak ada
+  /// penerimaan yang hilang diam-diam. Pengawas TIDAK dimatikan
+  /// di sini — ia terus membaca selama layar aktif.
   void _handleReceived(Event_PaymentReceived e, int gen) {
     // Rayakan di sini juga (bunyi + getar), bersamaan dengan
     // tanda centang: pengawas event layar ini adalah pemicu
@@ -453,12 +549,10 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
       _noteController.clear();
     });
     _scrollToCelebration();
-    _celebrationTimer?.cancel();
-    _celebrationTimer = Timer(receiveCelebrationDuration, _finishCelebration);
     _syncWatcher();
   }
 
-  /// Jeda tampil panel sukses selesai: reset panel supaya layar
+  /// Tombol Selesai pada panel sukses: reset panel supaya layar
   /// siap menerima pembayaran berikutnya tanpa user keluar
   /// halaman, lalu selaraskan pengawas — ia tetap berjalan selama
   /// layar aktif (offer memang untuk dibayar berulang, dan
@@ -478,18 +572,24 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   /// ensureVisible mengantar tepat ke blok perayaan (fokusnya
   /// perayaan itu sendiri). Blok belum terpasang (sangat jarang)
   /// → jatuh ke gulir ke atas seperti perilaku lama.
-  void _scrollToCelebration() {
+  void _scrollToCelebration() => _scrollToKey(_celebrationKey,
+      fallbackToTop: true);
+
+  /// Gulir halus sampai blok berkunci [key] terlihat — dipakai
+  /// perayaan (sesudah pembayaran tiba) dan blok QR invoice /
+  /// offer statis (sesudah keduanya selesai dibuat).
+  void _scrollToKey(GlobalKey key, {bool fallbackToTop = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final celebrationContext = _celebrationKey.currentContext;
-      if (celebrationContext != null) {
+      final targetContext = key.currentContext;
+      if (targetContext != null) {
         Scrollable.ensureVisible(
-          celebrationContext,
+          targetContext,
           duration: const Duration(milliseconds: 350),
           curve: Curves.easeOut,
           alignment: 0.1,
         );
-      } else {
+      } else if (fallbackToTop) {
         _scrollToTop();
       }
     });
@@ -683,6 +783,25 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                           TextStyle(fontSize: 12, color: context.palette.muted),
                       textAlign: TextAlign.center,
                     ),
+                    const SizedBox(height: 14),
+                    // Penutup manual (keputusan NUX 4 Nov 2026):
+                    // perayaan tidak lagi hilang sendiri oleh
+                    // timer — user yang menyelesaikannya.
+                    ElevatedButton(
+                      onPressed: _finishCelebration,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 28,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(context.l10n.done),
+                    ),
                   ],
                 ),
               ),
@@ -702,6 +821,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                       TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               Container(
+                key: _invoiceKey,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -713,7 +833,14 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                     version: QrVersions.auto,
                     size: 220,
                     backgroundColor: Colors.white,
-                    errorCorrectionLevel: QrErrorCorrectLevel.M,
+                    // Level H (bukan M): tengah QR tertutup logo
+                    // ELNUX, koreksi kesalahan tertinggi menjaga
+                    // QR tetap terpindai.
+                    errorCorrectionLevel: QrErrorCorrectLevel.H,
+                    embeddedImage: const AssetImage('assets/app_icon.png'),
+                    embeddedImageStyle: const QrEmbeddedImageStyle(
+                      size: Size(46, 46),
+                    ),
                   ),
                 ),
               ),
@@ -789,6 +916,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                 )
               else if (_staticOffer != null) ...[
                 Container(
+                  key: _staticKey,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -800,7 +928,12 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                       version: QrVersions.auto,
                       size: 220,
                       backgroundColor: Colors.white,
-                      errorCorrectionLevel: QrErrorCorrectLevel.M,
+                      errorCorrectionLevel: QrErrorCorrectLevel.H,
+                      embeddedImage:
+                          const AssetImage('assets/app_icon.png'),
+                      embeddedImageStyle: const QrEmbeddedImageStyle(
+                        size: Size(46, 46),
+                      ),
                     ),
                   ),
                 ),
@@ -844,6 +977,19 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                   style: TextStyle(
                       fontSize: 12, color: context.palette.muted),
                   textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 6),
+                // Label offer yang berlaku + jalan mengubahnya
+                // (custom user; kosong = bawaan).
+                Text(
+                  '${context.l10n.staticCodeLabelTitle}: $_offerDescription',
+                  style: TextStyle(
+                      fontSize: 12, color: context.palette.muted),
+                  textAlign: TextAlign.center,
+                ),
+                TextButton(
+                  onPressed: _staticLoading ? null : _editOfferLabel,
+                  child: Text(context.l10n.staticCodeLabelEdit),
                 ),
               ] else if (_staticError != null) ...[
                 Text(_staticError!,

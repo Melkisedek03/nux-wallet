@@ -50,8 +50,23 @@ StaticOfferStep decideStaticOfferStep({
 /// kegagalan tulis ditelan — offer bisa dibuat ulang kapan pun,
 /// jadi simpanan ini murni penstabil kode bayar antar sesi, bukan
 /// sumber kebenaran dana.
+///
+/// Deskripsi adalah BAGIAN dari offer (tertulis di dalamnya),
+/// jadi simpanan mencatat deskripsi yang dipakai saat offer
+/// dibuat: offer hanya dipakai ulang bila deskripsinya masih
+/// sama dengan yang diminta pemanggil. User boleh memasang
+/// label kustom ([customDescriptionKey]); menggantinya membuat
+/// offer lama gugur dan offer baru dibuat dengan label baru
+/// (permintaan NUX 4 Nov 2026: QR Bolt12 bisa di-custom, tidak
+/// diset = bawaan).
 class Bolt12OfferStore {
   static const String storageKey = 'bolt12_static_offer';
+
+  /// Deskripsi yang dipakai saat offer tersimpan dibuat.
+  static const String offerDescriptionKey = 'bolt12_offer_for_description';
+
+  /// Label kustom pilihan user; absen/kosong = label bawaan.
+  static const String customDescriptionKey = 'bolt12_offer_custom_label';
 
   /// Muat offer tersimpan; null bila belum ada atau bentuknya
   /// tidak sah lagi (mis. simpanan dari versi lama) — pemanggil
@@ -66,13 +81,67 @@ class Bolt12OfferStore {
     }
   }
 
-  Future<void> save(String offer) async {
+  /// Deskripsi yang dipakai saat offer tersimpan dibuat; null
+  /// bila tidak tercatat (simpanan era sebelum pencatatan —
+  /// diperlakukan sebagai cocok: offer warisan itu lahir dari
+  /// label bawaan, dan perubahan label selalu lewat editor
+  /// yang menghapus offer tersimpan secara eksplisit).
+  Future<String?> loadOfferDescription() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString(offerDescriptionKey);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> save(String offer, {required String forDescription}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(storageKey, offer.trim());
+      await prefs.setString(offerDescriptionKey, forDescription);
     } catch (_) {
       // Abaikan — offer sesi ini tetap tampil; pembuatan ulang di
       // sesi berikut hanya mengganti kode, bukan dana.
+    }
+  }
+
+  /// Hapus offer tersimpan (label berubah): offer berikutnya
+  /// dibuat ulang dengan deskripsi yang berlaku.
+  Future<void> clearOffer() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(storageKey);
+      await prefs.remove(offerDescriptionKey);
+    } catch (_) {
+      // Abaikan — ketidaksesuaian deskripsi tetap memicu
+      // pembuatan ulang pada ensureOffer berikutnya.
+    }
+  }
+
+  /// Label kustom user; null bila tidak dipasang.
+  Future<String?> loadCustomDescription() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(customDescriptionKey)?.trim();
+      return raw == null || raw.isEmpty ? null : raw;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Pasang label kustom (null/teks kosong = kembali bawaan).
+  Future<void> saveCustomDescription(String? description) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final trimmed = description?.trim() ?? '';
+      if (trimmed.isEmpty) {
+        await prefs.remove(customDescriptionKey);
+      } else {
+        await prefs.setString(customDescriptionKey, trimmed);
+      }
+    } catch (_) {
+      // Abaikan — label sesi berikut jatuh ke simpanan lama.
     }
   }
 }
@@ -110,7 +179,16 @@ class Bolt12OfferService {
     : _store = store ?? Bolt12OfferStore();
 
   Future<StaticOfferResult> ensureOffer({required String description}) async {
-    final stored = await _store.load();
+    var stored = await _store.load();
+    // Offer tersimpan hanya sah untuk deskripsi yang sama:
+    // label berubah (kustom dipasang/diubah/dihapus) → offer
+    // lama gugur, dibuat ulang dengan deskripsi berlaku.
+    // Deskripsi tak tercatat (simpanan warisan) dianggap
+    // cocok — lihat loadOfferDescription.
+    if (stored != null) {
+      final recorded = await _store.loadOfferDescription();
+      if (recorded != null && recorded != description) stored = null;
+    }
     var peers = 0;
     if (stored == null) {
       try {
@@ -137,7 +215,7 @@ class Bolt12OfferService {
             return const StaticOfferResult(StaticOfferOutcome.failed);
           }
           final trimmed = offer.trim();
-          await _store.save(trimmed);
+          await _store.save(trimmed, forDescription: description);
           return StaticOfferResult(StaticOfferOutcome.ready, trimmed);
         } catch (_) {
           return const StaticOfferResult(StaticOfferOutcome.failed);

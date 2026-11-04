@@ -1130,6 +1130,40 @@ class AppLocalizationsEn extends AppLocalizations {
       'Manual discounts above this limit must be approved with an admin PIN.';
 
   @override
+  String get storeCustomerTitle => 'Customers';
+
+  @override
+  String get storeCustomerChoose => 'Choose Customer';
+
+  @override
+  String get storeCustomerAdd => 'Add Customer';
+
+  @override
+  String get storeCustomerNameLabel => 'Customer Name (optional)';
+
+  @override
+  String get storeCustomerOfferLabel => 'Static Payment Code (Bolt12)';
+
+  @override
+  String get storeCustomerScan => 'Scan';
+
+  @override
+  String get storeCustomerInvalidOffer =>
+      'Invalid payment code — must be a Bolt12 offer (lno1…).';
+
+  @override
+  String get storeCustomerEmpty => 'No saved customers yet.';
+
+  @override
+  String get storeCustomerEdit => 'Edit';
+
+  @override
+  String get storeCustomerDelete => 'Delete';
+
+  @override
+  String get storeCustomerManage => 'Manage Customers';
+
+  @override
   String get storeAuditLogin => 'Login';
 
   @override
@@ -1490,6 +1524,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeReceiptCashier => 'Cashier';
 
   @override
+  String get staticCodeLabelTitle => 'Payment Code Label';
+
+  @override
+  String get staticCodeLabelEdit => 'Edit Label';
+
+  @override
+  String get staticCodeLabelHint =>
+      'This label is written into the payment code and seen by payers. Changing it creates a NEW payment code — share the new code again. Leave empty to return to the default label.';
+
+  @override
   String storeReceiptPointsDiscountLabel(String points) {
     return 'Disc. ($points nusan)';
   }
@@ -1505,9 +1549,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get storeShareReceiptFailed => 'Could not create the receipt image.';
-
-  @override
-  String get storeCustomerNameLabel => 'Customer Name (optional)';
 
   @override
   String get storeSettingsAddress => 'Store Address (receipt header line)';

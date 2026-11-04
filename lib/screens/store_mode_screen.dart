@@ -10,6 +10,7 @@ import '../theme.dart';
 import '../services/lsp_service.dart';
 import '../services/print_service.dart';
 import '../services/store_catalog.dart';
+import '../services/store_customers.dart';
 import '../services/store_draft.dart';
 import '../services/store_hold.dart';
 import '../services/store_operators.dart';
@@ -28,6 +29,7 @@ import '../utils/store_mode_logic.dart';
 import '../utils/store_receipt.dart';
 import '../utils/store_report.dart';
 import 'scan_screen.dart';
+import 'store_customers_screen.dart';
 import 'store_operator_gate.dart';
 import 'store_receipt_preview.dart';
 import 'store_point_rules_screen.dart';
@@ -1539,13 +1541,79 @@ class _StoreModeScreenState extends State<StoreModeScreen>
   /// record ditandai 'issued'; gagal/masih berjalan → tetap
   /// 'pending' (antre Poin Tertunda), penjualan rupiahnya tidak
   /// terpengaruh sama sekali.
+  /// Sumber kode tujuan penerbitan poin: bila ada pelanggan
+  /// tersimpan, kasir memilih — offer statis pelanggan dari
+  /// daftar, atau pindai kode seperti biasa. Tanpa pelanggan
+  /// tersimpan langsung ke pemindai (perilaku lama).
+  Future<String?> _pickIssueCode() async {
+    final customers = await StoreCustomerStore().loadAll();
+    if (!mounted) return null;
+    if (customers.isEmpty) {
+      return Navigator.push<String>(
+        context,
+        MaterialPageRoute(builder: (_) => const ScanScreen()),
+      );
+    }
+    final l10n = context.l10n;
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: context.palette.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 16, 18, 6),
+                child: Text(
+                  l10n.storeCustomerChoose,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              for (final customer in customers)
+                ListTile(
+                  leading: const Icon(
+                    Icons.person_rounded,
+                    color: Color(0xFF34D399),
+                  ),
+                  title: Text(
+                    customer.name,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  onTap: () => Navigator.pop(ctx, customer.offer),
+                ),
+              const Divider(height: 16),
+              ListTile(
+                leading: const Icon(Icons.qr_code_scanner_rounded),
+                title: Text(l10n.storeCustomerScan),
+                onTap: () => Navigator.pop(ctx, '__scan__'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (picked == null || !mounted) return null;
+    if (picked == '__scan__') {
+      return Navigator.push<String>(
+        context,
+        MaterialPageRoute(builder: (_) => const ScanScreen()),
+      );
+    }
+    return picked;
+  }
+
   Future<void> _issuePoints(CompletedOrder record) async {
     if (_issuing || record.pointsEarned <= 0) return;
     final l10n = context.l10n;
-    final raw = await Navigator.push<String>(
-      context,
-      MaterialPageRoute(builder: (_) => const ScanScreen()),
-    );
+    final raw = await _pickIssueCode();
     if (raw == null || !mounted) return;
     final code = raw.trim();
     if (code.isEmpty) return;
@@ -3237,6 +3305,10 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
   // debit jurnal baru tercatat pada record lunas di _settle.
   // Tidak ada invoice dan tidak ada pembayaran dari pelanggan.
   String? _redeemOffer;
+
+  /// Nama pelanggan tersimpan yang offer-nya sedang dipakai
+  /// (null bila offer datang dari pindai langsung).
+  String? _redeemCustomerName;
   int _journalBalance = 0;
   bool _redeemApplied = false;
   int _redeemPoints = 0;
@@ -3313,15 +3385,36 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
       setState(() => _redeemError = l10n.storeRedeemNeedOffer);
       return;
     }
-    final offer = normalizePointsOffer(code);
+    _useRedeemOffer(normalizePointsOffer(code));
+  }
+
+  /// Pakai satu offer sebagai dasar penukaran (dari pindai
+  /// atau dari pelanggan tersimpan): baca saldo jurnalnya dan
+  /// reset klaim yang sedang disusun.
+  void _useRedeemOffer(String offer, {String? customerName}) {
     setState(() {
       _redeemOffer = offer;
+      _redeemCustomerName = customerName;
       _journalBalance = pointsJournalBalanceFor(widget.history, offer);
       _redeemApplied = false;
       _redeemPoints = 0;
       _redeemError = null;
       _pointsController.clear();
     });
+  }
+
+  /// Pilih pelanggan tersimpan untuk penukaran (alternatif
+  /// memindai kode bayar pelanggan): offer pelanggan terpilih
+  /// langsung menjadi dasar penukaran.
+  Future<void> _chooseCustomerForRedeem() async {
+    final customer = await showStoreCustomerPicker(
+      context,
+      subtitleFor: (c) => context.l10n.storeRedeemBalance(
+        pointsJournalBalanceFor(widget.history, c.offer),
+      ),
+    );
+    if (customer == null || !mounted) return;
+    _useRedeemOffer(customer.offer, customerName: customer.name);
   }
 
   /// Terapkan klaim penukaran: kunci jumlah poin (dijepit ke
@@ -3779,7 +3872,32 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
                 ),
               ),
             ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _chooseCustomerForRedeem,
+              icon: const Icon(Icons.person_rounded, size: 19),
+              label: Text(l10n.storeCustomerChoose),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 13,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
           ] else ...[
+            if (_redeemCustomerName != null) ...[
+              Text(
+                '${l10n.storeCustomerTitle}: ${_redeemCustomerName!}',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+            ],
             Text(
               l10n.storeRedeemBalance(_journalBalance),
               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
@@ -3817,7 +3935,17 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 6),
+                // Tombol Max (permintaan NUX 4 Nov 2026): isi
+                // kolom dengan hak tukar penuh yang berlaku
+                // (saldo jurnal dibatasi plafon tagihan).
+                TextButton(
+                  onPressed: _maxPoints > 0
+                      ? () => _pointsController.text = '$_maxPoints'
+                      : null,
+                  child: const Text('Max'),
+                ),
+                const SizedBox(width: 2),
                 ElevatedButton(
                   onPressed: _journalBalance > 0 ? _applyRedeem : null,
                   style: ElevatedButton.styleFrom(
@@ -3844,12 +3972,18 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
                   ),
                 ),
               ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: _scanCustomerOffer,
-                child: Text(l10n.storeRedeemScanAgain),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton(
+                  onPressed: _chooseCustomerForRedeem,
+                  child: Text(l10n.storeCustomerChoose),
+                ),
+                TextButton(
+                  onPressed: _scanCustomerOffer,
+                  child: Text(l10n.storeRedeemScanAgain),
+                ),
+              ],
             ),
           ],
           if (_redeemError != null)

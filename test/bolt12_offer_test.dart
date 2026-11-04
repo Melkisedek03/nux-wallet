@@ -65,8 +65,24 @@ void main() {
     test('simpan → muat kembali utuh', () async {
       final store = Bolt12OfferStore();
       expect(await store.load(), isNull);
-      await store.save(_offerContoh);
+      await store.save(_offerContoh, forDescription: 'uji');
       expect(await store.load(), _offerContoh);
+      expect(await store.loadOfferDescription(), 'uji');
+    });
+
+    test('label kustom: pasang, baca, hapus; clearOffer membuang '
+        'offer + deskripsinya', () async {
+      final store = Bolt12OfferStore();
+      expect(await store.loadCustomDescription(), isNull);
+      await store.saveCustomDescription('  Toko Berkah  ');
+      expect(await store.loadCustomDescription(), 'Toko Berkah');
+      await store.saveCustomDescription('');
+      expect(await store.loadCustomDescription(), isNull);
+
+      await store.save(_offerContoh, forDescription: 'uji');
+      await store.clearOffer();
+      expect(await store.load(), isNull);
+      expect(await store.loadOfferDescription(), isNull);
     });
 
     test('simpanan rusak dianggap tidak ada', () async {
@@ -94,6 +110,20 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       final service = Bolt12OfferService(LspService());
       final result = await service.ensureOffer(description: 'uji');
+      expect(result.outcome, StaticOfferOutcome.failed);
+      expect(result.offer, isNull);
+    });
+
+    test('deskripsi tercatat berbeda: offer simpanan TIDAK '
+        'dipakai ulang (label berubah = offer baru)', () async {
+      SharedPreferences.setMockInitialValues({
+        Bolt12OfferStore.storageKey: _offerContoh,
+        Bolt12OfferStore.offerDescriptionKey: 'label lama',
+      });
+      final service = Bolt12OfferService(LspService());
+      // Node mati: bila offer lama dipakai ulang hasilnya akan
+      // ready; yang benar adalah usaha buat baru → failed.
+      final result = await service.ensureOffer(description: 'label baru');
       expect(result.outcome, StaticOfferOutcome.failed);
       expect(result.offer, isNull);
     });

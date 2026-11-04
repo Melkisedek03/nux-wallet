@@ -5,6 +5,7 @@ import '../locale_controller.dart';
 import '../theme.dart';
 import '../services/store_settings.dart';
 import '../utils/format.dart';
+import 'store_customers_screen.dart';
 import 'store_operators_screen.dart';
 import 'store_point_rules_screen.dart';
 
@@ -390,6 +391,16 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
                   ),
                   icon: const Icon(Icons.fact_check_rounded, size: 19),
                   label: Text(l10n.storeAuditTitle),
+                ),
+                TextButton.icon(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const StoreCustomersScreen(),
+                    ),
+                  ),
+                  icon: const Icon(Icons.person_rounded, size: 19),
+                  label: Text(l10n.storeCustomerTitle),
                 ),
               ],
             ),

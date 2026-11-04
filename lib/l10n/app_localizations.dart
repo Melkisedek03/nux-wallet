@@ -2120,6 +2120,72 @@ abstract class AppLocalizations {
   /// **'Diskon manual di atas ambang ini wajib disetujui PIN admin.'**
   String get storeSettingsDiscountThresholdHint;
 
+  /// No description provided for @storeCustomerTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Pelanggan'**
+  String get storeCustomerTitle;
+
+  /// No description provided for @storeCustomerChoose.
+  ///
+  /// In id, this message translates to:
+  /// **'Pilih Pelanggan'**
+  String get storeCustomerChoose;
+
+  /// No description provided for @storeCustomerAdd.
+  ///
+  /// In id, this message translates to:
+  /// **'Tambah Pelanggan'**
+  String get storeCustomerAdd;
+
+  /// No description provided for @storeCustomerNameLabel.
+  ///
+  /// In id, this message translates to:
+  /// **'Nama Pelanggan (opsional)'**
+  String get storeCustomerNameLabel;
+
+  /// No description provided for @storeCustomerOfferLabel.
+  ///
+  /// In id, this message translates to:
+  /// **'Kode Bayar Statis (Bolt12)'**
+  String get storeCustomerOfferLabel;
+
+  /// No description provided for @storeCustomerScan.
+  ///
+  /// In id, this message translates to:
+  /// **'Pindai'**
+  String get storeCustomerScan;
+
+  /// No description provided for @storeCustomerInvalidOffer.
+  ///
+  /// In id, this message translates to:
+  /// **'Kode bayar tidak sah — harus offer Bolt12 (lno1…).'**
+  String get storeCustomerInvalidOffer;
+
+  /// No description provided for @storeCustomerEmpty.
+  ///
+  /// In id, this message translates to:
+  /// **'Belum ada pelanggan tersimpan.'**
+  String get storeCustomerEmpty;
+
+  /// No description provided for @storeCustomerEdit.
+  ///
+  /// In id, this message translates to:
+  /// **'Ubah'**
+  String get storeCustomerEdit;
+
+  /// No description provided for @storeCustomerDelete.
+  ///
+  /// In id, this message translates to:
+  /// **'Hapus'**
+  String get storeCustomerDelete;
+
+  /// No description provided for @storeCustomerManage.
+  ///
+  /// In id, this message translates to:
+  /// **'Kelola Pelanggan'**
+  String get storeCustomerManage;
+
   /// No description provided for @storeAuditLogin.
   ///
   /// In id, this message translates to:
@@ -2756,6 +2822,24 @@ abstract class AppLocalizations {
   /// **'Kasir'**
   String get storeReceiptCashier;
 
+  /// No description provided for @staticCodeLabelTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Label Kode Bayar'**
+  String get staticCodeLabelTitle;
+
+  /// No description provided for @staticCodeLabelEdit.
+  ///
+  /// In id, this message translates to:
+  /// **'Ubah Label'**
+  String get staticCodeLabelEdit;
+
+  /// No description provided for @staticCodeLabelHint.
+  ///
+  /// In id, this message translates to:
+  /// **'Label ini tertulis di dalam kode bayar dan dilihat pembayar. Mengganti label membuat kode bayar BARU — bagikan ulang kode yang baru. Kosongkan untuk kembali ke label bawaan.'**
+  String get staticCodeLabelHint;
+
   /// No description provided for @storeReceiptPointsDiscountLabel.
   ///
   /// In id, this message translates to:
@@ -2785,12 +2869,6 @@ abstract class AppLocalizations {
   /// In id, this message translates to:
   /// **'Tidak dapat membuat gambar struk.'**
   String get storeShareReceiptFailed;
-
-  /// No description provided for @storeCustomerNameLabel.
-  ///
-  /// In id, this message translates to:
-  /// **'Nama Pelanggan (opsional)'**
-  String get storeCustomerNameLabel;
 
   /// No description provided for @storeSettingsAddress.
   ///

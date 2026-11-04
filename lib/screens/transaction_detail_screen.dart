@@ -277,7 +277,13 @@ class TransactionDetailScreen extends StatelessWidget {
                     version: QrVersions.auto,
                     size: 220,
                     backgroundColor: Colors.white,
-                    errorCorrectionLevel: QrErrorCorrectLevel.M,
+                    // Logo ELNUX di tengah QR (konsisten dengan
+                    // layar Terima); level H menjaga terpindai.
+                    errorCorrectionLevel: QrErrorCorrectLevel.H,
+                    embeddedImage: const AssetImage('assets/app_icon.png'),
+                    embeddedImageStyle: const QrEmbeddedImageStyle(
+                      size: Size(46, 46),
+                    ),
                   ),
                 ),
               ),
