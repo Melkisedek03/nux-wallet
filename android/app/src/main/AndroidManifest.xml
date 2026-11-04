@@ -14,6 +14,16 @@
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30"/>
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30"/>
+    <!-- Jembatan offline antar-HP (spike, Google Nearby Connections):
+         iklankan/sambung Bluetooth di Android 12+, plus akses Wi-Fi
+         untuk jalur Wi-Fi Direct/LAN yang dipilih Nearby di balik
+         layar. NEARBY_WIFI_DEVICES dinyatakan neverForLocation
+         karena posisi tidak pernah diturunkan dari Wi-Fi. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
+    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" android:usesPermissionFlags="neverForLocation"/>
     <uses-feature android:name="android.hardware.camera.any" android:required="false"/>
     <application
         android:label="ELNUX"
