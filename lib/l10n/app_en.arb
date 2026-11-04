@@ -64,6 +64,7 @@
   "txTime": "Time",
   "txPaymentId": "Payment ID",
   "txPaymentHash": "Payment Hash",
+  "txNote": "Note",
   "txSucceeded": "Succeeded",
   "txExpiredBadge": "Expired",
   "txInvoiceExpiredNote": "This invoice has expired and can no longer be paid. Create a new invoice to receive a payment.",
@@ -102,6 +103,8 @@
   "done": "Done",
   "invalidAmount": "Enter a valid amount",
   "receiveInvoiceDesc": "Receive {amount}",
+  "receiveNoteLabel": "Note (optional)",
+  "receiveNoteHint": "e.g. for November school fees",
   "@receiveInvoiceDesc": {
     "placeholders": {
       "amount": {

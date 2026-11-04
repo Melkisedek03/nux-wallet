@@ -9,6 +9,7 @@ import 'package:ldk_node/src/generated/api/types.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../services/bolt12_service.dart';
 import '../services/lsp_service.dart';
+import '../services/payment_notes.dart';
 import '../services/saved_invoices.dart';
 import '../utils/animated_checkmark.dart';
 import '../utils/coin_alert.dart';
@@ -51,6 +52,11 @@ class ReceiveScreen extends StatefulWidget {
 
 class _ReceiveScreenState extends State<ReceiveScreen> {
   final _amountController = TextEditingController();
+
+  /// Kolom Catatan (opsional): teksnya menjadi deskripsi invoice
+  /// (tag 'd' BOLT11) — dibaca pembayar sebelum membayar dan
+  /// disimpan sebagai judul catatan pembayaran ini di riwayat.
+  final _noteController = TextEditingController();
   String? _invoice;
   bool _loading = false;
   String? _error;
@@ -219,6 +225,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
     _stopWatching();
     _celebrationTimer?.cancel();
     _amountController.dispose();
+    _noteController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -248,8 +255,13 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
       _restored = false;
     });
 
-    final description = context.l10n.receiveInvoiceDesc(
-        formatAmountWithUnit(amountMsat, unit, locale: locale));
+    // Catatan user (bila diisi) menjadi deskripsi invoice;
+    // kosong → teks bawaan "Terima {amount}" seperti sebelumnya.
+    final note = _noteController.text.trim();
+    final description = resolveInvoiceDescription(
+        note: note,
+        fallback: context.l10n.receiveInvoiceDesc(
+            formatAmountWithUnit(amountMsat, unit, locale: locale)));
 
     // Pilih jalur dari kapasitas terima yang sudah ada. Gagal
     // membaca kapasitas (node sesaat tidak siap) tidak boleh
@@ -291,6 +303,13 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
           createdAt: DateTime.now(),
           expiresAt: info.expiresAt.toLocal(),
         ));
+        // Catatan user ditautkan ke hash invoice ini: catatan
+        // pembayaran node tidak membawa deskripsi, jadi tanpa
+        // simpanan ini riwayat penerimaan tidak bisa berjudul
+        // catatannya sendiri.
+        if (note.isNotEmpty) {
+          await PaymentNoteStore().save(info.paymentHashHex, note);
+        }
       }
       _syncWatcher();
     } catch (e) {
@@ -431,6 +450,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
       _invoice = null;
       _restored = false;
       _amountController.clear();
+      _noteController.clear();
     });
     _scrollToCelebration();
     _celebrationTimer?.cancel();
@@ -577,6 +597,28 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                   ),
                 );
               },
+            ),
+            const SizedBox(height: 16),
+            // Kolom catatan (opsional): menjadi deskripsi invoice.
+            Text(context.l10n.receiveNoteLabel,
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _noteController,
+              maxLength: 140,
+              textInputAction: TextInputAction.done,
+              style: const TextStyle(fontSize: 15),
+              decoration: InputDecoration(
+                hintText: context.l10n.receiveNoteHint,
+                hintStyle: TextStyle(color: context.palette.hint),
+                counterText: '',
+                filled: true,
+                fillColor: context.palette.cardAlt,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+              ),
             ),
             const SizedBox(height: 16),
             // Create button

@@ -179,6 +179,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get txPaymentHash => 'Hash Pembayaran';
 
   @override
+  String get txNote => 'Catatan';
+
+  @override
   String get txSucceeded => 'Berhasil';
 
   @override
@@ -275,6 +278,12 @@ class AppLocalizationsId extends AppLocalizations {
   String receiveInvoiceDesc(String amount) {
     return 'Terima $amount';
   }
+
+  @override
+  String get receiveNoteLabel => 'Catatan (opsional)';
+
+  @override
+  String get receiveNoteHint => 'cth. untuk SPP bulan November';
 
   @override
   String get createInvoiceFailed => 'Gagal membuat invoice. Coba lagi.';

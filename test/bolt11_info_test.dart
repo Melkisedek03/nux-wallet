@@ -15,6 +15,10 @@ void main() {
       expect(info, isNotNull);
       expect(info!.paymentHashHex,
           'd65fee6b19d0c93281e5af4fbfc95365498e9bf54e599155c4a9dacba974c482');
+      // Deskripsi invoice uji ini memang "uji JIT NUX" (lihat
+      // komentar di konstanta _invoice — diverifikasi decoder
+      // independen).
+      expect(info.description, 'uji JIT NUX');
       // timestamp invoice 1792389572 + expiry 3600 detik.
       expect(info.expiresAt.millisecondsSinceEpoch, 1792393172 * 1000);
       expect(

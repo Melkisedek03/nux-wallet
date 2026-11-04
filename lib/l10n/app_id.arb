@@ -64,6 +64,7 @@
   "txTime": "Waktu",
   "txPaymentId": "ID Pembayaran",
   "txPaymentHash": "Hash Pembayaran",
+  "txNote": "Catatan",
   "txSucceeded": "Berhasil",
   "txExpiredBadge": "Kedaluwarsa",
   "txInvoiceExpiredNote": "Invoice ini sudah kedaluwarsa dan tidak bisa dibayar lagi. Buat invoice baru untuk menerima pembayaran.",
@@ -109,6 +110,8 @@
       }
     }
   },
+  "receiveNoteLabel": "Catatan (opsional)",
+  "receiveNoteHint": "cth. untuk SPP bulan November",
   "createInvoiceFailed": "Gagal membuat invoice. Coba lagi.",
   "receiveJitMinimumNote": "Untuk penerimaan pertama (sekaligus membuatkan jalur penerimaanmu), jumlah terkecilnya 1.000 nusan. Setelah jalurmu jadi, kamu bisa menerima berapa pun, termasuk di bawah 1.000 nusan.",
   "receiveTitle": "Terima NUX",

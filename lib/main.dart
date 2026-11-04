@@ -25,6 +25,7 @@ import 'screens/printer_settings_screen.dart';
 import 'screens/store_mode_screen.dart';
 import 'screens/transaction_detail_screen.dart';
 import 'services/lsp_profile.dart';
+import 'services/payment_notes.dart';
 import 'services/saved_invoices.dart';
 import 'services/lsp_service.dart';
 import 'services/csv_export.dart';
@@ -126,6 +127,12 @@ class _HomeScreenState extends State<HomeScreen>
   /// Riwayat pembayaran terakhir dari node (terbaru di depan).
   List<PaymentDetails> _payments = const [];
 
+  /// Catatan pembayaran lokal (hash hex → catatan), dimuat
+  /// bersama riwayat. Catatan pembayaran node tidak membawa
+  /// deskripsi invoice, jadi judul catatan di daftar Aktivitas/
+  /// Riwayat dibaca dari peta ini (lihat PaymentNoteStore).
+  Map<String, String> _paymentNotes = const {};
+
   /// Deteksi koin masuk: true setelah muat riwayat pertama selesai —
   /// riwayat lama tidak memicu bunyi/getar, hanya kedatangan baru.
   bool _paymentsPrimed = false;
@@ -209,7 +216,13 @@ class _HomeScreenState extends State<HomeScreen>
       }
       _receivedAlertKeys.addAll(succeededIn);
       _paymentsPrimed = true;
-      if (mounted) setState(() => _payments = payments);
+      final notes = await PaymentNoteStore().loadAll();
+      if (mounted) {
+        setState(() {
+          _payments = payments;
+          _paymentNotes = notes;
+        });
+      }
     } catch (_) {
       // Abaikan — daftar lama tetap ditampilkan.
     }
@@ -1181,8 +1194,30 @@ _quickAction(const Icon(Icons.add_rounded, size: 25), context.l10n.buy, false, (
   /// "Sedang diproses" (dananya sungguh terkunci); "Menunggu"
   /// hanya tersisa untuk pending masuk, yang oleh penyaring
   /// _displayPayments tidak lagi ditampilkan di daftar.
+  /// Judul baris riwayat dari catatan: dipangkas per rune
+  /// (aman untuk emoji) supaya baris tetap satu-dua baris;
+  /// catatan utuh tampil di layar detail.
+  String _noteRowTitle(String note) {
+    final runes = note.runes.toList();
+    if (runes.length <= 42) return note;
+    return '${String.fromCharCodes(runes.take(42))}…';
+  }
+
+  /// Hash pembayaran (hex) dari jenis pembayaran Lightning —
+  /// kunci menautkan catatan lokal. Null untuk on-chain (yang
+  /// tidak punya catatan invoice).
+  String? _paymentHashHex(PaymentDetails payment) {
+    final kind = payment.kind;
+    if (kind is PaymentKind_Bolt11) return _hashHex(kind.hash.data);
+    if (kind is PaymentKind_Bolt11Jit) return _hashHex(kind.hash.data);
+    if (kind is PaymentKind_Spontaneous) return _hashHex(kind.hash.data);
+    return null;
+  }
+
   Widget _paymentRow(PaymentDetails payment) {
     final isIn = payment.direction == PaymentDirection.inbound;
+    final hashHex = _paymentHashHex(payment);
+    final note = hashHex == null ? null : _paymentNotes[hashHex];
     final kind = payment.kind;
     final tag = kind is PaymentKind_Bolt11Jit
         ? '\u26A1 JIT'
@@ -1200,7 +1235,14 @@ _quickAction(const Icon(Icons.add_rounded, size: 25), context.l10n.buy, false, (
       icon: isIn
           ? const Icon(Icons.arrow_downward_rounded, size: 22)
           : const Icon(Icons.arrow_upward_rounded, size: 22),
-      title: isIn ? context.l10n.received : context.l10n.sent,
+      // Judul baris = catatan pembayaran bila ada (itulah gunanya
+      // catatan ditulis); arah tetap terbaca dari ikon panah dan
+      // tanda +/− nominal. Tanpa catatan, judul arah seperti dulu.
+      title: note != null
+          ? _noteRowTitle(note)
+          : isIn
+              ? context.l10n.received
+              : context.l10n.sent,
       addr: _shortPaymentId(payment.id),
       tag: tag,
       isIn: isIn,
@@ -1242,8 +1284,11 @@ _quickAction(const Icon(Icons.add_rounded, size: 25), context.l10n.buy, false, (
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            TransactionDetailScreen(payment: payment, savedInvoice: saved),
+        builder: (_) => TransactionDetailScreen(
+          payment: payment,
+          savedInvoice: saved,
+          note: hashHex == null ? null : _paymentNotes[hashHex],
+        ),
       ),
     );
   }

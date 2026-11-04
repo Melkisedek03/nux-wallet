@@ -422,6 +422,12 @@ abstract class AppLocalizations {
   /// **'Hash Pembayaran'**
   String get txPaymentHash;
 
+  /// No description provided for @txNote.
+  ///
+  /// In id, this message translates to:
+  /// **'Catatan'**
+  String get txNote;
+
   /// No description provided for @txSucceeded.
   ///
   /// In id, this message translates to:
@@ -589,6 +595,18 @@ abstract class AppLocalizations {
   /// In id, this message translates to:
   /// **'Terima {amount}'**
   String receiveInvoiceDesc(String amount);
+
+  /// No description provided for @receiveNoteLabel.
+  ///
+  /// In id, this message translates to:
+  /// **'Catatan (opsional)'**
+  String get receiveNoteLabel;
+
+  /// No description provided for @receiveNoteHint.
+  ///
+  /// In id, this message translates to:
+  /// **'cth. untuk SPP bulan November'**
+  String get receiveNoteHint;
 
   /// No description provided for @createInvoiceFailed.
   ///

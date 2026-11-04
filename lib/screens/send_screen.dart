@@ -7,6 +7,7 @@ import '../unit_controller.dart';
 import '../theme.dart';
 import 'package:flutter/services.dart';
 import '../services/lsp_service.dart';
+import '../services/payment_notes.dart';
 import '../utils/animated_checkmark.dart';
 import '../utils/bolt11_info.dart';
 import '../utils/bolt12_info.dart';
@@ -249,6 +250,12 @@ class _SendScreenState extends State<SendScreen> {
     if (amountMsat != null) {
       if (!await _checkSendable(amountMsat)) return;
     }
+    // Deskripsi/catatan invoice (tag 'd') — ditampilkan di dialog
+    // konfirmasi dan disimpan sebagai judul pembayaran ini di
+    // riwayat. Gagal baca (invoice tak terurai) = tanpa catatan,
+    // alur bayar tidak terganggu.
+    final bolt11Info = parseBolt11Info(invoice);
+    final invoiceDescription = bolt11Info?.description;
     await _vibrateConfirm();
     if (!mounted) return;
     final confirmed = await showDialog<bool>(
@@ -278,6 +285,11 @@ class _SendScreenState extends State<SendScreen> {
                 style: const TextStyle(fontSize: 12.5),
               ),
             ],
+            if (invoiceDescription != null) ...[
+              const SizedBox(height: 6),
+              Text(invoiceDescription,
+                  style: const TextStyle(fontSize: 13)),
+            ],
             const SizedBox(height: 12),
             Text(
               _invoicePreview(invoice),
@@ -302,7 +314,18 @@ class _SendScreenState extends State<SendScreen> {
       ),
     );
     if (confirmed == true && mounted) {
-      await _pay(() => widget.lspService.payInvoice(invoice));
+      await _pay(
+        () => widget.lspService.payInvoice(invoice),
+        onSent: () async {
+          // Pembayaran sudah diterima node: tautkan deskripsi
+          // invoice ke hash-nya supaya riwayat berjudul catatan
+          // ini. Catatan pembayaran node tidak membawa deskripsi.
+          final hash = bolt11Info?.paymentHashHex;
+          if (hash != null && invoiceDescription != null) {
+            await PaymentNoteStore().save(hash, invoiceDescription);
+          }
+        },
+      );
     }
   }
 
@@ -442,7 +465,13 @@ class _SendScreenState extends State<SendScreen> {
   /// offer Bolt12 — keduanya mengembalikan ID pembayaran node)
   /// lalu tunggu hasil akhirnya. Validasi bentuk & nominal sudah
   /// dikerjakan pemanggil sebelum konfirmasi.
-  Future<void> _pay(Future<PaymentId> Function() sendPayment) async {
+  ///
+  /// [onSent] (bila ada) dijalankan tepat sesudah perintah kirim
+  /// diterima node, sebelum hasil akhir ditunggu — tempat pemanggil
+  /// menautkan catatan pembayaran. Kegagalannya ditelan: catatan
+  /// tidak boleh menggagalkan pembayaran yang sudah berjalan.
+  Future<void> _pay(Future<PaymentId> Function() sendPayment,
+      {Future<void> Function()? onSent}) async {
     setState(() {
       _loading = true;
       _error = null;
@@ -455,6 +484,13 @@ class _SendScreenState extends State<SendScreen> {
 
     try {
       final paymentId = await sendPayment();
+      if (onSent != null) {
+        try {
+          await onSent();
+        } catch (_) {
+          // Abaikan — lihat dokumentasi [onSent].
+        }
+      }
       if (!mounted) return;
       // Perintah kirim diterima node — mulai tunggu hasil AKHIR.
       // Tanpa penungguan ini centang berhasil tampil prematur dan

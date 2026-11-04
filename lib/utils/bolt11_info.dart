@@ -1,6 +1,7 @@
-/// Pembaca info dasar invoice BOLT11 (payment hash + masa berlaku).
+/// Pembaca info dasar invoice BOLT11 (payment hash + masa berlaku
+/// + deskripsi).
 ///
-/// ELNUX perlu dua hal dari invoice yang dibuatnya sendiri:
+/// ELNUX perlu tiga hal dari sebuah invoice:
 ///
 /// 1. **payment hash** — untuk mencocokkan invoice tersimpan dengan
 ///    catatan pembayaran di node (PaymentKind_Bolt11/Jit menyimpan
@@ -9,26 +10,41 @@
 /// 2. **waktu kedaluwarsa** — dihitung dari timestamp invoice +
 ///    tag 'x' (default 3600 detik bila tag tidak ada), supaya
 ///    aplikasi tahu invoice masih layak ditampilkan atau sudah mati.
+/// 3. **deskripsi** (tag 'd') — catatan teks yang ditulis pembuat
+///    invoice ("untuk SPP November"); ditampilkan ke pembayar
+///    sebelum membayar dan disimpan sebagai catatan riwayat.
+///    Field 'h' (hash deskripsi) TIDAK bisa dikembalikan menjadi
+///    teks, jadi invoice yang hanya membawa 'h' terbaca tanpa
+///    deskripsi.
 ///
 /// Ini BUKAN decoder lengkap dan TIDAK memverifikasi tanda tangan
-/// invoice: fungsinya hanya membaca dua field di atas dari invoice
-/// yang dibuat node sendiri. Checksum bech32 tetap diverifikasi —
-/// invoice yang checksum-nya rusak dianggap tidak valid dan fungsi
-/// mengembalikan null (fail-open: pemanggil cukup tidak menautkan
-/// invoice tersimpan, tanpa error ke user).
+/// invoice: fungsinya hanya membaca tiga field di atas. Checksum
+/// bech32 tetap diverifikasi — invoice yang checksum-nya rusak
+/// dianggap tidak valid dan fungsi mengembalikan null (fail-open:
+/// pemanggil cukup tidak menautkan invoice tersimpan, tanpa error
+/// ke user).
 ///
 /// Fungsi ketiga, [parseBolt11AmountMsat], membaca nominal dari
 /// awalan (HRP) invoice mana pun untuk pemeriksaan pra-bayar di
 /// layar Kirim — juga fail-open dengan checksum terverifikasi.
 library;
 
-/// Info hasil baca invoice: payment hash (hex 64 karakter) dan
-/// waktu kedaluwarsa menurut jam invoice itu sendiri.
+import 'dart:convert';
+
+/// Info hasil baca invoice: payment hash (hex 64 karakter),
+/// waktu kedaluwarsa menurut jam invoice itu sendiri, dan
+/// deskripsi/catatan invoice (null bila invoice tidak membawa
+/// tag 'd' atau isinya kosong).
 class Bolt11Info {
   final String paymentHashHex;
   final DateTime expiresAt;
+  final String? description;
 
-  const Bolt11Info({required this.paymentHashHex, required this.expiresAt});
+  const Bolt11Info({
+    required this.paymentHashHex,
+    required this.expiresAt,
+    this.description,
+  });
 
   bool isExpiredAt(DateTime now) => !now.isBefore(expiresAt);
 }
@@ -67,6 +83,7 @@ Bolt11Info? parseBolt11Info(String invoice) {
 
   String? paymentHashHex;
   int? expirySecs;
+  String? description;
   var i = 7;
   while (i + 3 <= payload.length) {
     final type = payload[i];
@@ -89,13 +106,48 @@ Bolt11Info? parseBolt11Info(String invoice) {
         v = (v << 5) | w;
       }
       expirySecs = v;
+    } else if (type == 13 && description == null) {
+      // 'd' = description: byte UTF-8 yang dikemas 5-bit.
+      // Dekode toleran (bit sisa di ujung diabaikan, byte nol
+      // ekor dibuang): deskripsi hanya untuk tampilan, jadi
+      // kekakuan padding pembuat invoice lain tidak boleh
+      // menggagalkan pembacaan hash/kedaluwarsa di atas.
+      final bytes = _wordsToBytesTolerant(data);
+      final text = utf8.decode(bytes, allowMalformed: true).trim();
+      if (text.isNotEmpty) description = text;
     }
   }
   if (paymentHashHex == null) return null;
   final expiresAt = DateTime.fromMillisecondsSinceEpoch(
       (timestamp + (expirySecs ?? 3600)) * 1000,
       isUtc: true);
-  return Bolt11Info(paymentHashHex: paymentHashHex, expiresAt: expiresAt);
+  return Bolt11Info(
+    paymentHashHex: paymentHashHex,
+    expiresAt: expiresAt,
+    description: description,
+  );
+}
+
+/// Kemas ulang kata 5-bit menjadi byte, toleran: bit sisa yang
+/// tidak membentuk byte utuh diabaikan dan byte 0x00 di ujung
+/// dibuang (sisa bantalan enkode). Dipakai khusus deskripsi —
+/// untuk payment hash tetap dipakai [_convertBits] yang ketat.
+List<int> _wordsToBytesTolerant(List<int> words) {
+  var acc = 0;
+  var bits = 0;
+  final out = <int>[];
+  for (final w in words) {
+    acc = (acc << 5) | w;
+    bits += 5;
+    while (bits >= 8) {
+      bits -= 8;
+      out.add((acc >> bits) & 0xff);
+    }
+  }
+  while (out.isNotEmpty && out.last == 0) {
+    out.removeLast();
+  }
+  return out;
 }
 
 /// Baca nominal invoice (msat) dari awalannya (HRP bech32).

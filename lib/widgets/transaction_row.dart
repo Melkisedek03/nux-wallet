@@ -6,7 +6,8 @@ import '../theme.dart';
 ///
 /// Susunan kolom tengahnya TIGA baris, bukan dua:
 ///
-/// 1. judul arah (Diterima/Terkirim),
+/// 1. judul (catatan pembayaran bila ada, kalau tidak judul
+///    arah Diterima/Terkirim),
 /// 2. ID pembayaran pendek + chip jenis (⚡ JIT / ⛓ on-chain),
 /// 3. chip status (Menunggu/Gagal) — hanya bila status bukan sukses.
 ///

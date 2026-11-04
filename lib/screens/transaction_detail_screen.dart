@@ -44,10 +44,16 @@ class TransactionDetailScreen extends StatelessWidget {
   /// invoice ada, atau pembayaran keluar/on-chain).
   final SavedInvoice? savedInvoice;
 
+  /// Catatan pembayaran (deskripsi invoice) dari simpanan lokal;
+  /// null bila pembayaran ini tidak punya catatan. Catatan
+  /// pembayaran node sendiri tidak membawa deskripsi.
+  final String? note;
+
   const TransactionDetailScreen({
     super.key,
     required this.payment,
     this.savedInvoice,
+    this.note,
   });
 
   String _hex(Iterable<int> bytes) =>
@@ -212,6 +218,8 @@ class TransactionDetailScreen extends StatelessWidget {
                   _row(context, context.l10n.txType, typeText),
                   _row(context, context.l10n.txStatus, statusText),
                   _row(context, context.l10n.amountLabel, amountText),
+                  if (note != null)
+                    _row(context, context.l10n.txNote, note!),
                   _row(context, context.l10n.txTime, _fullTime(context)),
                 ],
               ),

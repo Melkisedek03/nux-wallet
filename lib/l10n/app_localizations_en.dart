@@ -180,6 +180,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get txPaymentHash => 'Payment Hash';
 
   @override
+  String get txNote => 'Note';
+
+  @override
   String get txSucceeded => 'Succeeded';
 
   @override
@@ -275,6 +278,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String receiveInvoiceDesc(String amount) {
     return 'Receive $amount';
   }
+
+  @override
+  String get receiveNoteLabel => 'Note (optional)';
+
+  @override
+  String get receiveNoteHint => 'e.g. for November school fees';
 
   @override
   String get createInvoiceFailed => 'Failed to create invoice. Try again.';
