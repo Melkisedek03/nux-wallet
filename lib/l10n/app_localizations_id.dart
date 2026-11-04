@@ -62,6 +62,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get bootFailedRetry => 'Coba lagi';
 
   @override
+  String get bootOfflineButton => 'Lanjutkan tanpa internet';
+
+  @override
   String get bootGenericError => 'Terjadi kendala saat memulai dompet.';
 
   @override

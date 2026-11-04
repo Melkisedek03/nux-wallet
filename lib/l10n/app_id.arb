@@ -17,6 +17,7 @@
   "splashTagline": "Uangmu, Kendalimu.",
   "bootFailedTitle": "Gagal menghubungkan node",
   "bootFailedRetry": "Coba lagi",
+  "bootOfflineButton": "Lanjutkan tanpa internet",
   "bootGenericError": "Terjadi kendala saat memulai dompet.",
   "lspNodeIdMissing": "lspNodeId belum diisi di lib/config.dart — minta node id LSP ke operator.",
   "seedCorrupt": "File seed korup (panjang {length}, harus 64). Hapus {path} untuk generate ulang (DANA LAMA HILANG).",

@@ -13,8 +13,15 @@ import 'offline_bridge.dart';
 class LspService {
   FfiNode? _node;
   bool _running = false;
+  bool _offlineMode = false;
+  String? _lspHost;
 
   bool get isRunning => _running;
+
+  /// True bila node dijalankan lewat boot mode offline: node dibangun
+  /// tanpa sumber likuiditas LSPS2 karena host LSP tidak di-resolve
+  /// (tanpa internet). Lihat parameter offlineMode di init().
+  bool get isOfflineMode => _offlineMode;
 
   Future<void> init({
     required List<int> seedBytes,
@@ -24,6 +31,7 @@ class LspService {
     String? lspToken,
     required String electrumUrl,
     bool isTestnet = true,
+    bool offlineMode = false,
   }) async {
     // Inisialisasi runtime flutter_rust_bridge (kelas `core` di
     // binding) sebelum panggilan API pertama. verifyInit idempotent:
@@ -41,12 +49,35 @@ class LspService {
     }
     final lspHost = lspAddress.substring(0, sep);
     final lspPort = int.parse(lspAddress.substring(sep + 1));
-    final addrs = await InternetAddress.lookup(lspHost);
-    final ipv4 = addrs.firstWhere(
-      (a) => a.type == InternetAddressType.IPv4,
-      orElse: () =>
-          throw StateError('Tidak ada alamat IPv4 untuk host "$lspHost"'),
-    );
+    _lspHost = lspHost;
+    // Mode offline (kondisi ekstrem tanpa internet): resolusi DNS host
+    // LSP pasti gagal dan LSPS2 memang tidak terjangkau, jadi resolusi
+    // dan konfigurasi likuiditas dilewati — node dibangun TANPA sumber
+    // likuiditas. Node tetap bisa berjalan, menerima peer lokal, dan
+    // membayar lewat channel yang sudah ada; membuka channel JIT baru
+    // tidak tersedia sampai node dimulai ulang dengan internet
+    // (otomatis lewat heartbeat di main.dart, atau mulai ulang
+    // aplikasi secara manual).
+    _offlineMode = offlineMode;
+    LiquiditySourceConfig? liquidityConfig;
+    if (!offlineMode) {
+      final addrs = await InternetAddress.lookup(lspHost);
+      final ipv4 = addrs.firstWhere(
+        (a) => a.type == InternetAddressType.IPv4,
+        orElse: () =>
+            throw StateError('Tidak ada alamat IPv4 untuk host "$lspHost"'),
+      );
+      liquidityConfig = LiquiditySourceConfig(
+        lsps2Service: (
+          SocketAddress.tcpIpV4(
+            addr: U8Array4(ipv4.rawAddress),
+            port: lspPort,
+          ),
+          PublicKey(hex: lspNodeId),
+          lspToken,
+        ),
+      );
+    }
 
     final config = Config(
       // Testnet = Nusacoin testnet (X11) — chain hash-nya cocok dengan
@@ -75,17 +106,6 @@ class LspService {
 
     final chainConfig = ChainDataSourceConfig.electrum(
       serverUrl: electrumUrl,
-    );
-
-    final liquidityConfig = LiquiditySourceConfig(
-      lsps2Service: (
-        SocketAddress.tcpIpV4(
-          addr: U8Array4(ipv4.rawAddress),
-          port: lspPort,
-        ),
-        PublicKey(hex: lspNodeId),
-        lspToken,
-      ),
     );
 
     final builder = FfiBuilder.createBuilder(
@@ -353,6 +373,21 @@ class LspService {
       await _node!.eventHandled();
     }
     return event;
+  }
+
+  /// Probe murah untuk heartbeat mode offline: true bila host LSP
+  /// bisa di-resolve ke alamat IPv4 — persis prasyarat boot normal
+  /// yang gagal saat boot offline dipilih. Tidak membuka koneksi
+  /// apa pun, hanya resolusi DNS.
+  Future<bool> probeLspReachable() async {
+    final host = _lspHost;
+    if (host == null) return false;
+    try {
+      final addrs = await InternetAddress.lookup(host);
+      return addrs.any((a) => a.type == InternetAddressType.IPv4);
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> stop() async {

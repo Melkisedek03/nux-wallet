@@ -200,6 +200,12 @@ abstract class AppLocalizations {
   /// **'Coba lagi'**
   String get bootFailedRetry;
 
+  /// No description provided for @bootOfflineButton.
+  ///
+  /// In id, this message translates to:
+  /// **'Lanjutkan tanpa internet'**
+  String get bootOfflineButton;
+
   /// No description provided for @bootGenericError.
   ///
   /// In id, this message translates to:
