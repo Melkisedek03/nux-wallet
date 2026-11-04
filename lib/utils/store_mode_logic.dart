@@ -461,6 +461,15 @@ int maxRedeemablePoints({
 // Tunai
 // ---------------------------------------------------------------------
 
+/// Ketuk kartu pecahan di layar pembayaran: MENAMBAH [denom] ke
+/// uang diterima saat ini (mode akumulasi — kasir menyusun uang
+/// pelanggan dari beberapa lembar). Tanpa plafon: uang diterima
+/// memang boleh jauh melebihi tagihan, kembaliannya dihitung
+/// terpisah oleh [cashChangeRp]. Berbeda dari "Uang Pas" yang
+/// MENETAPKAN nilai persis sebesar sisa tagihan.
+int cashAddDenomRp({required int currentRp, required int denomRp}) =>
+    currentRp + denomRp;
+
 /// Kembalian tunai: uang diterima − yang harus dibayar. Negatif
 /// berarti uangnya belum cukup (belum bisa lunas).
 int cashChangeRp({required int receivedRp, required int dueRp}) =>

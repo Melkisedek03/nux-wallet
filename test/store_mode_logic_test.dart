@@ -411,6 +411,18 @@ void main() {
   });
 
   group('tunai', () {
+    test('kartu pecahan menumpuk (akumulasi), bukan menimpa', () {
+      // Contoh NUX: tap 1000 lalu tap 5000 -> isian 6000.
+      var received = cashAddDenomRp(currentRp: 0, denomRp: 1000);
+      expect(received, 1000);
+      received = cashAddDenomRp(currentRp: received, denomRp: 5000);
+      expect(received, 6000);
+      // Menumpuk juga di atas nilai ketikan manual.
+      expect(cashAddDenomRp(currentRp: 7500, denomRp: 50000), 57500);
+      // Tanpa plafon: boleh jauh melebihi tagihan (kembalian urusan lain).
+      expect(cashAddDenomRp(currentRp: 90000, denomRp: 100000), 190000);
+    });
+
     test('kembalian = diterima − harus dibayar', () {
       expect(cashChangeRp(receivedRp: 50000, dueRp: 47500), 2500);
       expect(cashChangeRp(receivedRp: 47500, dueRp: 47500), 0);

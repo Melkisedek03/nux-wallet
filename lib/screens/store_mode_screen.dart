@@ -3146,6 +3146,11 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
     setState(() => _cashRp = value);
   }
 
+  /// Kartu pecahan: tambahkan pecahan ke uang diterima saat ini
+  /// (akumulasi di atas ketikan manual maupun ketukan sebelumnya).
+  void _addCash(int denom) =>
+      _setCash(cashAddDenomRp(currentRp: _cashRp, denomRp: denom));
+
   // ---------------- Build ----------------
 
   @override
@@ -3326,8 +3331,8 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
                         100000,
                       ])
                         ActionChip(
-                          label: Text(formatRupiah(denom)),
-                          onPressed: () => _setCash(denom),
+                          label: Text('+${formatRupiah(denom)}'),
+                          onPressed: () => _addCash(denom),
                         ),
                     ],
                   ),
