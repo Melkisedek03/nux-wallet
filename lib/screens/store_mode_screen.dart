@@ -3732,11 +3732,11 @@ class _CatalogManagerSheetState extends State<_CatalogManagerSheet> {
                     segments: [
                       ButtonSegment(
                         value: null,
-                        label: Text(l10n.storeNoDiscount),
+                        label: const Text('0'),
                       ),
                       ButtonSegment(
                         value: DiscountKind.percent,
-                        label: Text(l10n.storeDiscountPercent),
+                        label: const Text('%'),
                       ),
                       ButtonSegment(
                         value: DiscountKind.fixed,
