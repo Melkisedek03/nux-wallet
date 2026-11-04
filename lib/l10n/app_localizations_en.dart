@@ -1132,18 +1132,44 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeVoidRecorded => 'Order cancelled — recorded as VOID.';
 
   @override
-  String get storeCancelBlockedRedeem =>
-      'The points redemption is already verified — this order can no longer be cancelled; settle its payment.';
-
-  @override
   String get storeRedeemTitle => 'Redeem Nusan Points';
 
   @override
   String get storeRedeemHint =>
-      'The customer redeems nusan points as a discount on this order. Enter the points, create a redemption code, and ask the customer to pay it from their own ELNUX app. The discount applies only after the points payment is verified.';
+      'Redemption is read from this store\'s own points issuance records — the customer pays nothing. Ask the customer to show their Bolt12 offer in their ELNUX app, scan it, then apply a discount up to the points recorded for them.';
+
+  @override
+  String get storeRedeemScanOffer => 'Scan Customer Offer';
+
+  @override
+  String storeRedeemBalance(int balance) {
+    return 'Recorded points for this customer: $balance points.';
+  }
+
+  @override
+  String get storeRedeemNoBalance =>
+      'No points are recorded for this offer at this store yet — redemption isn\'t possible.';
+
+  @override
+  String get storeRedeemNeedOffer =>
+      'Redemption uses the customer\'s Bolt12 offer. That code isn\'t an offer — ask the customer to open their offer in ELNUX and scan again.';
 
   @override
   String get storeRedeemPointsLabel => 'Points';
+
+  @override
+  String get storeRedeemApply => 'Apply Discount';
+
+  @override
+  String storeRedeemApplied(int points, String amount) {
+    return 'Redemption recorded: $points points = Rp$amount discount.';
+  }
+
+  @override
+  String get storeRedeemUndo => 'Undo Redemption';
+
+  @override
+  String get storeRedeemScanAgain => 'Scan Again';
 
   @override
   String storeRedeemMaxNote(int max) {
@@ -1154,43 +1180,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String storeRedeemClamped(int max) {
     return 'That exceeds the limit — using $max points.';
   }
-
-  @override
-  String get storeRedeemCreate => 'Create Redemption Code';
-
-  @override
-  String get storeRedeemWaiting =>
-      'Waiting for the customer\'s points payment…';
-
-  @override
-  String get storeRedeemCopied => 'Redemption code copied';
-
-  @override
-  String storeRedeemVerified(int points, String amount) {
-    return 'Redemption verified: $points points = Rp$amount discount.';
-  }
-
-  @override
-  String get storeRedeemFailed =>
-      'The points redemption failed or expired — no discount. The order can still be paid in rupiah.';
-
-  @override
-  String get storeRedeemCancel => 'Cancel Redemption';
-
-  @override
-  String get storeRedeemCancelWarn =>
-      'This redemption code will be cancelled. If the customer pays it afterwards anyway, the points still arrive in the store wallet but no discount applies — settle this order in full rupiah.';
-
-  @override
-  String get storeRedeemLeaveBody =>
-      'A points redemption is still in progress. Leaving this page cancels the redemption — the order returns to the cashier without a points discount.';
-
-  @override
-  String get storeRedeemDesc => 'Nusan points redemption';
-
-  @override
-  String get storeRedeemMinChannel =>
-      'This points amount is below the minimum for creating a new receiving path (1,000 points). Increase the points, or skip redemption this time.';
 
   @override
   String get storeRedeemInvalidPoints =>
@@ -1228,6 +1217,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get storeIssueStillPending =>
       'The points payment is still in flight — it stays pending; check again from the Pending Points list.';
+
+  @override
+  String get storeIssueInvoiceNote =>
+      'Points issued to a one-time invoice — they are not recorded in the store journal. To make points redeemable on the next visit, issue them to the customer\'s Bolt12 offer.';
 
   @override
   String get storeDoneButton => 'Done';

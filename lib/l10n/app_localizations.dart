@@ -2120,12 +2120,6 @@ abstract class AppLocalizations {
   /// **'Pesanan dibatalkan — tercatat sebagai VOID.'**
   String get storeVoidRecorded;
 
-  /// No description provided for @storeCancelBlockedRedeem.
-  ///
-  /// In id, this message translates to:
-  /// **'Penukaran poin sudah terverifikasi — pesanan tidak bisa dibatalkan; selesaikan pembayarannya.'**
-  String get storeCancelBlockedRedeem;
-
   /// No description provided for @storeRedeemTitle.
   ///
   /// In id, this message translates to:
@@ -2135,14 +2129,62 @@ abstract class AppLocalizations {
   /// No description provided for @storeRedeemHint.
   ///
   /// In id, this message translates to:
-  /// **'Pelanggan menukar poin nusan sebagai potongan belanja. Masukkan jumlah poin, buat kode penukaran, dan minta pelanggan membayarnya dari aplikasi ELNUX miliknya. Potongan berlaku sesudah pembayaran poin terverifikasi.'**
+  /// **'Penukaran dibaca dari catatan penerbitan poin toko ini — pelanggan tidak membayar apa pun. Minta pelanggan menunjukkan offer Bolt12 dari aplikasi ELNUX miliknya, pindai, lalu terapkan potongan sampai sebesar poin yang tercatat untuknya.'**
   String get storeRedeemHint;
+
+  /// No description provided for @storeRedeemScanOffer.
+  ///
+  /// In id, this message translates to:
+  /// **'Pindai Offer Pelanggan'**
+  String get storeRedeemScanOffer;
+
+  /// No description provided for @storeRedeemBalance.
+  ///
+  /// In id, this message translates to:
+  /// **'Poin tercatat untuk pelanggan ini: {balance} poin.'**
+  String storeRedeemBalance(int balance);
+
+  /// No description provided for @storeRedeemNoBalance.
+  ///
+  /// In id, this message translates to:
+  /// **'Belum ada poin tercatat untuk offer ini di toko ini — penukaran belum bisa dilakukan.'**
+  String get storeRedeemNoBalance;
+
+  /// No description provided for @storeRedeemNeedOffer.
+  ///
+  /// In id, this message translates to:
+  /// **'Penukaran memakai offer Bolt12 pelanggan. Kode ini bukan offer — minta pelanggan membuka offer-nya di ELNUX lalu pindai ulang.'**
+  String get storeRedeemNeedOffer;
 
   /// No description provided for @storeRedeemPointsLabel.
   ///
   /// In id, this message translates to:
   /// **'Jumlah Poin'**
   String get storeRedeemPointsLabel;
+
+  /// No description provided for @storeRedeemApply.
+  ///
+  /// In id, this message translates to:
+  /// **'Terapkan Potongan'**
+  String get storeRedeemApply;
+
+  /// No description provided for @storeRedeemApplied.
+  ///
+  /// In id, this message translates to:
+  /// **'Penukaran tercatat: {points} poin = potongan Rp{amount}.'**
+  String storeRedeemApplied(int points, String amount);
+
+  /// No description provided for @storeRedeemUndo.
+  ///
+  /// In id, this message translates to:
+  /// **'Urungkan Penukaran'**
+  String get storeRedeemUndo;
+
+  /// No description provided for @storeRedeemScanAgain.
+  ///
+  /// In id, this message translates to:
+  /// **'Pindai Ulang'**
+  String get storeRedeemScanAgain;
 
   /// No description provided for @storeRedeemMaxNote.
   ///
@@ -2155,66 +2197,6 @@ abstract class AppLocalizations {
   /// In id, this message translates to:
   /// **'Jumlah poin melebihi batas — dipakai {max} poin.'**
   String storeRedeemClamped(int max);
-
-  /// No description provided for @storeRedeemCreate.
-  ///
-  /// In id, this message translates to:
-  /// **'Buat Kode Tukar'**
-  String get storeRedeemCreate;
-
-  /// No description provided for @storeRedeemWaiting.
-  ///
-  /// In id, this message translates to:
-  /// **'Menunggu pembayaran poin dari pelanggan…'**
-  String get storeRedeemWaiting;
-
-  /// No description provided for @storeRedeemCopied.
-  ///
-  /// In id, this message translates to:
-  /// **'Kode penukaran disalin'**
-  String get storeRedeemCopied;
-
-  /// No description provided for @storeRedeemVerified.
-  ///
-  /// In id, this message translates to:
-  /// **'Penukaran terverifikasi: {points} poin = potongan Rp{amount}.'**
-  String storeRedeemVerified(int points, String amount);
-
-  /// No description provided for @storeRedeemFailed.
-  ///
-  /// In id, this message translates to:
-  /// **'Penukaran poin gagal atau kedaluwarsa — tidak ada potongan. Pesanan tetap bisa dibayar rupiah.'**
-  String get storeRedeemFailed;
-
-  /// No description provided for @storeRedeemCancel.
-  ///
-  /// In id, this message translates to:
-  /// **'Batalkan Penukaran'**
-  String get storeRedeemCancel;
-
-  /// No description provided for @storeRedeemCancelWarn.
-  ///
-  /// In id, this message translates to:
-  /// **'Kode penukaran ini dibatalkan. Bila pelanggan terlanjur membayar sesudah ini, poinnya tetap masuk ke dompet toko tetapi potongan tidak berlaku — selesaikan belanja ini dalam rupiah penuh.'**
-  String get storeRedeemCancelWarn;
-
-  /// No description provided for @storeRedeemLeaveBody.
-  ///
-  /// In id, this message translates to:
-  /// **'Penukaran poin masih berjalan. Meninggalkan halaman ini membatalkan penukaran — pesanan kembali ke kasir tanpa potongan poin.'**
-  String get storeRedeemLeaveBody;
-
-  /// No description provided for @storeRedeemDesc.
-  ///
-  /// In id, this message translates to:
-  /// **'Penukaran poin nusan'**
-  String get storeRedeemDesc;
-
-  /// No description provided for @storeRedeemMinChannel.
-  ///
-  /// In id, this message translates to:
-  /// **'Jumlah poin ini di bawah minimum pembuatan jalur terima baru (1.000 poin). Naikkan jumlah poin, atau lewati penukaran kali ini.'**
-  String get storeRedeemMinChannel;
 
   /// No description provided for @storeRedeemInvalidPoints.
   ///
@@ -2275,6 +2257,12 @@ abstract class AppLocalizations {
   /// In id, this message translates to:
   /// **'Pembayaran poin masih berjalan — statusnya tetap tertunda; cek lagi dari daftar Poin Tertunda.'**
   String get storeIssueStillPending;
+
+  /// No description provided for @storeIssueInvoiceNote.
+  ///
+  /// In id, this message translates to:
+  /// **'Poin terbit ke invoice sekali pakai — poin seperti ini tidak tercatat di jurnal toko. Agar bisa ditukar pada kunjungan berikutnya, terbitkan ke offer Bolt12 pelanggan.'**
+  String get storeIssueInvoiceNote;
 
   /// No description provided for @storeDoneButton.
   ///

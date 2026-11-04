@@ -536,10 +536,34 @@
   "storeVoidConfirmTitle": "Batalkan Pesanan Ini?",
   "storeVoidConfirmBody": "Pesanan dibatalkan dan dicatat sebagai VOID di laporan. Tindakan ini tidak bisa dibatalkan.",
   "storeVoidRecorded": "Pesanan dibatalkan — tercatat sebagai VOID.",
-  "storeCancelBlockedRedeem": "Penukaran poin sudah terverifikasi — pesanan tidak bisa dibatalkan; selesaikan pembayarannya.",
   "storeRedeemTitle": "Tukar Poin Nusan",
-  "storeRedeemHint": "Pelanggan menukar poin nusan sebagai potongan belanja. Masukkan jumlah poin, buat kode penukaran, dan minta pelanggan membayarnya dari aplikasi ELNUX miliknya. Potongan berlaku sesudah pembayaran poin terverifikasi.",
+  "storeRedeemHint": "Penukaran dibaca dari catatan penerbitan poin toko ini — pelanggan tidak membayar apa pun. Minta pelanggan menunjukkan offer Bolt12 dari aplikasi ELNUX miliknya, pindai, lalu terapkan potongan sampai sebesar poin yang tercatat untuknya.",
+  "storeRedeemScanOffer": "Pindai Offer Pelanggan",
+  "storeRedeemBalance": "Poin tercatat untuk pelanggan ini: {balance} poin.",
+  "@storeRedeemBalance": {
+    "placeholders": {
+      "balance": {
+        "type": "int"
+      }
+    }
+  },
+  "storeRedeemNoBalance": "Belum ada poin tercatat untuk offer ini di toko ini — penukaran belum bisa dilakukan.",
+  "storeRedeemNeedOffer": "Penukaran memakai offer Bolt12 pelanggan. Kode ini bukan offer — minta pelanggan membuka offer-nya di ELNUX lalu pindai ulang.",
   "storeRedeemPointsLabel": "Jumlah Poin",
+  "storeRedeemApply": "Terapkan Potongan",
+  "storeRedeemApplied": "Penukaran tercatat: {points} poin = potongan Rp{amount}.",
+  "@storeRedeemApplied": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "storeRedeemUndo": "Urungkan Penukaran",
+  "storeRedeemScanAgain": "Pindai Ulang",
   "storeRedeemMaxNote": "Maksimal {max} poin untuk belanja ini.",
   "@storeRedeemMaxNote": {
     "placeholders": {
@@ -556,26 +580,6 @@
       }
     }
   },
-  "storeRedeemCreate": "Buat Kode Tukar",
-  "storeRedeemWaiting": "Menunggu pembayaran poin dari pelanggan…",
-  "storeRedeemCopied": "Kode penukaran disalin",
-  "storeRedeemVerified": "Penukaran terverifikasi: {points} poin = potongan Rp{amount}.",
-  "@storeRedeemVerified": {
-    "placeholders": {
-      "points": {
-        "type": "int"
-      },
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
-  "storeRedeemFailed": "Penukaran poin gagal atau kedaluwarsa — tidak ada potongan. Pesanan tetap bisa dibayar rupiah.",
-  "storeRedeemCancel": "Batalkan Penukaran",
-  "storeRedeemCancelWarn": "Kode penukaran ini dibatalkan. Bila pelanggan terlanjur membayar sesudah ini, poinnya tetap masuk ke dompet toko tetapi potongan tidak berlaku — selesaikan belanja ini dalam rupiah penuh.",
-  "storeRedeemLeaveBody": "Penukaran poin masih berjalan. Meninggalkan halaman ini membatalkan penukaran — pesanan kembali ke kasir tanpa potongan poin.",
-  "storeRedeemDesc": "Penukaran poin nusan",
-  "storeRedeemMinChannel": "Jumlah poin ini di bawah minimum pembuatan jalur terima baru (1.000 poin). Naikkan jumlah poin, atau lewati penukaran kali ini.",
   "storeRedeemInvalidPoints": "Jumlah poin tidak sah atau melebihi potongan yang mungkin untuk belanja ini.",
   "storeSaleCompleted": "Penjualan Selesai",
   "storePointsEarnedLine": "Poin nusan diperoleh: {points} poin",
@@ -593,6 +597,7 @@
   "storeIssueAmountMismatch": "Nominal kode tidak sama dengan poin yang harus diterbitkan — minta pelanggan membuat kode sejumlah poin yang diperoleh.",
   "storeIssueFailed": "Penerbitan poin gagal — poin tetap tertunda dan bisa diterbitkan dari daftar Poin Tertunda.",
   "storeIssueStillPending": "Pembayaran poin masih berjalan — statusnya tetap tertunda; cek lagi dari daftar Poin Tertunda.",
+  "storeIssueInvoiceNote": "Poin terbit ke invoice sekali pakai — poin seperti ini tidak tercatat di jurnal toko. Agar bisa ditukar pada kunjungan berikutnya, terbitkan ke offer Bolt12 pelanggan.",
   "storeDoneButton": "Selesai",
   "storePendingBadge": "Poin Tertunda ({count})",
   "@storePendingBadge": {
