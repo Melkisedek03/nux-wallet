@@ -163,7 +163,7 @@ void main() {
     });
   });
 
-  group('migrasi skema v1 → v2', () {
+  group('migrasi skema v1 → v3', () {
     test('basis data v1 ter-upgrade: record lama utuh, jurnal baru '
         'tersimpan & terbaca', () async {
       sqfliteFfiInit();
@@ -268,11 +268,12 @@ CREATE TABLE store_kv(
       });
       await v1.close();
 
-      // Buka lewat StoreDatabase produksi: upgrade ke v2 jalan.
+      // Buka lewat StoreDatabase produksi: upgrade berjenjang
+      // (v2 jurnal, lalu v3 Fase A) jalan sampai versi terkini.
       final storeDb = StoreDatabase(dbPathProvider: () async => dbPath);
       final db = await storeDb.database;
       final versionRows = await db.rawQuery('PRAGMA user_version');
-      expect(versionRows.first['user_version'], 2);
+      expect(versionRows.first['user_version'], 3);
 
       final history = StoreOrderHistoryStore(database: storeDb);
       final loaded = await history.load();

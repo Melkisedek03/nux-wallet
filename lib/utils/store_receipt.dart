@@ -88,6 +88,9 @@ class StoreReceiptLabels {
   /// Label baris waktu cetak ulang: 'Reprint'.
   final String reprintLabel;
 
+  /// Label baris kasir/operator: 'Kasir'.
+  final String cashierLabel;
+
   /// Label baris diskon poin: "Pot. (2.000 nusan)".
   final String Function(int points) pointsDiscountLabel;
 
@@ -113,6 +116,7 @@ class StoreReceiptLabels {
     required this.noteWord,
     required this.reprintBanner,
     required this.reprintLabel,
+    required this.cashierLabel,
     required this.pointsDiscountLabel,
     required this.pointsRuleText,
   });
@@ -162,6 +166,11 @@ class StoreReceiptData {
   /// penanda anti-penyalahgunaan salinan nota (permintaan
   /// NUX 4 Nov 2026).
   final String? reprintText;
+
+  /// Nama operator/kasir yang melayani (stempel operator
+  /// record); '' = tanpa baris kasir (record sebelum Fase A).
+  /// Permintaan NUX 4 Nov 2026: id kasir tampil di struk.
+  final String cashierName;
   final int billNo;
 
   /// Nomor Bill terformat tampil ('INV261103-0002') — dari
@@ -229,6 +238,7 @@ class StoreReceiptData {
     required this.redeemRateRp,
     required this.footerText,
     this.reprintText,
+    required this.cashierName,
   });
 }
 
@@ -281,6 +291,7 @@ StoreReceiptData buildStoreReceiptData({
     dateText: dateText,
     reprintText:
         reprintAt == null ? null : receiptTimestampText(reprintAt),
+    cashierName: record.operatorName,
     billNo: record.billNo,
     billNoText: formatBillNo(t, record.billNo),
     tokenNo: record.tokenNo,
@@ -322,10 +333,17 @@ String formatBillNo(DateTime time, int seq) {
 }
 
 /// Nomor urut bill berikutnya untuk TANGGAL kalender lokal
-/// [date]: jumlah record LUNAS era rupiah pada tanggal yang
-/// sama + 1. Murni & deterministik dari record yang
-/// tersimpan — VOID tidak bernomor (ia tidak pernah menjadi
-/// struk pelanggan).
+/// [date]: jumlah record era rupiah pada tanggal yang sama
+/// yang sudah MENGONSUMSI nomor (billNo > 0) + 1. Murni &
+/// deterministik dari record yang tersimpan.
+///
+/// Yang dihitung adalah nomor yang terpakai, BUKAN status
+/// lunas saat ini: penjualan yang di-VOID SESUDAH lunas
+/// (Fase A) nomornya tetap terhitung — nomor INV tidak boleh
+/// dipakai ulang, karena salinan & laporan lama yang membawa
+/// nomor itu sudah beredar. VOID pra-lunas tidak bernomor
+/// (billNo 0 — ia tidak pernah menjadi struk pelanggan),
+/// jadi tidak ikut terhitung.
 ///
 /// Urut berjalan per hari LINTAS shift (menggantikan urut
 /// per shift): tanggal kini tertanam di nomor bill, jadi
@@ -334,7 +352,7 @@ String formatBillNo(DateTime time, int seq) {
 int nextBillSeqForDate(List<CompletedOrder> orders, DateTime date) {
   var count = 0;
   for (final order in orders) {
-    if (!order.isRupiahEra || order.isVoid) continue;
+    if (!order.isRupiahEra || order.billNo <= 0) continue;
     final t = order.time;
     if (t.year != date.year || t.month != date.month || t.day != date.day) {
       continue;
@@ -486,6 +504,9 @@ List<StoreReceiptElement> buildStoreReceiptElements(
             : '${data.tokenNo}',
       ),
     );
+  }
+  if (data.cashierName.isNotEmpty) {
+    out.add(ReceiptMetaRow(labels.cashierLabel, data.cashierName));
   }
   out.add(const ReceiptDashedRule());
   out.add(ReceiptItemsHeader(labels.itemHeader, labels.amountHeader));

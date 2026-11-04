@@ -138,6 +138,20 @@ int discountAmountFor(int baseRp, Discount? discount) {
   };
 }
 
+/// Apakah diskon manual sebesar [discountRp] atas basis
+/// [baseRp] melewati ambang yang boleh diterapkan kasir
+/// sendiri (Fase A)? Perbandingan murni persen tanpa float:
+/// melewati ambang ⇔ discountRp × 100 > baseRp × ambang%.
+/// Tanpa diskon / basis tidak positif → tidak melewati.
+bool discountExceedsAdminThreshold({
+  required int discountRp,
+  required int baseRp,
+  required int thresholdPercent,
+}) {
+  if (discountRp <= 0 || baseRp <= 0) return false;
+  return discountRp * 100 > baseRp * thresholdPercent;
+}
+
 /// Satu baris pesanan Mode Toko.
 ///
 /// Baris produk katalog membawa [code] (isi barcode/QR produk)

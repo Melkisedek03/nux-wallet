@@ -55,6 +55,12 @@ class StoreSettings {
   /// kembali" / "Thank You & Visit Again").
   final String receiptFooterText;
 
+  /// Ambang diskon manual (persen dari basisnya) yang masih
+  /// boleh diterapkan kasir sendiri; di atas ini dialog PIN
+  /// admin wajib tampil sebelum diskon diterapkan (Fase A,
+  /// keputusan NUX 4 Nov 2026). Bawaan 50%.
+  final int adminDiscountThresholdPercent;
+
   const StoreSettings({
     this.storeName = '',
     this.pointsEnabled = true,
@@ -66,6 +72,7 @@ class StoreSettings {
     this.storeCity = '',
     this.showTokenNumber = true,
     this.receiptFooterText = '',
+    this.adminDiscountThresholdPercent = 50,
   });
 
   static const defaults = StoreSettings();
@@ -82,6 +89,7 @@ class StoreSettings {
     String? storeCity,
     bool? showTokenNumber,
     String? receiptFooterText,
+    int? adminDiscountThresholdPercent,
   }) => StoreSettings(
     storeName: storeName ?? this.storeName,
     pointsEnabled: pointsEnabled ?? this.pointsEnabled,
@@ -95,6 +103,8 @@ class StoreSettings {
     storeCity: storeCity ?? this.storeCity,
     showTokenNumber: showTokenNumber ?? this.showTokenNumber,
     receiptFooterText: receiptFooterText ?? this.receiptFooterText,
+    adminDiscountThresholdPercent:
+        adminDiscountThresholdPercent ?? this.adminDiscountThresholdPercent,
   );
 
   Map<String, Object?> toJson() => {
@@ -108,6 +118,7 @@ class StoreSettings {
     'storeCity': storeCity,
     'showTokenNumber': showTokenNumber,
     'receiptFooterText': receiptFooterText,
+    'adminDiscountThresholdPercent': adminDiscountThresholdPercent,
   };
 
   /// Baca pengaturan dari JSON; field yang hilang/tak sah jatuh
@@ -128,6 +139,7 @@ class StoreSettings {
     final city = raw['storeCity'];
     final showToken = raw['showTokenNumber'];
     final footer = raw['receiptFooterText'];
+    final adminPct = raw['adminDiscountThresholdPercent'];
     return StoreSettings(
       storeName: name is String ? name.trim() : '',
       pointsEnabled: enabled is bool ? enabled : true,
@@ -145,6 +157,12 @@ class StoreSettings {
       storeCity: city is String ? city.trim() : '',
       showTokenNumber: showToken is bool ? showToken : true,
       receiptFooterText: footer is String ? footer.trim() : '',
+      // Ambang diskon admin Fase A: sah pada 0–100 (0 = semua
+      // diskon manual wajib PIN admin; 100 = praktis bebas).
+      adminDiscountThresholdPercent:
+          adminPct is num && adminPct >= 0 && adminPct <= 100
+              ? adminPct.toInt()
+              : 50,
     );
   }
 
@@ -160,7 +178,9 @@ class StoreSettings {
       other.storeAddress == storeAddress &&
       other.storeCity == storeCity &&
       other.showTokenNumber == showTokenNumber &&
-      other.receiptFooterText == receiptFooterText;
+      other.receiptFooterText == receiptFooterText &&
+      other.adminDiscountThresholdPercent ==
+          adminDiscountThresholdPercent;
 
   @override
   int get hashCode => Object.hash(
@@ -174,6 +194,7 @@ class StoreSettings {
     storeCity,
     showTokenNumber,
     receiptFooterText,
+    adminDiscountThresholdPercent,
   );
 }
 

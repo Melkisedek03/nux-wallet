@@ -1910,6 +1910,270 @@ abstract class AppLocalizations {
   /// **'Pratinjau & Bagikan'**
   String get storePreviewShareReceipt;
 
+  /// No description provided for @storeOperatorLoginTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Login Operator'**
+  String get storeOperatorLoginTitle;
+
+  /// No description provided for @storeOperatorSetupTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Buat Akun Owner'**
+  String get storeOperatorSetupTitle;
+
+  /// No description provided for @storeOperatorSetupBody.
+  ///
+  /// In id, this message translates to:
+  /// **'Mode Toko sekarang memakai login operator. Buat akun owner pertama: akun ini mengelola operator lain dan menyetujui aksi sensitif.'**
+  String get storeOperatorSetupBody;
+
+  /// No description provided for @storeOperatorNameLabel.
+  ///
+  /// In id, this message translates to:
+  /// **'Nama Operator'**
+  String get storeOperatorNameLabel;
+
+  /// No description provided for @storeOperatorPinLabel.
+  ///
+  /// In id, this message translates to:
+  /// **'PIN (6 digit)'**
+  String get storeOperatorPinLabel;
+
+  /// No description provided for @storeOperatorPinConfirmLabel.
+  ///
+  /// In id, this message translates to:
+  /// **'Ulangi PIN'**
+  String get storeOperatorPinConfirmLabel;
+
+  /// No description provided for @storeOperatorPinMismatch.
+  ///
+  /// In id, this message translates to:
+  /// **'PIN tidak sama.'**
+  String get storeOperatorPinMismatch;
+
+  /// No description provided for @storeOperatorPinInvalid.
+  ///
+  /// In id, this message translates to:
+  /// **'PIN harus 6 digit angka.'**
+  String get storeOperatorPinInvalid;
+
+  /// No description provided for @storeOperatorNameRequired.
+  ///
+  /// In id, this message translates to:
+  /// **'Nama operator wajib diisi.'**
+  String get storeOperatorNameRequired;
+
+  /// No description provided for @storeOperatorLoginButton.
+  ///
+  /// In id, this message translates to:
+  /// **'Masuk'**
+  String get storeOperatorLoginButton;
+
+  /// No description provided for @storeOperatorWrongPin.
+  ///
+  /// In id, this message translates to:
+  /// **'PIN salah.'**
+  String get storeOperatorWrongPin;
+
+  /// No description provided for @storeOperatorSwitch.
+  ///
+  /// In id, this message translates to:
+  /// **'Ganti Operator'**
+  String get storeOperatorSwitch;
+
+  /// No description provided for @storeOperatorRoleOwner.
+  ///
+  /// In id, this message translates to:
+  /// **'Owner'**
+  String get storeOperatorRoleOwner;
+
+  /// No description provided for @storeOperatorRoleCashier.
+  ///
+  /// In id, this message translates to:
+  /// **'Kasir'**
+  String get storeOperatorRoleCashier;
+
+  /// No description provided for @storeAdminPinTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'PIN Admin'**
+  String get storeAdminPinTitle;
+
+  /// No description provided for @storeAdminPinBody.
+  ///
+  /// In id, this message translates to:
+  /// **'Aksi ini butuh persetujuan owner. Minta owner memasukkan PIN-nya.'**
+  String get storeAdminPinBody;
+
+  /// No description provided for @storeAdminApproved.
+  ///
+  /// In id, this message translates to:
+  /// **'Persetujuan admin diterima.'**
+  String get storeAdminApproved;
+
+  /// No description provided for @storeVoidSaleButton.
+  ///
+  /// In id, this message translates to:
+  /// **'VOID Penjualan'**
+  String get storeVoidSaleButton;
+
+  /// No description provided for @storeVoidSaleTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'VOID Penjualan Lunas?'**
+  String get storeVoidSaleTitle;
+
+  /// No description provided for @storeVoidSaleBody.
+  ///
+  /// In id, this message translates to:
+  /// **'Penjualan ditandai VOID: hilang dari total laporan dan jurnal poin dibalikkan. Record asal tetap tersimpan bertanda VOID. Tindakan ini tidak bisa dibatalkan.'**
+  String get storeVoidSaleBody;
+
+  /// No description provided for @storeVoidReasonLabel.
+  ///
+  /// In id, this message translates to:
+  /// **'Alasan VOID (wajib)'**
+  String get storeVoidReasonLabel;
+
+  /// No description provided for @storeVoidDone.
+  ///
+  /// In id, this message translates to:
+  /// **'Penjualan ditandai VOID.'**
+  String get storeVoidDone;
+
+  /// No description provided for @storeOperatorsTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Kelola Operator'**
+  String get storeOperatorsTitle;
+
+  /// No description provided for @storeOperatorLastOwner.
+  ///
+  /// In id, this message translates to:
+  /// **'Tidak bisa menonaktifkan owner aktif terakhir.'**
+  String get storeOperatorLastOwner;
+
+  /// No description provided for @storeOperatorAdd.
+  ///
+  /// In id, this message translates to:
+  /// **'Tambah Operator'**
+  String get storeOperatorAdd;
+
+  /// No description provided for @storeOperatorRoleLabel.
+  ///
+  /// In id, this message translates to:
+  /// **'Peran'**
+  String get storeOperatorRoleLabel;
+
+  /// No description provided for @storeOperatorDeactivate.
+  ///
+  /// In id, this message translates to:
+  /// **'Nonaktifkan'**
+  String get storeOperatorDeactivate;
+
+  /// No description provided for @storeOperatorActivate.
+  ///
+  /// In id, this message translates to:
+  /// **'Aktifkan'**
+  String get storeOperatorActivate;
+
+  /// No description provided for @storeOperatorResetPin.
+  ///
+  /// In id, this message translates to:
+  /// **'Ganti PIN'**
+  String get storeOperatorResetPin;
+
+  /// No description provided for @storeOperatorInactiveBadge.
+  ///
+  /// In id, this message translates to:
+  /// **'Nonaktif'**
+  String get storeOperatorInactiveBadge;
+
+  /// No description provided for @storeAuditTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Log Aktivitas'**
+  String get storeAuditTitle;
+
+  /// No description provided for @storeAuditEmpty.
+  ///
+  /// In id, this message translates to:
+  /// **'Belum ada aktivitas tercatat.'**
+  String get storeAuditEmpty;
+
+  /// No description provided for @storeSettingsAdminSection.
+  ///
+  /// In id, this message translates to:
+  /// **'Operator & Keamanan'**
+  String get storeSettingsAdminSection;
+
+  /// No description provided for @storeSettingsDiscountThresholdLabel.
+  ///
+  /// In id, this message translates to:
+  /// **'Ambang diskon kasir (%)'**
+  String get storeSettingsDiscountThresholdLabel;
+
+  /// No description provided for @storeSettingsDiscountThresholdHint.
+  ///
+  /// In id, this message translates to:
+  /// **'Diskon manual di atas ambang ini wajib disetujui PIN admin.'**
+  String get storeSettingsDiscountThresholdHint;
+
+  /// No description provided for @storeAuditLogin.
+  ///
+  /// In id, this message translates to:
+  /// **'Login'**
+  String get storeAuditLogin;
+
+  /// No description provided for @storeAuditLogout.
+  ///
+  /// In id, this message translates to:
+  /// **'Keluar'**
+  String get storeAuditLogout;
+
+  /// No description provided for @storeAuditOperatorCreated.
+  ///
+  /// In id, this message translates to:
+  /// **'Operator dibuat'**
+  String get storeAuditOperatorCreated;
+
+  /// No description provided for @storeAuditOperatorUpdated.
+  ///
+  /// In id, this message translates to:
+  /// **'Operator diubah'**
+  String get storeAuditOperatorUpdated;
+
+  /// No description provided for @storeAuditPinChanged.
+  ///
+  /// In id, this message translates to:
+  /// **'PIN diganti'**
+  String get storeAuditPinChanged;
+
+  /// No description provided for @storeAuditShiftOpen.
+  ///
+  /// In id, this message translates to:
+  /// **'Buka shift'**
+  String get storeAuditShiftOpen;
+
+  /// No description provided for @storeAuditShiftClose.
+  ///
+  /// In id, this message translates to:
+  /// **'Tutup shift'**
+  String get storeAuditShiftClose;
+
+  /// No description provided for @storeAuditAdminOverride.
+  ///
+  /// In id, this message translates to:
+  /// **'Override admin'**
+  String get storeAuditAdminOverride;
+
+  /// No description provided for @storeAuditSaleVoid.
+  ///
+  /// In id, this message translates to:
+  /// **'VOID penjualan'**
+  String get storeAuditSaleVoid;
+
   /// No description provided for @storeReportCurrentShift.
   ///
   /// In id, this message translates to:
@@ -2485,6 +2749,12 @@ abstract class AppLocalizations {
   /// In id, this message translates to:
   /// **'Reprint'**
   String get storeReceiptReprintLabel;
+
+  /// No description provided for @storeReceiptCashier.
+  ///
+  /// In id, this message translates to:
+  /// **'Kasir'**
+  String get storeReceiptCashier;
 
   /// No description provided for @storeReceiptPointsDiscountLabel.
   ///

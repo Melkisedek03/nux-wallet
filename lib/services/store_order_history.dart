@@ -153,6 +153,13 @@ class CompletedOrder {
   /// kolom ini bahan penelusuran, bukan kunci agregasi.
   final int? shiftOpenedMs;
 
+  /// Stempel operator Fase A: id & nama operator yang sedang
+  /// login saat record ini dicatat (penjualan oleh "siapa" —
+  /// bahan akuntabilitas laporan level nota & baris Kasir di
+  /// struk). '' untuk record sebelum Fase A / tanpa sesi.
+  final String operatorId;
+  final String operatorName;
+
   const CompletedOrder({
     this.id = '',
     required this.time,
@@ -178,6 +185,8 @@ class CompletedOrder {
     this.billNo = 0,
     this.tokenNo = 0,
     this.shiftOpenedMs,
+    this.operatorId = '',
+    this.operatorName = '',
   });
 
   bool get isRupiahEra => era == storeEraRupiah;
@@ -215,6 +224,83 @@ class CompletedOrder {
       billNo: billNo,
       tokenNo: tokenNo,
       shiftOpenedMs: shiftOpenedMs,
+      operatorId: operatorId,
+      operatorName: operatorName,
+    );
+  }
+
+  /// Salinan record berstempel operator Fase A (id + nama
+  /// operator yang sedang login) — dicap layar Mode Toko pada
+  /// record hasil halaman pembayaran tepat sebelum dicatat,
+  /// untuk penjualan lunas maupun VOID pra-lunas.
+  CompletedOrder withOperator({
+    required String operatorId,
+    required String operatorName,
+  }) {
+    return CompletedOrder(
+      id: id,
+      time: time,
+      lines: lines,
+      orderDiscount: orderDiscount,
+      era: era,
+      subtotalRp: subtotalRp,
+      totalDiscountRp: totalDiscountRp,
+      grandTotalRp: grandTotalRp,
+      paymentHashHex: paymentHashHex,
+      isVoid: isVoid,
+      payMethod: payMethod,
+      cashReceivedRp: cashReceivedRp,
+      changeRp: changeRp,
+      pointsRedeemed: pointsRedeemed,
+      pointsDiscountRp: pointsDiscountRp,
+      pointsEarned: pointsEarned,
+      pointsIssueStatus: pointsIssueStatus,
+      pointsIssueHashHex: pointsIssueHashHex,
+      pointsRecipientOffer: pointsRecipientOffer,
+      pointsRedeemOffer: pointsRedeemOffer,
+      customerName: customerName,
+      billNo: billNo,
+      tokenNo: tokenNo,
+      shiftOpenedMs: shiftOpenedMs,
+      operatorId: operatorId,
+      operatorName: operatorName,
+    );
+  }
+
+  /// Salinan record yang ditandai VOID — jalur pembatalan
+  /// penjualan LUNAS (Fase A): fakta penjualan tidak berubah
+  /// sama sekali, hanya statusnya; laporan & jurnal poin
+  /// mengecualikan record VOID, jadi penanda ini sekaligus
+  /// membalikkan seluruh dampak tercatat penjualan itu.
+  /// Otorisasi (PIN admin) & audit adalah urusan pemanggil.
+  CompletedOrder markVoid() {
+    return CompletedOrder(
+      id: id,
+      time: time,
+      lines: lines,
+      orderDiscount: orderDiscount,
+      era: era,
+      subtotalRp: subtotalRp,
+      totalDiscountRp: totalDiscountRp,
+      grandTotalRp: grandTotalRp,
+      paymentHashHex: paymentHashHex,
+      isVoid: true,
+      payMethod: payMethod,
+      cashReceivedRp: cashReceivedRp,
+      changeRp: changeRp,
+      pointsRedeemed: pointsRedeemed,
+      pointsDiscountRp: pointsDiscountRp,
+      pointsEarned: pointsEarned,
+      pointsIssueStatus: pointsIssueStatus,
+      pointsIssueHashHex: pointsIssueHashHex,
+      pointsRecipientOffer: pointsRecipientOffer,
+      pointsRedeemOffer: pointsRedeemOffer,
+      customerName: customerName,
+      billNo: billNo,
+      tokenNo: tokenNo,
+      shiftOpenedMs: shiftOpenedMs,
+      operatorId: operatorId,
+      operatorName: operatorName,
     );
   }
 
@@ -255,6 +341,8 @@ class CompletedOrder {
       billNo: billNo ?? this.billNo,
       tokenNo: tokenNo ?? this.tokenNo,
       shiftOpenedMs: shiftOpenedMs ?? this.shiftOpenedMs,
+      operatorId: operatorId,
+      operatorName: operatorName,
     );
   }
 
@@ -285,6 +373,8 @@ class CompletedOrder {
     if (billNo != 0) 'billNo': billNo,
     if (tokenNo != 0) 'tokenNo': tokenNo,
     if (shiftOpenedMs != null) 'shiftOpenedMs': shiftOpenedMs,
+    if (operatorId.isNotEmpty) 'operatorId': operatorId,
+    if (operatorName.isNotEmpty) 'operatorName': operatorName,
   };
 
   /// Baca satu record; null bila bentuknya tidak sah (waktu/baris/
@@ -371,6 +461,12 @@ class CompletedOrder {
       shiftOpenedMs: raw['shiftOpenedMs'] is num
           ? (raw['shiftOpenedMs'] as num).toInt()
           : null,
+      operatorId: raw['operatorId'] is String
+          ? raw['operatorId'] as String
+          : '',
+      operatorName: raw['operatorName'] is String
+          ? raw['operatorName'] as String
+          : '',
     );
   }
 
@@ -400,6 +496,8 @@ class CompletedOrder {
       other.billNo == billNo &&
       other.tokenNo == tokenNo &&
       other.shiftOpenedMs == shiftOpenedMs &&
+      other.operatorId == operatorId &&
+      other.operatorName == operatorName &&
       _linesEqual(other.lines, lines);
 
   @override
@@ -428,6 +526,8 @@ class CompletedOrder {
       billNo,
       tokenNo,
       shiftOpenedMs,
+      operatorId,
+      operatorName,
       Object.hashAll(lines),
     ),
   );
@@ -535,6 +635,8 @@ CompletedOrder buildCompletedOrder({
   String pointsIssueStatus = issueStatusNone,
   String? pointsRedeemOffer,
   String customerName = '',
+  String operatorId = '',
+  String operatorName = '',
 }) {
   final subtotal = orderSubtotalRp(lines);
   final orderDisc = orderDiscountAmountRp(lines, orderDiscount);
@@ -566,6 +668,8 @@ CompletedOrder buildCompletedOrder({
     pointsIssueStatus: pointsIssueStatus,
     pointsRedeemOffer: pointsRedeemOffer,
     customerName: customerName.trim(),
+    operatorId: operatorId,
+    operatorName: operatorName,
   );
 }
 
@@ -670,6 +774,8 @@ Future<void> insertCompletedOrder(
     'points_issue_hash': order.pointsIssueHashHex,
     'points_recipient_offer': order.pointsRecipientOffer,
     'points_redeem_offer': order.pointsRedeemOffer,
+    'operator_id': order.operatorId,
+    'operator_name': order.operatorName,
     'customer_name': order.customerName,
     'bill_no': order.billNo,
     'token_no': order.tokenNo,
@@ -769,6 +875,12 @@ CompletedOrder _orderFromRows(
             (row['points_redeem_offer'] as String).isNotEmpty
         ? row['points_redeem_offer'] as String
         : null,
+    operatorId: row['operator_id'] is String
+        ? row['operator_id'] as String
+        : '',
+    operatorName: row['operator_name'] is String
+        ? row['operator_name'] as String
+        : '',
     customerName: row['customer_name'] is String
         ? row['customer_name'] as String
         : '',

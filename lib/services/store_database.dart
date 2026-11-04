@@ -7,6 +7,30 @@ import 'store_catalog.dart';
 import 'store_order_history.dart';
 import 'store_shift.dart';
 
+/// Skema tabel operator Fase A (dipakai onCreate & onUpgrade —
+/// satu-satunya definisi).
+const String _operatorsTableSql = '''
+CREATE TABLE operators(
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  role TEXT NOT NULL,
+  pin_salt TEXT NOT NULL,
+  pin_hash TEXT NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_ms INTEGER NOT NULL
+)''';
+
+/// Skema tabel log audit Fase A (append-only dari aplikasi).
+const String _auditTableSql = '''
+CREATE TABLE audit_log(
+  seq INTEGER PRIMARY KEY AUTOINCREMENT,
+  time_ms INTEGER NOT NULL,
+  operator_id TEXT NOT NULL DEFAULT '',
+  operator_name TEXT NOT NULL DEFAULT '',
+  action TEXT NOT NULL,
+  detail TEXT NOT NULL DEFAULT ''
+)''';
+
 /// Basis data SQLite Mode Toko (keputusan NUX 4 Nov 2026):
 /// SATU berkas `store_pos.db` di direktori dokumen aplikasi
 /// menjadi rumah baru seluruh data transaksional toko —
@@ -52,7 +76,7 @@ class StoreDatabase {
     final path = await (_dbPathProvider?.call() ?? _defaultDbPath());
     final db = await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onUpgrade: (db, oldVersion, newVersion) async {
         // v2: kolom jurnal poin pada orders — offer penerima
         // penerbitan & offer penukaran (penukaran model jurnal
@@ -64,6 +88,31 @@ class StoreDatabase {
           );
           await db.execute(
             'ALTER TABLE orders ADD COLUMN points_redeem_offer TEXT',
+          );
+        }
+        // v3 (Fase A peran Mode Toko, keputusan NUX 4 Nov
+        // 2026): tabel operator (akun PIN) + log audit, dan
+        // kolom stempel operator pada orders & shifts. Record
+        // lama terbaca berstempel kosong ('' = sebelum ada
+        // peran; laporan/struk memperlakukannya sebagai
+        // tanpa operator).
+        if (oldVersion < 3) {
+          await db.execute(
+            "ALTER TABLE orders ADD COLUMN operator_id TEXT NOT NULL DEFAULT ''",
+          );
+          await db.execute(
+            "ALTER TABLE orders ADD COLUMN operator_name TEXT NOT NULL DEFAULT ''",
+          );
+          await db.execute(
+            "ALTER TABLE shifts ADD COLUMN operator_id TEXT NOT NULL DEFAULT ''",
+          );
+          await db.execute(
+            "ALTER TABLE shifts ADD COLUMN operator_name TEXT NOT NULL DEFAULT ''",
+          );
+          await db.execute(_operatorsTableSql);
+          await db.execute(_auditTableSql);
+          await db.execute(
+            'CREATE INDEX idx_audit_time ON audit_log(time_ms)',
           );
         }
       },
@@ -98,6 +147,8 @@ CREATE TABLE orders(
   points_issue_hash TEXT,
   points_recipient_offer TEXT,
   points_redeem_offer TEXT,
+  operator_id TEXT NOT NULL DEFAULT '',
+  operator_name TEXT NOT NULL DEFAULT '',
   customer_name TEXT NOT NULL DEFAULT '',
   bill_no INTEGER NOT NULL DEFAULT 0,
   token_no INTEGER NOT NULL DEFAULT 0,
@@ -126,13 +177,20 @@ CREATE TABLE order_lines(
 CREATE TABLE shifts(
   opened_ms INTEGER PRIMARY KEY,
   closed_ms INTEGER,
-  era TEXT NOT NULL DEFAULT 'nusan'
+  era TEXT NOT NULL DEFAULT 'nusan',
+  operator_id TEXT NOT NULL DEFAULT '',
+  operator_name TEXT NOT NULL DEFAULT ''
 )''');
         await db.execute('''
 CREATE TABLE store_kv(
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 )''');
+        await db.execute(_operatorsTableSql);
+        await db.execute(_auditTableSql);
+        await db.execute(
+          'CREATE INDEX idx_audit_time ON audit_log(time_ms)',
+        );
       },
     );
     await _importFromSharedPreferencesOnce(db);

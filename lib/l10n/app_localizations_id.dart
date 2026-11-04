@@ -1019,6 +1019,143 @@ class AppLocalizationsId extends AppLocalizations {
   String get storePreviewShareReceipt => 'Pratinjau & Bagikan';
 
   @override
+  String get storeOperatorLoginTitle => 'Login Operator';
+
+  @override
+  String get storeOperatorSetupTitle => 'Buat Akun Owner';
+
+  @override
+  String get storeOperatorSetupBody =>
+      'Mode Toko sekarang memakai login operator. Buat akun owner pertama: akun ini mengelola operator lain dan menyetujui aksi sensitif.';
+
+  @override
+  String get storeOperatorNameLabel => 'Nama Operator';
+
+  @override
+  String get storeOperatorPinLabel => 'PIN (6 digit)';
+
+  @override
+  String get storeOperatorPinConfirmLabel => 'Ulangi PIN';
+
+  @override
+  String get storeOperatorPinMismatch => 'PIN tidak sama.';
+
+  @override
+  String get storeOperatorPinInvalid => 'PIN harus 6 digit angka.';
+
+  @override
+  String get storeOperatorNameRequired => 'Nama operator wajib diisi.';
+
+  @override
+  String get storeOperatorLoginButton => 'Masuk';
+
+  @override
+  String get storeOperatorWrongPin => 'PIN salah.';
+
+  @override
+  String get storeOperatorSwitch => 'Ganti Operator';
+
+  @override
+  String get storeOperatorRoleOwner => 'Owner';
+
+  @override
+  String get storeOperatorRoleCashier => 'Kasir';
+
+  @override
+  String get storeAdminPinTitle => 'PIN Admin';
+
+  @override
+  String get storeAdminPinBody =>
+      'Aksi ini butuh persetujuan owner. Minta owner memasukkan PIN-nya.';
+
+  @override
+  String get storeAdminApproved => 'Persetujuan admin diterima.';
+
+  @override
+  String get storeVoidSaleButton => 'VOID Penjualan';
+
+  @override
+  String get storeVoidSaleTitle => 'VOID Penjualan Lunas?';
+
+  @override
+  String get storeVoidSaleBody =>
+      'Penjualan ditandai VOID: hilang dari total laporan dan jurnal poin dibalikkan. Record asal tetap tersimpan bertanda VOID. Tindakan ini tidak bisa dibatalkan.';
+
+  @override
+  String get storeVoidReasonLabel => 'Alasan VOID (wajib)';
+
+  @override
+  String get storeVoidDone => 'Penjualan ditandai VOID.';
+
+  @override
+  String get storeOperatorsTitle => 'Kelola Operator';
+
+  @override
+  String get storeOperatorLastOwner =>
+      'Tidak bisa menonaktifkan owner aktif terakhir.';
+
+  @override
+  String get storeOperatorAdd => 'Tambah Operator';
+
+  @override
+  String get storeOperatorRoleLabel => 'Peran';
+
+  @override
+  String get storeOperatorDeactivate => 'Nonaktifkan';
+
+  @override
+  String get storeOperatorActivate => 'Aktifkan';
+
+  @override
+  String get storeOperatorResetPin => 'Ganti PIN';
+
+  @override
+  String get storeOperatorInactiveBadge => 'Nonaktif';
+
+  @override
+  String get storeAuditTitle => 'Log Aktivitas';
+
+  @override
+  String get storeAuditEmpty => 'Belum ada aktivitas tercatat.';
+
+  @override
+  String get storeSettingsAdminSection => 'Operator & Keamanan';
+
+  @override
+  String get storeSettingsDiscountThresholdLabel => 'Ambang diskon kasir (%)';
+
+  @override
+  String get storeSettingsDiscountThresholdHint =>
+      'Diskon manual di atas ambang ini wajib disetujui PIN admin.';
+
+  @override
+  String get storeAuditLogin => 'Login';
+
+  @override
+  String get storeAuditLogout => 'Keluar';
+
+  @override
+  String get storeAuditOperatorCreated => 'Operator dibuat';
+
+  @override
+  String get storeAuditOperatorUpdated => 'Operator diubah';
+
+  @override
+  String get storeAuditPinChanged => 'PIN diganti';
+
+  @override
+  String get storeAuditShiftOpen => 'Buka shift';
+
+  @override
+  String get storeAuditShiftClose => 'Tutup shift';
+
+  @override
+  String get storeAuditAdminOverride => 'Override admin';
+
+  @override
+  String get storeAuditSaleVoid => 'VOID penjualan';
+
+  @override
   String get storeReportCurrentShift => 'Shift Berjalan';
 
   @override
@@ -1349,6 +1486,9 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get storeReceiptReprintLabel => 'Reprint';
+
+  @override
+  String get storeReceiptCashier => 'Kasir';
 
   @override
   String storeReceiptPointsDiscountLabel(String points) {

@@ -20,14 +20,17 @@ import 'store_receipt_preview.dart';
 /// dibagikan — salinan tidak boleh bisa berlagak nota asli
 /// (permintaan NUX 4 Nov 2026).
 ///
-/// VOID penjualan lunas SENGAJA belum ada di sini: aksi itu
-/// mengubah data penjualan dan menunggu gerbang otentikasi
-/// PIN owner (Fase peran Mode Toko).
+/// VOID penjualan lunas ada di detail penjualan (Fase A):
+/// alasan wajib + persetujuan PIN admin lewat callback layar
+/// Mode Toko; record ditandai VOID, bukan dihapus — fakta
+/// penjualannya tetap bisa ditinjau di sini bertanda VOID.
 class StoreSalesHistoryScreen extends StatefulWidget {
   const StoreSalesHistoryScreen({
     super.key,
     required this.receiptLabels,
     required this.receiptDataFor,
+    this.onVoidApproval,
+    this.onVoidSale,
   });
 
   /// Label struk (bahasa aktif) dari layar Mode Toko.
@@ -40,6 +43,15 @@ class StoreSalesHistoryScreen extends StatefulWidget {
     CompletedOrder record,
     DateTime? reprintAt,
   ) receiptDataFor;
+
+  /// Gerbang persetujuan VOID penjualan lunas (PIN admin di
+  /// layar Mode Toko); null = VOID tidak ditawarkan.
+  final Future<bool> Function()? onVoidApproval;
+
+  /// Eksekusi VOID sesudah alasan terisi & persetujuan lolos:
+  /// record ditandai VOID + audit ditulis pemanggil.
+  final Future<void> Function(CompletedOrder record, String reason)?
+      onVoidSale;
 
   @override
   State<StoreSalesHistoryScreen> createState() =>
@@ -89,9 +101,14 @@ class _StoreSalesHistoryScreenState extends State<StoreSalesHistoryScreen> {
           methodLabel: _methodLabel(record),
           receiptLabels: widget.receiptLabels,
           receiptDataFor: widget.receiptDataFor,
+          onVoidApproval: widget.onVoidApproval,
+          onVoidSale: widget.onVoidSale,
         ),
       ),
     );
+    // Detail bisa mengubah record (VOID penjualan lunas) —
+    // segarkan daftar saat kembali.
+    if (mounted) _load();
   }
 
   @override
@@ -221,6 +238,8 @@ class _StoreSaleDetailScreen extends StatelessWidget {
     required this.methodLabel,
     required this.receiptLabels,
     required this.receiptDataFor,
+    this.onVoidApproval,
+    this.onVoidSale,
   });
 
   final CompletedOrder record;
@@ -231,6 +250,9 @@ class _StoreSaleDetailScreen extends StatelessWidget {
     CompletedOrder record,
     DateTime? reprintAt,
   ) receiptDataFor;
+  final Future<bool> Function()? onVoidApproval;
+  final Future<void> Function(CompletedOrder record, String reason)?
+      onVoidSale;
 
   /// Salinan hanya untuk penjualan rupiah yang LUNAS: record
   /// VOID tidak pernah menjadi nota pelanggan, dan record era
@@ -262,6 +284,75 @@ class _StoreSaleDetailScreen extends StatelessWidget {
         watermark: 'REPRINT',
       ),
     );
+  }
+
+  /// VOID penjualan lunas (Fase A): dialog alasan (wajib) →
+  /// persetujuan PIN admin (callback layar Mode Toko) →
+  /// eksekusi VOID oleh pemanggil → kembali ke daftar yang
+  /// tersegar (record kini bertanda VOID).
+  Future<void> _voidSale(BuildContext context) async {
+    final approval = onVoidApproval;
+    final execute = onVoidSale;
+    if (approval == null || execute == null) return;
+    final l10n = context.l10n;
+    final reasonController = TextEditingController();
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ctx.palette.card,
+        title: Text(l10n.storeVoidSaleTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              l10n.storeVoidSaleBody,
+              style: TextStyle(fontSize: 13, color: ctx.palette.muted),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: reasonController,
+              autofocus: true,
+              maxLines: 2,
+              decoration: InputDecoration(
+                labelText: l10n.storeVoidReasonLabel,
+                filled: true,
+                fillColor: ctx.palette.cardAlt,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.cancel),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              final text = reasonController.text.trim();
+              if (text.isEmpty) return;
+              Navigator.pop(ctx, text);
+            },
+            child: Text(l10n.storeVoidSaleButton),
+          ),
+        ],
+      ),
+    );
+    reasonController.dispose();
+    if (reason == null || !context.mounted) return;
+    if (!await approval()) return;
+    if (!context.mounted) return;
+    await execute(record, reason);
+    if (!context.mounted) return;
+    Navigator.pop(context);
   }
 
   Widget _row(BuildContext context, String label, String value) {
@@ -324,6 +415,9 @@ class _StoreSaleDetailScreen extends StatelessWidget {
                   l10n.storeReceiptGrandTotal,
                   'Rp${formatRupiah(record.grandTotalRp)}',
                 ),
+                if (record.operatorName.isNotEmpty)
+                  _row(context, l10n.storeReceiptCashier,
+                      record.operatorName),
                 if (record.isVoid) _row(context, 'Status', 'VOID'),
               ],
             ),
@@ -397,6 +491,22 @@ class _StoreSaleDetailScreen extends StatelessWidget {
                 ),
               ),
             ),
+            if (onVoidApproval != null && onVoidSale != null) ...[
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () => _voidSale(context),
+                icon: const Icon(Icons.block_rounded, size: 19),
+                label: Text(l10n.storeVoidSaleButton),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.redAccent,
+                  side: const BorderSide(color: Colors.redAccent),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+            ],
           ] else
             Text(
               l10n.storeSaleReceiptUnavailable,

@@ -21,13 +21,30 @@ class StoreShift {
   /// yang masih terbuka; shift baru selalu dibuat ber-era 'rp'.
   final String era;
 
-  const StoreShift({required this.openedAt, this.closedAt, this.era = 'nusan'});
+  /// Stempel operator Fase A: operator yang MEMBUKA shift ini.
+  /// '' untuk shift sebelum Fase A. Inilah dasar aturan
+  /// "kasir hanya melihat laporan shift-nya sendiri".
+  final String operatorId;
+  final String operatorName;
+
+  const StoreShift({
+    required this.openedAt,
+    this.closedAt,
+    this.era = 'nusan',
+    this.operatorId = '',
+    this.operatorName = '',
+  });
 
   bool get isOpen => closedAt == null;
 
   /// Salinan shift ini dalam keadaan tertutup pada [at].
-  StoreShift close(DateTime at) =>
-      StoreShift(openedAt: openedAt, closedAt: at, era: era);
+  StoreShift close(DateTime at) => StoreShift(
+        openedAt: openedAt,
+        closedAt: at,
+        era: era,
+        operatorId: operatorId,
+        operatorName: operatorName,
+      );
 
   /// Ujung jendela laporan shift ini: waktu tutup, atau [now]
   /// bila shift masih berjalan.
@@ -46,6 +63,8 @@ class StoreShift {
     'openedAtMs': openedAt.millisecondsSinceEpoch,
     'closedAtMs': closedAt?.millisecondsSinceEpoch,
     if (era != 'nusan') 'era': era,
+    if (operatorId.isNotEmpty) 'operatorId': operatorId,
+    if (operatorName.isNotEmpty) 'operatorName': operatorName,
   };
 
   /// Baca satu shift; null bila bentuknya tidak sah (waktu buka
@@ -66,6 +85,12 @@ class StoreShift {
       openedAt: openedAt,
       closedAt: closedAt,
       era: raw['era'] == 'rp' ? 'rp' : 'nusan',
+      operatorId: raw['operatorId'] is String
+          ? raw['operatorId'] as String
+          : '',
+      operatorName: raw['operatorName'] is String
+          ? raw['operatorName'] as String
+          : '',
     );
   }
 
@@ -76,13 +101,17 @@ class StoreShift {
           openedAt.millisecondsSinceEpoch &&
       other.closedAt?.millisecondsSinceEpoch ==
           closedAt?.millisecondsSinceEpoch &&
-      other.era == era;
+      other.era == era &&
+      other.operatorId == operatorId &&
+      other.operatorName == operatorName;
 
   @override
   int get hashCode => Object.hash(
     openedAt.millisecondsSinceEpoch,
     closedAt?.millisecondsSinceEpoch,
     era,
+    operatorId,
+    operatorName,
   );
 }
 
@@ -130,6 +159,8 @@ Future<void> insertShiftRows(
       'opened_ms': shift.openedAt.millisecondsSinceEpoch,
       'closed_ms': shift.closedAt?.millisecondsSinceEpoch,
       'era': shift.era,
+      'operator_id': shift.operatorId,
+      'operator_name': shift.operatorName,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 }
@@ -164,6 +195,12 @@ class StoreShiftStore {
                   )
                 : null,
             era: row['era'] == 'rp' ? 'rp' : 'nusan',
+            operatorId: row['operator_id'] is String
+                ? row['operator_id'] as String
+                : '',
+            operatorName: row['operator_name'] is String
+                ? row['operator_name'] as String
+                : '',
           ),
       ];
     } catch (_) {
