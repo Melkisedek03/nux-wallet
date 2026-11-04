@@ -675,12 +675,13 @@
   "storeReceiptCustomer": "Pelanggan",
   "storeReceiptDate": "Tanggal",
   "storeReceiptBillNo": "No. Bill",
-  "storeReceiptTokenNo": "No. Token/Outlet ID",
+  "storeReceiptTokenNo": "Order/Outlet",
   "storeReceiptItemHeader": "Item",
   "storeReceiptAmountHeader": "Jumlah",
   "storeReceiptOrderDiscount": "Diskon Order",
+  "storeReceiptLineDiscount": "Diskon Item",
   "storeReceiptGrandTotal": "Bayar",
-  "storeReceiptPointsDiscountLabel": "Diskon poin nusan ({points} poin)",
+  "storeReceiptPointsDiscountLabel": "Pot. ({points} nusan)",
   "@storeReceiptPointsDiscountLabel": {
     "placeholders": {
       "points": {

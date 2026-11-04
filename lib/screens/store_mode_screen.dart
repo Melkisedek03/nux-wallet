@@ -1639,7 +1639,7 @@ class _StoreModeScreenState extends State<StoreModeScreen>
       tokenNoLabel: l10n.storeReceiptTokenNo,
       itemHeader: l10n.storeReceiptItemHeader,
       amountHeader: l10n.storeReceiptAmountHeader,
-      discountLabel: l10n.storeDiscount,
+      discountLabel: l10n.storeReceiptLineDiscount,
       orderDiscountLabel: l10n.storeReceiptOrderDiscount,
       grandTotalLabel: l10n.storeReceiptGrandTotal,
       cashLabel: l10n.storeCash,

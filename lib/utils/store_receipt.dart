@@ -80,7 +80,7 @@ class StoreReceiptLabels {
   final String promoLabel;
   final String noteWord;
 
-  /// Label baris diskon poin: "Diskon poin nusan (2.000 poin)".
+  /// Label baris diskon poin: "Pot. (2.000 nusan)".
   final String Function(int points) pointsDiscountLabel;
 
   /// Baris ketentuan nilai potongan: menerima nilai per poin
@@ -455,7 +455,9 @@ List<StoreReceiptElement> buildStoreReceiptElements(
       ),
     );
     if (item.qty > 1) {
-      out.add(ReceiptItemSub('${item.qty} x ${_rp(item.unitPriceRp)}'));
+      // Harga satuan gaya nota: "@Rp5.000" (permintaan NUX
+      // 4 Nov 2026, menggantikan "2 x Rp5.000").
+      out.add(ReceiptItemSub('@${_rp(item.unitPriceRp)}'));
     }
     if (item.discountRp > 0) {
       out.add(

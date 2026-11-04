@@ -149,7 +149,7 @@ class _ReceiptCard extends StatelessWidget {
             // kotak lebih lebar — label pendek tetap sejajar
             // seperti sebelumnya.
             SizedBox(
-              width: label.length > 12 ? 164 : 98,
+              width: label.length >= 12 ? 164 : 98,
               child: Text('$label:', style: _base, maxLines: 1),
             ),
             Expanded(child: Text(value, style: _base)),

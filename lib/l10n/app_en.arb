@@ -663,7 +663,7 @@
       }
     }
   },
-  "storeReceiptPointsRule": "1 nusan = Rp{rate} off",
+  "storeReceiptPointsRule": "1 nusan = Disc. Rp{rate}",
   "@storeReceiptPointsRule": {
     "placeholders": {
       "rate": {
@@ -675,12 +675,13 @@
   "storeReceiptCustomer": "Customer",
   "storeReceiptDate": "Date",
   "storeReceiptBillNo": "Bill No",
-  "storeReceiptTokenNo": "Token No/Outlet ID",
+  "storeReceiptTokenNo": "Order/Outlet",
   "storeReceiptItemHeader": "Item",
   "storeReceiptAmountHeader": "Amount",
   "storeReceiptOrderDiscount": "Order Discount",
+  "storeReceiptLineDiscount": "Item Disc.",
   "storeReceiptGrandTotal": "Pay",
-  "storeReceiptPointsDiscountLabel": "Nusan points discount ({points} pts)",
+  "storeReceiptPointsDiscountLabel": "Disc. ({points} nusan)",
   "@storeReceiptPointsDiscountLabel": {
     "placeholders": {
       "points": {

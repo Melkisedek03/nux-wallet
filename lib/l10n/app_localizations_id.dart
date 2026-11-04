@@ -1296,7 +1296,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeReceiptBillNo => 'No. Bill';
 
   @override
-  String get storeReceiptTokenNo => 'No. Token/Outlet ID';
+  String get storeReceiptTokenNo => 'Order/Outlet';
 
   @override
   String get storeReceiptItemHeader => 'Item';
@@ -1308,11 +1308,14 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeReceiptOrderDiscount => 'Diskon Order';
 
   @override
+  String get storeReceiptLineDiscount => 'Diskon Item';
+
+  @override
   String get storeReceiptGrandTotal => 'Bayar';
 
   @override
   String storeReceiptPointsDiscountLabel(String points) {
-    return 'Diskon poin nusan ($points poin)';
+    return 'Pot. ($points nusan)';
   }
 
   @override

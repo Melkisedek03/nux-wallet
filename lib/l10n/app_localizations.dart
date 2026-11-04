@@ -2381,7 +2381,7 @@ abstract class AppLocalizations {
   /// No description provided for @storeReceiptTokenNo.
   ///
   /// In id, this message translates to:
-  /// **'No. Token/Outlet ID'**
+  /// **'Order/Outlet'**
   String get storeReceiptTokenNo;
 
   /// No description provided for @storeReceiptItemHeader.
@@ -2402,6 +2402,12 @@ abstract class AppLocalizations {
   /// **'Diskon Order'**
   String get storeReceiptOrderDiscount;
 
+  /// No description provided for @storeReceiptLineDiscount.
+  ///
+  /// In id, this message translates to:
+  /// **'Diskon Item'**
+  String get storeReceiptLineDiscount;
+
   /// No description provided for @storeReceiptGrandTotal.
   ///
   /// In id, this message translates to:
@@ -2411,7 +2417,7 @@ abstract class AppLocalizations {
   /// No description provided for @storeReceiptPointsDiscountLabel.
   ///
   /// In id, this message translates to:
-  /// **'Diskon poin nusan ({points} poin)'**
+  /// **'Pot. ({points} nusan)'**
   String storeReceiptPointsDiscountLabel(String points);
 
   /// No description provided for @storeReceiptFooterDefault.
