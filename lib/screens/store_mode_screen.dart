@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ldk_node/src/generated/api/types.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../locale_controller.dart';
@@ -1227,6 +1226,11 @@ class _StoreModeScreenState extends State<StoreModeScreen>
   /// lunas = penjualan tercatat (panel sukses + penerbitan poin).
   Future<void> _openPayment() async {
     if (_openShift == null || _lines.isEmpty) return;
+    // Riwayat segar untuk JURNAL poin halaman pembayaran:
+    // saldo penukaran pelanggan dihitung dari penerbitan &
+    // penukaran yang sudah tercatat sampai saat ini.
+    final journalOrders = await _historyStore.load();
+    if (!mounted) return;
     final result = await Navigator.push<CompletedOrder>(
       context,
       MaterialPageRoute(
@@ -1235,6 +1239,7 @@ class _StoreModeScreenState extends State<StoreModeScreen>
           orderDiscount: _orderDiscount,
           settings: _settings,
           lspService: widget.lspService,
+          history: journalOrders,
         ),
       ),
     );
@@ -1374,6 +1379,11 @@ class _StoreModeScreenState extends State<StoreModeScreen>
     if (raw == null || !mounted) return;
     final code = raw.trim();
     if (code.isEmpty) return;
+    // Offer penerima (bila kode yang dipindai adalah offer
+    // Bolt12): dicatat ke record saat penerbitan sukses sebagai
+    // kunci jurnal poin pelanggan. Invoice sekali pakai tidak
+    // memberi identitas jurnal (null).
+    String? recipientOffer;
     final amountMsat = BigInt.from(record.pointsEarned) * BigInt.from(1000);
     setState(() => _issuing = true);
     try {
@@ -1384,6 +1394,7 @@ class _StoreModeScreenState extends State<StoreModeScreen>
           _snack(l10n.storeIssueInvalidCode);
           return;
         }
+        recipientOffer = normalizePointsOffer(code);
         if (info.isFixedAmount) {
           if (info.amountMsat != amountMsat) {
             _snack(l10n.storeIssueAmountMismatch);
@@ -1414,6 +1425,7 @@ class _StoreModeScreenState extends State<StoreModeScreen>
         final updated = record.withIssueStatus(
           issueStatusIssued,
           issueHashHex: paymentIdHex(paymentId),
+          recipientOffer: recipientOffer,
         );
         await _historyStore.replace(updated);
         if (!mounted) return;
@@ -1421,7 +1433,11 @@ class _StoreModeScreenState extends State<StoreModeScreen>
           setState(() => _saleRecord = updated);
         }
         await _loadPendingIssues();
-        _snack(l10n.storePointsIssuedOk);
+        _snack(
+          recipientOffer == null
+              ? l10n.storeIssueInvoiceNote
+              : l10n.storePointsIssuedOk,
+        );
         _armCelebrationTimer();
       } else if (status == PaymentStatus.failed) {
         _snack(l10n.storeIssueFailed);
@@ -2902,13 +2918,12 @@ class _DiscountEditResult {
   final bool cleared;
 }
 
-enum _RedeemState { idle, creating, waiting, verified, failed }
-
 /// Halaman Penyelesaian Pembayaran (Mode Toko v2). Pesanan
 /// SELALU diselesaikan dalam rupiah: opsional penukaran poin
-/// nusan lebih dulu (invoice penukaran dari dompet toko; diskon
-/// Rp diterapkan HANYA sesudah pembayaran poin terverifikasi
-/// cocok lewat hash), lalu sisa dibayar Tunai (dengan hitungan
+/// nusan lebih dulu (dibaca dari JURNAL penerbitan toko untuk
+/// offer Bolt12 pelanggan yang dipindai; potongan Rp diterapkan
+/// dari catatan itu — pelanggan tidak membayar apa pun saat
+/// menukar), lalu sisa dibayar Tunai (dengan hitungan
 /// kembalian) atau QRIS (catat saja) — atau Rp0 penuh (promosi /
 /// tertutup poin seluruhnya). Mengembalikan [CompletedOrder]
 /// lunas atau VOID; null = kembali tanpa catatan apa pun.
@@ -2918,12 +2933,17 @@ class _StorePaymentPage extends StatefulWidget {
     required this.orderDiscount,
     required this.settings,
     required this.lspService,
+    required this.history,
   });
 
   final List<OrderLine> lines;
   final Discount? orderDiscount;
   final StoreSettings settings;
   final LspService lspService;
+
+  /// Riwayat penjualan toko saat halaman dibuka — bahan jurnal
+  /// poin (saldo penukaran per offer pelanggan).
+  final List<CompletedOrder> history;
 
   @override
   State<_StorePaymentPage> createState() => _StorePaymentPageState();
@@ -2933,23 +2953,23 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
   final _pointsController = TextEditingController();
   final _cashController = TextEditingController();
   final _customerController = TextEditingController();
-  _RedeemState _redeemState = _RedeemState.idle;
-  String? _redeemInvoice;
-  String? _redeemHashHex;
-  DateTime? _redeemExpiresAt;
+  // Penukaran poin model JURNAL: offer pelanggan yang terpindai
+  // + saldo jurnalnya di toko ini. Klaim yang diterapkan
+  // (_redeemApplied) mengunci _redeemPoints sebagai potongan;
+  // debit jurnal baru tercatat pada record lunas di _settle.
+  // Tidak ada invoice dan tidak ada pembayaran dari pelanggan.
+  String? _redeemOffer;
+  int _journalBalance = 0;
+  bool _redeemApplied = false;
   int _redeemPoints = 0;
   String? _redeemError;
-  Timer? _redeemTimer;
-  bool _polling = false;
   String _method = payMethodCash;
   int _cashRp = 0;
 
   int get _dueBeforePoints =>
       orderDueRp(widget.lines, widget.orderDiscount);
 
-  bool get _redeemVerified => _redeemState == _RedeemState.verified;
-
-  int get _pointsDiscountRp => _redeemVerified
+  int get _pointsDiscountRp => _redeemApplied
       ? pointsDiscountRpFor(
           points: _redeemPoints,
           rateRpPerPoint: widget.settings.redeemRateRp,
@@ -2961,12 +2981,19 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
 
   int get _remainingRp => _dueBeforePoints - _pointsDiscountRp;
 
-  int get _maxPoints => maxRedeemablePoints(
+  /// Plafon poin dari sisi belanja saja (nilai per poin &
+  /// persentase maksimal dari total).
+  int get _billCapPoints => maxRedeemablePoints(
     rateRpPerPoint: widget.settings.redeemRateRp,
     remainingRp: _dueBeforePoints,
     totalRp: _dueBeforePoints,
     maxPercent: widget.settings.maxRedeemPercent,
   );
+
+  /// Batas tukar yang berlaku: plafon belanja DAN saldo jurnal
+  /// pelanggan yang terpindai (0 sebelum ada offer).
+  int get _maxPoints =>
+      _billCapPoints < _journalBalance ? _billCapPoints : _journalBalance;
 
   int get _earnedPreview => widget.settings.pointsEnabled
       ? pointsEarnedFor(
@@ -2978,16 +3005,54 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
 
   @override
   void dispose() {
-    _redeemTimer?.cancel();
     _pointsController.dispose();
     _cashController.dispose();
     _customerController.dispose();
     super.dispose();
   }
 
-  // ---------------- Penukaran poin ----------------
+  // ---------------- Penukaran poin (jurnal toko) ----------------
 
-  Future<void> _createRedeemInvoice() async {
+  /// Pindai offer Bolt12 pelanggan dari ELNUX miliknya, lalu
+  /// baca saldo jurnalnya dari riwayat toko. Penukaran model
+  /// jurnal tidak meminta pembayaran apa pun dari pelanggan:
+  /// hak potongan lahir dari penerbitan poin toko yang tercatat
+  /// untuk offer ini (pointsJournalBalanceFor). Kode selain
+  /// offer (mis. invoice sekali pakai) ditolak — invoice tidak
+  /// membawa identitas jurnal yang bisa dipakai ulang.
+  Future<void> _scanCustomerOffer() async {
+    final raw = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const ScanScreen()),
+    );
+    if (raw == null || !mounted) return;
+    final code = raw.trim();
+    final l10n = context.l10n;
+    final info = code.toLowerCase().startsWith('lno1')
+        ? parseOfferInfo(code)
+        : null;
+    if (info == null || info.isExpiredAt(DateTime.now())) {
+      setState(() => _redeemError = l10n.storeRedeemNeedOffer);
+      return;
+    }
+    final offer = normalizePointsOffer(code);
+    setState(() {
+      _redeemOffer = offer;
+      _journalBalance = pointsJournalBalanceFor(widget.history, offer);
+      _redeemApplied = false;
+      _redeemPoints = 0;
+      _redeemError = null;
+      _pointsController.clear();
+    });
+  }
+
+  /// Terapkan klaim penukaran: kunci jumlah poin (dijepit ke
+  /// batas gabungan saldo jurnal & plafon belanja); potongan
+  /// rupiahnya dihitung _pointsDiscountRp. Belum ada catatan
+  /// yang berubah di sini — debit jurnal tercatat nanti pada
+  /// record lunas (_settle menulis offer penukar ke record),
+  /// jadi mengurungkan klaim di halaman ini selalu aman.
+  void _applyRedeem() {
     final l10n = context.l10n;
     var points = int.tryParse(_pointsController.text.trim()) ?? 0;
     if (points <= 0 || _maxPoints <= 0) {
@@ -3001,139 +3066,18 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
       );
     }
     setState(() {
-      _redeemState = _RedeemState.creating;
+      _redeemPoints = points;
+      _redeemApplied = true;
       _redeemError = null;
     });
-    try {
-      final amountMsat = BigInt.from(points) * BigInt.from(1000);
-      final usable = await widget.lspService.usableInboundCapacityMsat();
-      final route = chooseReceiveInvoiceRoute(
-        amountMsat: amountMsat,
-        usableInboundCapacityMsat: usable,
-      );
-      // Jalur terima BARU (JIT) punya lantai invoice 1.000 nusan
-      // di sisi klien: penukaran di bawah itu lewat jalur baru
-      // tidak bisa dibuat — sampaikan terus terang, kasir dapat
-      // menaikkan jumlah poin atau melewati penukaran.
-      if (route == ReceiveInvoiceRoute.jit && points < 1000) {
-        if (!mounted) return;
-        setState(() {
-          _redeemState = _RedeemState.failed;
-          _redeemError = l10n.storeRedeemMinChannel;
-        });
-        return;
-      }
-      final invoice = route == ReceiveInvoiceRoute.jit
-          ? await widget.lspService.createJitInvoice(
-              amountMsat: amountMsat,
-              description: l10n.storeRedeemDesc,
-              expirySecs: 3600,
-            )
-          : await widget.lspService.createRegularInvoice(
-              amountMsat: amountMsat,
-              description: l10n.storeRedeemDesc,
-              expirySecs: 3600,
-            );
-      final info = parseBolt11Info(invoice);
-      if (!mounted) return;
-      if (info == null) {
-        setState(() {
-          _redeemState = _RedeemState.failed;
-          _redeemError = l10n.storeRedeemFailed;
-        });
-        return;
-      }
-      setState(() {
-        _redeemState = _RedeemState.waiting;
-        _redeemInvoice = invoice;
-        _redeemHashHex = info.paymentHashHex;
-        _redeemExpiresAt = info.expiresAt;
-        _redeemPoints = points;
-      });
-      _startRedeemPoll();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _redeemState = _RedeemState.failed;
-        _redeemError = friendlyError(
-          e,
-          fallback: l10n.storeRedeemFailed,
-          l10n: l10n,
-        );
-      });
-    }
   }
 
-  /// Pengawas invoice penukaran: tiriskan antre event node;
-  /// penerimaan yang hash-nya cocok dengan invoice penukaran
-  /// menandai penukaran TERVERIFIKASI (diskon boleh diterapkan).
-  /// Kedaluwarsa saat menunggu = penukaran gagal (tanpa diskon).
-  void _startRedeemPoll() {
-    _redeemTimer?.cancel();
-    _redeemTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
-      if (!mounted || _polling) return;
-      if (_redeemExpiresAt != null &&
-          DateTime.now().isAfter(_redeemExpiresAt!)) {
-        _redeemTimer?.cancel();
-        setState(() {
-          _redeemState = _RedeemState.failed;
-          _redeemError = context.l10n.storeRedeemFailed;
-        });
-        return;
-      }
-      _polling = true;
-      try {
-        while (mounted) {
-          final event = await widget.lspService.pollNextEvent();
-          if (event == null) break;
-          if (event is Event_PaymentReceived) {
-            final hex = event.paymentHash.data
-                .map((b) => b.toRadixString(16).padLeft(2, '0'))
-                .join();
-            if (_redeemHashHex != null && hex == _redeemHashHex) {
-              _redeemTimer?.cancel();
-              if (mounted) {
-                setState(() => _redeemState = _RedeemState.verified);
-              }
-              return;
-            }
-          }
-        }
-      } finally {
-        _polling = false;
-      }
-    });
-  }
-
-  Future<void> _cancelRedeem() async {
-    final l10n = context.l10n;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: ctx.palette.card,
-        title: Text(l10n.storeRedeemCancel),
-        content: Text(l10n.storeRedeemCancelWarn),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.cancel),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.storeRedeemCancel),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    _redeemTimer?.cancel();
+  /// Urungkan klaim yang sudah diterapkan (offer & saldo jurnal
+  /// tetap terbaca, kasir bisa menerapkan jumlah lain).
+  void _undoRedeem() {
     setState(() {
-      _redeemState = _RedeemState.idle;
-      _redeemInvoice = null;
-      _redeemHashHex = null;
-      _redeemExpiresAt = null;
+      _redeemApplied = false;
       _redeemPoints = 0;
-      _redeemError = null;
     });
   }
 
@@ -3146,10 +3090,11 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
       time: now,
       lines: widget.lines,
       orderDiscount: widget.orderDiscount,
-      paymentHashHex: _redeemVerified ? _redeemHashHex : null,
+      paymentHashHex: null,
       payMethod: method,
       cashReceivedRp: method == payMethodCash ? _cashRp : 0,
-      pointsRedeemed: _redeemVerified ? _redeemPoints : 0,
+      pointsRedeemed: _redeemApplied ? _redeemPoints : 0,
+      pointsRedeemOffer: _redeemApplied ? _redeemOffer : null,
       pointsDiscountRp: _pointsDiscountRp,
       pointsEarned: _earnedPreview,
       pointsIssueStatus: _earnedPreview > 0
@@ -3161,7 +3106,6 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
   }
 
   Future<void> _cancelOrder() async {
-    if (_redeemVerified) return;
     final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -3186,7 +3130,6 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
       ),
     );
     if (confirmed != true || !mounted) return;
-    _redeemTimer?.cancel();
     final now = DateTime.now();
     Navigator.pop(
       context,
@@ -3218,36 +3161,11 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
     final l10n = context.l10n;
     final due = _dueBeforePoints;
     final remaining = _remainingRp;
-    final canPopDirectly =
-        _redeemState == _RedeemState.idle ||
-        _redeemState == _RedeemState.failed;
+    // Tidak ada pembayaran berjalan yang perlu dijaga saat
+    // keluar halaman: klaim jurnal baru tercatat bila pesanan
+    // benar-benar dilunasi, jadi kembali kapan pun aman.
     return PopScope(
-      canPop: canPopDirectly,
-      onPopInvokedWithResult: (didPop, _) async {
-        if (didPop) return;
-        final leave = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: ctx.palette.card,
-            title: Text(l10n.storeRedeemCancel),
-            content: Text(l10n.storeRedeemLeaveBody),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text(l10n.cancel),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text(l10n.storeRedeemCancel),
-              ),
-            ],
-          ),
-        );
-        if (leave == true && mounted) {
-          _redeemTimer?.cancel();
-          Navigator.pop(context);
-        }
-      },
+      canPop: true,
       child: Scaffold(
         appBar: AppBar(
           title: Text(l10n.storePayTitle),
@@ -3468,21 +3386,12 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
               const Divider(height: 1),
               const SizedBox(height: 8),
               TextButton(
-                onPressed: _redeemVerified ? null : _cancelOrder,
+                onPressed: _cancelOrder,
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.redAccent,
                 ),
                 child: Text(l10n.storeCancelOrder),
               ),
-              if (_redeemVerified)
-                Text(
-                  l10n.storeCancelBlockedRedeem,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: context.palette.muted,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
             ],
           ),
         ),
@@ -3536,68 +3445,7 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 6),
-          if (_redeemState == _RedeemState.creating) ...[
-            Row(
-              children: [
-                const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2.4),
-                ),
-                const SizedBox(width: 12),
-                Text(l10n.storeRedeemWaiting),
-              ],
-            ),
-          ] else if (_redeemState == _RedeemState.waiting) ...[
-            Center(
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: QrImageView(
-                  data: _redeemInvoice!,
-                  version: QrVersions.auto,
-                  size: 200,
-                  backgroundColor: Colors.white,
-                  errorCorrectionLevel: QrErrorCorrectLevel.M,
-                ),
-              ),
-            ),
-            // Salin kode penukaran sebagai teks: pelanggan yang
-            // tidak bisa memindai QR (kirim lewat chat, dsb.)
-            // tetap bisa membayar poinnya dari kode ini.
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.copy, color: Color(0xFF34D399)),
-                  tooltip: l10n.copy,
-                  onPressed: () {
-                    Clipboard.setData(
-                        ClipboardData(text: _redeemInvoice!));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.storeRedeemCopied)),
-                    );
-                  },
-                ),
-                Text(l10n.copy,
-                    style: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600)),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              l10n.storeRedeemWaiting,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            TextButton(
-              onPressed: _cancelRedeem,
-              child: Text(l10n.storeRedeemCancel),
-            ),
-          ] else if (_redeemState == _RedeemState.verified) ...[
+          if (_redeemApplied) ...[
             Row(
               children: [
                 const Icon(
@@ -3608,7 +3456,7 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
                 const SizedBox(width: 9),
                 Expanded(
                   child: Text(
-                    l10n.storeRedeemVerified(
+                    l10n.storeRedeemApplied(
                       _redeemPoints,
                       formatRupiah(_pointsDiscountRp),
                     ),
@@ -3620,11 +3468,49 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
                 ),
               ],
             ),
-          ] else ...[
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: _undoRedeem,
+                child: Text(l10n.storeRedeemUndo),
+              ),
+            ),
+          ] else if (_redeemOffer == null) ...[
             Text(
               l10n.storeRedeemHint,
               style: TextStyle(fontSize: 12, color: context.palette.muted),
             ),
+            const SizedBox(height: 10),
+            ElevatedButton.icon(
+              onPressed: _scanCustomerOffer,
+              icon: const Icon(Icons.qr_code_scanner_rounded, size: 19),
+              label: Text(l10n.storeRedeemScanOffer),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 13,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ] else ...[
+            Text(
+              l10n.storeRedeemBalance(_journalBalance),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+            if (_journalBalance <= 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  l10n.storeRedeemNoBalance,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: context.palette.muted,
+                  ),
+                ),
+              ),
             const SizedBox(height: 10),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -3649,7 +3535,7 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
                 ),
                 const SizedBox(width: 10),
                 ElevatedButton(
-                  onPressed: _createRedeemInvoice,
+                  onPressed: _journalBalance > 0 ? _applyRedeem : null,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -3659,7 +3545,7 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: Text(l10n.storeRedeemCreate),
+                  child: Text(l10n.storeRedeemApply),
                 ),
               ],
             ),
@@ -3674,18 +3560,25 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
                   ),
                 ),
               ),
-            if (_redeemError != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  _redeemError!,
-                  style: const TextStyle(
-                    color: Colors.redAccent,
-                    fontSize: 13,
-                  ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: _scanCustomerOffer,
+                child: Text(l10n.storeRedeemScanAgain),
+              ),
+            ),
+          ],
+          if (_redeemError != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                _redeemError!,
+                style: const TextStyle(
+                  color: Colors.redAccent,
+                  fontSize: 13,
                 ),
               ),
-          ],
+            ),
         ],
       ),
     );

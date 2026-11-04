@@ -536,10 +536,34 @@
   "storeVoidConfirmTitle": "Cancel This Order?",
   "storeVoidConfirmBody": "The order is cancelled and recorded as VOID in the report. This can't be undone.",
   "storeVoidRecorded": "Order cancelled — recorded as VOID.",
-  "storeCancelBlockedRedeem": "The points redemption is already verified — this order can no longer be cancelled; settle its payment.",
   "storeRedeemTitle": "Redeem Nusan Points",
-  "storeRedeemHint": "The customer redeems nusan points as a discount on this order. Enter the points, create a redemption code, and ask the customer to pay it from their own ELNUX app. The discount applies only after the points payment is verified.",
+  "storeRedeemHint": "Redemption is read from this store's own points issuance records — the customer pays nothing. Ask the customer to show their Bolt12 offer in their ELNUX app, scan it, then apply a discount up to the points recorded for them.",
+  "storeRedeemScanOffer": "Scan Customer Offer",
+  "storeRedeemBalance": "Recorded points for this customer: {balance} points.",
+  "@storeRedeemBalance": {
+    "placeholders": {
+      "balance": {
+        "type": "int"
+      }
+    }
+  },
+  "storeRedeemNoBalance": "No points are recorded for this offer at this store yet — redemption isn't possible.",
+  "storeRedeemNeedOffer": "Redemption uses the customer's Bolt12 offer. That code isn't an offer — ask the customer to open their offer in ELNUX and scan again.",
   "storeRedeemPointsLabel": "Points",
+  "storeRedeemApply": "Apply Discount",
+  "storeRedeemApplied": "Redemption recorded: {points} points = Rp{amount} discount.",
+  "@storeRedeemApplied": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "storeRedeemUndo": "Undo Redemption",
+  "storeRedeemScanAgain": "Scan Again",
   "storeRedeemMaxNote": "At most {max} points for this order.",
   "@storeRedeemMaxNote": {
     "placeholders": {
@@ -556,26 +580,6 @@
       }
     }
   },
-  "storeRedeemCreate": "Create Redemption Code",
-  "storeRedeemWaiting": "Waiting for the customer's points payment…",
-  "storeRedeemCopied": "Redemption code copied",
-  "storeRedeemVerified": "Redemption verified: {points} points = Rp{amount} discount.",
-  "@storeRedeemVerified": {
-    "placeholders": {
-      "points": {
-        "type": "int"
-      },
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
-  "storeRedeemFailed": "The points redemption failed or expired — no discount. The order can still be paid in rupiah.",
-  "storeRedeemCancel": "Cancel Redemption",
-  "storeRedeemCancelWarn": "This redemption code will be cancelled. If the customer pays it afterwards anyway, the points still arrive in the store wallet but no discount applies — settle this order in full rupiah.",
-  "storeRedeemLeaveBody": "A points redemption is still in progress. Leaving this page cancels the redemption — the order returns to the cashier without a points discount.",
-  "storeRedeemDesc": "Nusan points redemption",
-  "storeRedeemMinChannel": "This points amount is below the minimum for creating a new receiving path (1,000 points). Increase the points, or skip redemption this time.",
   "storeRedeemInvalidPoints": "That points amount isn't valid, or exceeds the possible discount for this order.",
   "storeSaleCompleted": "Sale Completed",
   "storePointsEarnedLine": "Nusan points earned: {points} points",
@@ -593,6 +597,7 @@
   "storeIssueAmountMismatch": "The code amount doesn't equal the points to issue — ask the customer to create a code for exactly the earned points.",
   "storeIssueFailed": "Issuing the points failed — they stay pending and can be issued from the Pending Points list.",
   "storeIssueStillPending": "The points payment is still in flight — it stays pending; check again from the Pending Points list.",
+  "storeIssueInvoiceNote": "Points issued to a one-time invoice — they are not recorded in the store journal. To make points redeemable on the next visit, issue them to the customer's Bolt12 offer.",
   "storeDoneButton": "Done",
   "storePendingBadge": "Pending Points ({count})",
   "@storePendingBadge": {

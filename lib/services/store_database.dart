@@ -52,7 +52,21 @@ class StoreDatabase {
     final path = await (_dbPathProvider?.call() ?? _defaultDbPath());
     final db = await openDatabase(
       path,
-      version: 1,
+      version: 2,
+      onUpgrade: (db, oldVersion, newVersion) async {
+        // v2: kolom jurnal poin pada orders — offer penerima
+        // penerbitan & offer penukaran (penukaran model jurnal
+        // membaca saldo dari dua kolom ini). Nullable; record
+        // lama terbaca null (di luar jurnal).
+        if (oldVersion < 2) {
+          await db.execute(
+            'ALTER TABLE orders ADD COLUMN points_recipient_offer TEXT',
+          );
+          await db.execute(
+            'ALTER TABLE orders ADD COLUMN points_redeem_offer TEXT',
+          );
+        }
+      },
       onCreate: (db, version) async {
         await db.execute('''
 CREATE TABLE catalog_items(
@@ -82,6 +96,8 @@ CREATE TABLE orders(
   points_earned INTEGER NOT NULL DEFAULT 0,
   points_issue_status TEXT NOT NULL DEFAULT 'none',
   points_issue_hash TEXT,
+  points_recipient_offer TEXT,
+  points_redeem_offer TEXT,
   customer_name TEXT NOT NULL DEFAULT '',
   bill_no INTEGER NOT NULL DEFAULT 0,
   token_no INTEGER NOT NULL DEFAULT 0,

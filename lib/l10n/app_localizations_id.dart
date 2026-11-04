@@ -1133,18 +1133,44 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeVoidRecorded => 'Pesanan dibatalkan — tercatat sebagai VOID.';
 
   @override
-  String get storeCancelBlockedRedeem =>
-      'Penukaran poin sudah terverifikasi — pesanan tidak bisa dibatalkan; selesaikan pembayarannya.';
-
-  @override
   String get storeRedeemTitle => 'Tukar Poin Nusan';
 
   @override
   String get storeRedeemHint =>
-      'Pelanggan menukar poin nusan sebagai potongan belanja. Masukkan jumlah poin, buat kode penukaran, dan minta pelanggan membayarnya dari aplikasi ELNUX miliknya. Potongan berlaku sesudah pembayaran poin terverifikasi.';
+      'Penukaran dibaca dari catatan penerbitan poin toko ini — pelanggan tidak membayar apa pun. Minta pelanggan menunjukkan offer Bolt12 dari aplikasi ELNUX miliknya, pindai, lalu terapkan potongan sampai sebesar poin yang tercatat untuknya.';
+
+  @override
+  String get storeRedeemScanOffer => 'Pindai Offer Pelanggan';
+
+  @override
+  String storeRedeemBalance(int balance) {
+    return 'Poin tercatat untuk pelanggan ini: $balance poin.';
+  }
+
+  @override
+  String get storeRedeemNoBalance =>
+      'Belum ada poin tercatat untuk offer ini di toko ini — penukaran belum bisa dilakukan.';
+
+  @override
+  String get storeRedeemNeedOffer =>
+      'Penukaran memakai offer Bolt12 pelanggan. Kode ini bukan offer — minta pelanggan membuka offer-nya di ELNUX lalu pindai ulang.';
 
   @override
   String get storeRedeemPointsLabel => 'Jumlah Poin';
+
+  @override
+  String get storeRedeemApply => 'Terapkan Potongan';
+
+  @override
+  String storeRedeemApplied(int points, String amount) {
+    return 'Penukaran tercatat: $points poin = potongan Rp$amount.';
+  }
+
+  @override
+  String get storeRedeemUndo => 'Urungkan Penukaran';
+
+  @override
+  String get storeRedeemScanAgain => 'Pindai Ulang';
 
   @override
   String storeRedeemMaxNote(int max) {
@@ -1155,42 +1181,6 @@ class AppLocalizationsId extends AppLocalizations {
   String storeRedeemClamped(int max) {
     return 'Jumlah poin melebihi batas — dipakai $max poin.';
   }
-
-  @override
-  String get storeRedeemCreate => 'Buat Kode Tukar';
-
-  @override
-  String get storeRedeemWaiting => 'Menunggu pembayaran poin dari pelanggan…';
-
-  @override
-  String get storeRedeemCopied => 'Kode penukaran disalin';
-
-  @override
-  String storeRedeemVerified(int points, String amount) {
-    return 'Penukaran terverifikasi: $points poin = potongan Rp$amount.';
-  }
-
-  @override
-  String get storeRedeemFailed =>
-      'Penukaran poin gagal atau kedaluwarsa — tidak ada potongan. Pesanan tetap bisa dibayar rupiah.';
-
-  @override
-  String get storeRedeemCancel => 'Batalkan Penukaran';
-
-  @override
-  String get storeRedeemCancelWarn =>
-      'Kode penukaran ini dibatalkan. Bila pelanggan terlanjur membayar sesudah ini, poinnya tetap masuk ke dompet toko tetapi potongan tidak berlaku — selesaikan belanja ini dalam rupiah penuh.';
-
-  @override
-  String get storeRedeemLeaveBody =>
-      'Penukaran poin masih berjalan. Meninggalkan halaman ini membatalkan penukaran — pesanan kembali ke kasir tanpa potongan poin.';
-
-  @override
-  String get storeRedeemDesc => 'Penukaran poin nusan';
-
-  @override
-  String get storeRedeemMinChannel =>
-      'Jumlah poin ini di bawah minimum pembuatan jalur terima baru (1.000 poin). Naikkan jumlah poin, atau lewati penukaran kali ini.';
 
   @override
   String get storeRedeemInvalidPoints =>
@@ -1229,6 +1219,10 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get storeIssueStillPending =>
       'Pembayaran poin masih berjalan — statusnya tetap tertunda; cek lagi dari daftar Poin Tertunda.';
+
+  @override
+  String get storeIssueInvoiceNote =>
+      'Poin terbit ke invoice sekali pakai — poin seperti ini tidak tercatat di jurnal toko. Agar bisa ditukar pada kunjungan berikutnya, terbitkan ke offer Bolt12 pelanggan.';
 
   @override
   String get storeDoneButton => 'Selesai';

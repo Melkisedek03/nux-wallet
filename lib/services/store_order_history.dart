@@ -70,9 +70,11 @@ class CompletedOrder {
   final int grandTotalRp;
 
   /// Hash pembayaran Lightning yang terkait record ini. Era
-  /// 'nusan': hash invoice penjualan. Era 'rp': hash invoice
-  /// PENUKARAN poin (null bila tidak ada penukaran) — satu-satunya
-  /// perpindahan Lightning pada penjualan rupiah.
+  /// 'nusan': hash invoice penjualan. Era 'rp': hanya terisi pada
+  /// record lama yang penukaran poinnya masih memakai invoice
+  /// (hash invoice penukaran itu). Penukaran model jurnal tidak
+  /// memindahkan Lightning apa pun, jadi record 'rp' baru selalu
+  /// null di field ini.
   final String? paymentHashHex;
 
   /// True = pesanan BATAL (VOID): dibatalkan kasir dari lembar
@@ -107,6 +109,22 @@ class CompletedOrder {
 
   /// Id pembayaran (hex) pengiriman poin saat berstatus 'issued'.
   final String? pointsIssueHashHex;
+
+  /// Offer Bolt12 pelanggan yang menerima penerbitan poin
+  /// transaksi ini (bentuk ternormalisasi: trim + huruf kecil),
+  /// terisi hanya bila penerbitan dibayar ke offer — penerbitan
+  /// ke invoice sekali pakai tidak mencatat identitas yang bisa
+  /// dipakai ulang. Field ini kunci JURNAL poin toko: saldo
+  /// penukaran seorang pelanggan = poin terbit ke offer-nya
+  /// dikurangi poin yang sudah ditukar atas offer yang sama.
+  /// null untuk record lama & penerbitan via invoice.
+  final String? pointsRecipientOffer;
+
+  /// Offer Bolt12 yang dipakai pelanggan untuk MENUKAR poin pada
+  /// transaksi ini (jurnal toko), ternormalisasi seperti
+  /// [pointsRecipientOffer]. null bila transaksi ini tidak
+  /// menukar poin (atau record lama pra-jurnal).
+  final String? pointsRedeemOffer;
 
   /// Nama pelanggan yang dicatat kasir di halaman pembayaran
   /// (opsional, untuk struk: baris "Customer: …"). '' = tidak
@@ -154,6 +172,8 @@ class CompletedOrder {
     this.pointsEarned = 0,
     this.pointsIssueStatus = issueStatusNone,
     this.pointsIssueHashHex,
+    this.pointsRecipientOffer,
+    this.pointsRedeemOffer,
     this.customerName = '',
     this.billNo = 0,
     this.tokenNo = 0,
@@ -165,7 +185,11 @@ class CompletedOrder {
   /// Salinan record dengan status penerbitan poin diperbarui —
   /// dipakai saat poin tertunda diterbitkan/dibatalkan dari
   /// antre, tanpa mengubah fakta penjualan apa pun.
-  CompletedOrder withIssueStatus(String status, {String? issueHashHex}) {
+  CompletedOrder withIssueStatus(
+    String status, {
+    String? issueHashHex,
+    String? recipientOffer,
+  }) {
     return CompletedOrder(
       id: id,
       time: time,
@@ -185,6 +209,8 @@ class CompletedOrder {
       pointsEarned: pointsEarned,
       pointsIssueStatus: status,
       pointsIssueHashHex: issueHashHex ?? pointsIssueHashHex,
+      pointsRecipientOffer: recipientOffer ?? pointsRecipientOffer,
+      pointsRedeemOffer: pointsRedeemOffer,
       customerName: customerName,
       billNo: billNo,
       tokenNo: tokenNo,
@@ -223,6 +249,8 @@ class CompletedOrder {
       pointsEarned: pointsEarned,
       pointsIssueStatus: pointsIssueStatus,
       pointsIssueHashHex: pointsIssueHashHex,
+      pointsRecipientOffer: pointsRecipientOffer,
+      pointsRedeemOffer: pointsRedeemOffer,
       customerName: customerName,
       billNo: billNo ?? this.billNo,
       tokenNo: tokenNo ?? this.tokenNo,
@@ -250,6 +278,9 @@ class CompletedOrder {
     if (pointsIssueStatus != issueStatusNone)
       'pointsIssueStatus': pointsIssueStatus,
     if (pointsIssueHashHex != null) 'pointsIssueHashHex': pointsIssueHashHex,
+    if (pointsRecipientOffer != null)
+      'pointsRecipientOffer': pointsRecipientOffer,
+    if (pointsRedeemOffer != null) 'pointsRedeemOffer': pointsRedeemOffer,
     if (customerName.isNotEmpty) 'customerName': customerName,
     if (billNo != 0) 'billNo': billNo,
     if (tokenNo != 0) 'tokenNo': tokenNo,
@@ -293,6 +324,8 @@ class CompletedOrder {
     final method = raw['payMethod'];
     final issueStatus = raw['pointsIssueStatus'];
     final issueHash = raw['pointsIssueHashHex'];
+    final recipientOffer = raw['pointsRecipientOffer'];
+    final redeemOffer = raw['pointsRedeemOffer'];
     final customer = raw['customerName'];
     int intOr0(Object? v) => v is num ? v.toInt() : 0;
     return CompletedOrder(
@@ -322,6 +355,13 @@ class CompletedOrder {
           : issueStatusNone,
       pointsIssueHashHex: issueHash is String && issueHash.isNotEmpty
           ? issueHash
+          : null,
+      pointsRecipientOffer:
+          recipientOffer is String && recipientOffer.isNotEmpty
+              ? recipientOffer
+              : null,
+      pointsRedeemOffer: redeemOffer is String && redeemOffer.isNotEmpty
+          ? redeemOffer
           : null,
       // Metadata struk: record lama tanpa field ini terbaca
       // kosong/tanpa nomor (kompatibel mundur).
@@ -354,6 +394,8 @@ class CompletedOrder {
       other.pointsEarned == pointsEarned &&
       other.pointsIssueStatus == pointsIssueStatus &&
       other.pointsIssueHashHex == pointsIssueHashHex &&
+      other.pointsRecipientOffer == pointsRecipientOffer &&
+      other.pointsRedeemOffer == pointsRedeemOffer &&
       other.customerName == customerName &&
       other.billNo == billNo &&
       other.tokenNo == tokenNo &&
@@ -379,6 +421,8 @@ class CompletedOrder {
     pointsEarned,
     pointsIssueStatus,
     pointsIssueHashHex,
+    pointsRecipientOffer,
+    pointsRedeemOffer,
     Object.hash(
       customerName,
       billNo,
@@ -489,6 +533,7 @@ CompletedOrder buildCompletedOrder({
   int pointsDiscountRp = 0,
   int pointsEarned = 0,
   String pointsIssueStatus = issueStatusNone,
+  String? pointsRedeemOffer,
   String customerName = '',
 }) {
   final subtotal = orderSubtotalRp(lines);
@@ -519,8 +564,42 @@ CompletedOrder buildCompletedOrder({
     pointsDiscountRp: pointsDiscountRp,
     pointsEarned: pointsEarned,
     pointsIssueStatus: pointsIssueStatus,
+    pointsRedeemOffer: pointsRedeemOffer,
     customerName: customerName.trim(),
   );
+}
+
+/// Bentuk ternormalisasi offer Bolt12 untuk kunci jurnal poin:
+/// trim + huruf kecil (offer adalah string bech32; perbandingan
+/// jurnal tidak boleh gagal hanya karena huruf besar dari hasil
+/// tempel/pindai).
+String normalizePointsOffer(String raw) => raw.trim().toLowerCase();
+
+/// Saldo poin JURNAL toko untuk satu offer pelanggan: poin yang
+/// sudah DITERBITKAN ke offer itu (status 'issued' dan offer
+/// tercatat) dikurangi poin yang sudah DITUKAR atas offer yang
+/// sama. Inilah satu-satunya dasar penukaran poin model jurnal:
+/// hak potongan lahir dari penerbitan toko sendiri yang tercatat,
+/// bukan dari saldo dompet pelanggan dan bukan dari pembayaran
+/// apa pun pada saat penukaran. Record VOID tidak dihitung;
+/// penerbitan yang belum berstatus 'issued' (masih tertunda)
+/// belum memberi hak; record tanpa offer tercatat berada di luar
+/// jurnal. Hasil berlantai 0.
+int pointsJournalBalanceFor(List<CompletedOrder> orders, String offer) {
+  final key = normalizePointsOffer(offer);
+  if (key.isEmpty) return 0;
+  var balance = 0;
+  for (final order in orders) {
+    if (order.isVoid) continue;
+    if (order.pointsRecipientOffer == key &&
+        order.pointsIssueStatus == issueStatusIssued) {
+      balance += order.pointsEarned;
+    }
+    if (order.pointsRedeemOffer == key) {
+      balance -= order.pointsRedeemed;
+    }
+  }
+  return balance < 0 ? 0 : balance;
 }
 
 String encodeOrderHistory(List<CompletedOrder> orders) =>
@@ -589,6 +668,8 @@ Future<void> insertCompletedOrder(
     'points_earned': order.pointsEarned,
     'points_issue_status': order.pointsIssueStatus,
     'points_issue_hash': order.pointsIssueHashHex,
+    'points_recipient_offer': order.pointsRecipientOffer,
+    'points_redeem_offer': order.pointsRedeemOffer,
     'customer_name': order.customerName,
     'bill_no': order.billNo,
     'token_no': order.tokenNo,
@@ -679,6 +760,14 @@ CompletedOrder _orderFromRows(
     },
     pointsIssueHashHex: issueHash is String && issueHash.isNotEmpty
         ? issueHash
+        : null,
+    pointsRecipientOffer: row['points_recipient_offer'] is String &&
+            (row['points_recipient_offer'] as String).isNotEmpty
+        ? row['points_recipient_offer'] as String
+        : null,
+    pointsRedeemOffer: row['points_redeem_offer'] is String &&
+            (row['points_redeem_offer'] as String).isNotEmpty
+        ? row['points_redeem_offer'] as String
         : null,
     customerName: row['customer_name'] is String
         ? row['customer_name'] as String
@@ -867,6 +956,7 @@ class StoreOrderHistoryStore {
           {
             'points_issue_status': updated.pointsIssueStatus,
             'points_issue_hash': updated.pointsIssueHashHex,
+            'points_recipient_offer': updated.pointsRecipientOffer,
           },
           where: 'id = ?',
           whereArgs: [updated.id],
