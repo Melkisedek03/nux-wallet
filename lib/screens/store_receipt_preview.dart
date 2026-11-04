@@ -167,7 +167,17 @@ class _ReceiptCard extends StatelessWidget {
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: Text(name, style: _base)),
+            Expanded(
+              child: Text(
+                name,
+                style: _base,
+                // Nama item selalu satu baris — tidak mendorong
+                // kolom jumlah (nama sudah terpangkas dari
+                // pembangun; elipsis hanya pengaman tampilan).
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
             const SizedBox(width: 10),
             Text(amountText, style: _base),
           ],

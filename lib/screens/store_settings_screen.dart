@@ -28,6 +28,7 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
   final _store = StoreSettingsStore();
   final _nameController = TextEditingController();
   final _addressController = TextEditingController();
+  final _cityController = TextEditingController();
   final _stepController = TextEditingController();
   final _perStepController = TextEditingController();
   final _rateController = TextEditingController();
@@ -55,6 +56,7 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
   void dispose() {
     _nameController.dispose();
     _addressController.dispose();
+    _cityController.dispose();
     _stepController.dispose();
     _perStepController.dispose();
     _rateController.dispose();
@@ -69,6 +71,7 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
     setState(() {
       _nameController.text = settings.storeName;
       _addressController.text = settings.storeAddress;
+      _cityController.text = settings.storeCity;
       _pointsEnabled = settings.pointsEnabled;
       _stepController.text = settings.earnStepRp.toString();
       _perStepController.text = settings.earnPointsPerStep.toString();
@@ -112,6 +115,7 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
       redeemRateRp: rate,
       maxRedeemPercent: maxPercent,
       storeAddress: _addressController.text.trim(),
+      storeCity: _cityController.text.trim(),
       showTokenNumber: _showToken,
       receiptFooterText: _footerController.text.trim(),
     );
@@ -180,6 +184,19 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
                   controller: _addressController,
                   decoration: InputDecoration(
                     labelText: l10n.storeSettingsAddress,
+                    filled: true,
+                    fillColor: context.palette.cardAlt,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _cityController,
+                  decoration: InputDecoration(
+                    labelText: l10n.storeSettingsCity,
                     filled: true,
                     fillColor: context.palette.cardAlt,
                     border: OutlineInputBorder(

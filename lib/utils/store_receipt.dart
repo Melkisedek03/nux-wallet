@@ -29,6 +29,30 @@ import 'format.dart';
 /// dengan lebar dokumen laporan shift.
 const storeReceiptWidth = 32;
 
+/// Lebar maksimum teks baris item ("<qty> <nama>") supaya
+/// baris item SELALU satu baris dan tidak menggeser kolom
+/// jumlah di ketiga keluaran. Batas paling ketat adalah
+/// kolom nama cetak kertas: 8 dari 12 kolom pada 58mm
+/// terbukti muat 20 karakter (ambang yang sama dengan yang
+/// dipakai perender kertas sejak awal).
+const storeReceiptItemNameMaxChars = 20;
+
+/// Pangkas [text] menjadi maksimal [max] karakter; bila
+/// dipotong, akhiri dengan '...' supaya kasir/pelanggan
+/// tahu teksnya terpotong, bukan nama aslinya.
+String fitReceiptEllipsis(String text, int max) {
+  if (text.length <= max) return text;
+  if (max <= 3) return text.substring(0, max);
+  return '${text.substring(0, max - 3)}...';
+}
+
+/// Teks baris item struk: qty disisipkan di awal sebelum
+/// nama ("1 Kopi Tubruk", "5 Roti Bakar" — permintaan NUX
+/// 4 Nov 2026), lalu dipangkas ke
+/// [storeReceiptItemNameMaxChars].
+String receiptItemLineText(int qty, String label) =>
+    fitReceiptEllipsis('$qty $label', storeReceiptItemNameMaxChars);
+
 /// Label teks struk, diisi layar dari l10n bahasa aplikasi.
 /// Struktur & tata letak tetap; yang mengikuti bahasa hanya
 /// labelnya (pola yang sama dengan ShiftReportLabels).
@@ -105,6 +129,9 @@ class StoreReceiptItem {
 class StoreReceiptData {
   final String shopName;
   final String shopAddress;
+
+  /// Baris ketiga kop struk (kota); '' = tanpa baris kota.
+  final String shopCity;
   final String customerName;
 
   /// Tanggal transaksi terformat 'dd/MM/yyyy' (gaya contoh).
@@ -145,6 +172,7 @@ class StoreReceiptData {
   const StoreReceiptData({
     required this.shopName,
     required this.shopAddress,
+    required this.shopCity,
     required this.customerName,
     required this.dateText,
     required this.billNo,
@@ -209,6 +237,7 @@ StoreReceiptData buildStoreReceiptData({
   return StoreReceiptData(
     shopName: shopName,
     shopAddress: settings.storeAddress,
+    shopCity: settings.storeCity,
     customerName: record.customerName,
     dateText: dateText,
     billNo: record.billNo,
@@ -315,7 +344,9 @@ class ReceiptItemsHeader extends StoreReceiptElement {
   const ReceiptItemsHeader(this.itemLabel, this.amountLabel);
 }
 
-/// Baris item: nama kiri, jumlah (kotor) rata kanan.
+/// Baris item: "<qty> <nama>" kiri (SUDAH terpangkas ≤
+/// [storeReceiptItemNameMaxChars] oleh pembangun, jadi
+/// selalu satu baris), jumlah (kotor) rata kanan.
 class ReceiptItemRow extends StoreReceiptElement {
   final String name;
   final String amountText;
@@ -372,6 +403,9 @@ List<StoreReceiptElement> buildStoreReceiptElements(
   if (data.shopAddress.isNotEmpty) {
     out.add(ReceiptCenterText(data.shopAddress));
   }
+  if (data.shopCity.isNotEmpty) {
+    out.add(ReceiptCenterText(data.shopCity));
+  }
   out.add(const ReceiptDashedRule());
   if (data.customerName.isNotEmpty) {
     out.add(
@@ -389,7 +423,12 @@ List<StoreReceiptElement> buildStoreReceiptElements(
   out.add(const ReceiptDashedRule());
   out.add(ReceiptItemsHeader(labels.itemHeader, labels.amountHeader));
   for (final item in data.items) {
-    out.add(ReceiptItemRow(item.label, _rp(item.grossRp)));
+    out.add(
+      ReceiptItemRow(
+        receiptItemLineText(item.qty, item.label),
+        _rp(item.grossRp),
+      ),
+    );
     if (item.qty > 1) {
       out.add(ReceiptItemSub('${item.qty} x ${_rp(item.unitPriceRp)}'));
     }
@@ -532,12 +571,15 @@ List<String> storeReceiptTextLines(List<StoreReceiptElement> elements) {
       case ReceiptItemsHeader(:final itemLabel, :final amountLabel):
         out.add(_spread(itemLabel, amountLabel, width));
       case ReceiptItemRow(:final name, :final amountText):
-        if (name.length + 1 + amountText.length <= width) {
-          out.add(_spread(name, amountText, width));
-        } else {
-          out.addAll(_wrap(name, width));
-          out.add(amountText.padLeft(width));
-        }
+        // Selalu SATU baris: nama sudah terpangkas oleh
+        // pembangun; pangkas sekali lagi hanya bila jumlah
+        // rupiahnya sendiri luar biasa panjang, supaya kolom
+        // jumlah tidak pernah terdorong.
+        final fitted = fitReceiptEllipsis(
+          name,
+          width - amountText.length - 1,
+        );
+        out.add(_spread(fitted, amountText, width));
       case ReceiptItemSub(:final text):
         out.addAll(_wrap(text, width, indent: '  '));
       case ReceiptRow(:final label, :final amountText):

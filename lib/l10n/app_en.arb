@@ -694,6 +694,7 @@
   "storeShareReceiptFailed": "Could not create the receipt image.",
   "storeCustomerNameLabel": "Customer Name (optional)",
   "storeSettingsAddress": "Store Address (receipt header line)",
+  "storeSettingsCity": "Store City (receipt header line)",
   "storeSettingsShowToken": "Show Token Number on Receipt",
   "storeSettingsShowTokenHint": "Daily queue number on the receipt; restarts from 1 each day.",
   "storeSettingsFooterText": "Receipt Footer Text",

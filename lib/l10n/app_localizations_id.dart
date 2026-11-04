@@ -730,7 +730,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeLineNoteTitle => 'Catatan Item';
 
   @override
-  String get storeNoteWord => 'Catatan';
+  String get storeNoteWord => 'Cat.';
 
   @override
   String get storeClearNote => 'Hapus Catatan';
@@ -1333,6 +1333,9 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get storeSettingsAddress => 'Alamat Toko (baris kop struk)';
+
+  @override
+  String get storeSettingsCity => 'Kota Toko (baris kop struk)';
 
   @override
   String get storeSettingsShowToken => 'Tampilkan Nomor Token di Struk';

@@ -1403,7 +1403,7 @@ abstract class AppLocalizations {
   /// No description provided for @storeNoteWord.
   ///
   /// In id, this message translates to:
-  /// **'Catatan'**
+  /// **'Cat.'**
   String get storeNoteWord;
 
   /// No description provided for @storeClearNote.
@@ -2449,6 +2449,12 @@ abstract class AppLocalizations {
   /// In id, this message translates to:
   /// **'Alamat Toko (baris kop struk)'**
   String get storeSettingsAddress;
+
+  /// No description provided for @storeSettingsCity.
+  ///
+  /// In id, this message translates to:
+  /// **'Kota Toko (baris kop struk)'**
+  String get storeSettingsCity;
 
   /// No description provided for @storeSettingsShowToken.
   ///

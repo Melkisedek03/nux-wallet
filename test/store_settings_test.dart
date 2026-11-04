@@ -64,6 +64,7 @@ void main() {
       const s = StoreSettings(
         storeName: 'Kafe Nusantara',
         storeAddress: 'Jl. Merdeka No. 1',
+        storeCity: 'Jakarta',
         showTokenNumber: false,
         receiptFooterText: 'Makasih, sampai jumpa!',
       );

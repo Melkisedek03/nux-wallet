@@ -40,6 +40,12 @@ class StoreSettings {
   /// di bawah nama toko; '' = tanpa baris alamat.
   final String storeAddress;
 
+  /// Baris ketiga kop struk (kota toko), tampil di tengah tepat
+  /// di bawah alamat; '' = tanpa baris kota. Kop struk utuh
+  /// disiapkan tiga baris: nama + alamat + kota (permintaan
+  /// NUX 4 Nov 2026).
+  final String storeCity;
+
   /// Tampilkan nomor token (antrean harian) pada struk? Bawaan
   /// tampil — mengikuti contoh struk yang dipakai kasir.
   final bool showTokenNumber;
@@ -57,6 +63,7 @@ class StoreSettings {
     this.redeemRateRp = 1,
     this.maxRedeemPercent,
     this.storeAddress = '',
+    this.storeCity = '',
     this.showTokenNumber = true,
     this.receiptFooterText = '',
   });
@@ -72,6 +79,7 @@ class StoreSettings {
     int? maxRedeemPercent,
     bool clearMaxRedeemPercent = false,
     String? storeAddress,
+    String? storeCity,
     bool? showTokenNumber,
     String? receiptFooterText,
   }) => StoreSettings(
@@ -84,6 +92,7 @@ class StoreSettings {
         ? null
         : (maxRedeemPercent ?? this.maxRedeemPercent),
     storeAddress: storeAddress ?? this.storeAddress,
+    storeCity: storeCity ?? this.storeCity,
     showTokenNumber: showTokenNumber ?? this.showTokenNumber,
     receiptFooterText: receiptFooterText ?? this.receiptFooterText,
   );
@@ -96,6 +105,7 @@ class StoreSettings {
     'redeemRateRp': redeemRateRp,
     'maxRedeemPercent': maxRedeemPercent,
     'storeAddress': storeAddress,
+    'storeCity': storeCity,
     'showTokenNumber': showTokenNumber,
     'receiptFooterText': receiptFooterText,
   };
@@ -115,6 +125,7 @@ class StoreSettings {
     final rate = raw['redeemRateRp'];
     final maxPct = raw['maxRedeemPercent'];
     final address = raw['storeAddress'];
+    final city = raw['storeCity'];
     final showToken = raw['showTokenNumber'];
     final footer = raw['receiptFooterText'];
     return StoreSettings(
@@ -131,6 +142,7 @@ class StoreSettings {
       // Field struk baru: simpanan lama tanpa field ini jatuh ke
       // bawaannya (alamat kosong, token tampil, footer bawaan).
       storeAddress: address is String ? address.trim() : '',
+      storeCity: city is String ? city.trim() : '',
       showTokenNumber: showToken is bool ? showToken : true,
       receiptFooterText: footer is String ? footer.trim() : '',
     );
@@ -146,6 +158,7 @@ class StoreSettings {
       other.redeemRateRp == redeemRateRp &&
       other.maxRedeemPercent == maxRedeemPercent &&
       other.storeAddress == storeAddress &&
+      other.storeCity == storeCity &&
       other.showTokenNumber == showTokenNumber &&
       other.receiptFooterText == receiptFooterText;
 
@@ -158,6 +171,7 @@ class StoreSettings {
     redeemRateRp,
     maxRedeemPercent,
     storeAddress,
+    storeCity,
     showTokenNumber,
     receiptFooterText,
   );

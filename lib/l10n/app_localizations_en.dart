@@ -1332,6 +1332,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeSettingsAddress => 'Store Address (receipt header line)';
 
   @override
+  String get storeSettingsCity => 'Store City (receipt header line)';
+
+  @override
   String get storeSettingsShowToken => 'Show Token Number on Receipt';
 
   @override

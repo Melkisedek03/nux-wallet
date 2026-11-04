@@ -296,7 +296,12 @@ class PrintService {
             ),
           ]);
         case ReceiptItemRow(:final name, :final amountText):
-          if (name.length <= 20 && amountText.length <= 11) {
+          // Nama SUDAH terpangkas ≤20 karakter oleh pembangun
+          // elemen (receiptItemLineText) → selalu muat kolom
+          // nama, SATU baris, kolom jumlah tak tergeser. Hanya
+          // jumlah yang luar biasa panjang yang jatuh ke
+          // baris sendiri seperti perilaku lama.
+          if (amountText.length <= 11) {
             bytes += gen.row([
               PosColumn(text: _asciiSafe(name), width: 8),
               PosColumn(
