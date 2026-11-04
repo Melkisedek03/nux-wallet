@@ -1704,7 +1704,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get offlineIntro =>
-      'Stage 1 test: two ELNUX nodes connect as peers over a Bluetooth bridge, without internet. Channels and payments come in later stages. Turn on Bluetooth and Location services on both phones before starting.';
+      'Stage 2 test: two ELNUX nodes connect as peers over a Bluetooth bridge, open a direct channel, then pay over Lightning while both phones are offline. Open the channel while the phones are side by side and the funder (the opening phone) is online; offline payments use a channel that is already ready. Turn on Bluetooth and Location services on both phones before starting.';
 
   @override
   String get offlineOwnNodeId => 'This Phone\'s Node ID';
@@ -1746,6 +1746,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get offlineConnectNode => 'Connect Lightning Node';
 
   @override
+  String get offlineScan => 'Scan QR';
+
+  @override
   String get offlinePeersTitle => 'Lightning Peers';
 
   @override
@@ -1756,6 +1759,67 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get offlineNoPeers => 'No peers yet.';
+
+  @override
+  String get offlineChannelTitle => 'Direct Channel';
+
+  @override
+  String get offlineTargetPeer => 'Target peer';
+
+  @override
+  String get offlineNoTargetPeer => 'not known yet';
+
+  @override
+  String get offlineOnchainAddress =>
+      'Node on-chain address (for channel funds)';
+
+  @override
+  String get offlineOnchainBalance => 'Spendable on-chain balance';
+
+  @override
+  String get offlineChannelAmount => 'Channel amount (nusan)';
+
+  @override
+  String get offlineOpenChannel => 'Open Channel';
+
+  @override
+  String get offlineChannelPending => 'Awaiting confirmations';
+
+  @override
+  String get offlineConfirmations => 'Confirmations';
+
+  @override
+  String get offlineChannelReady => 'Ready';
+
+  @override
+  String get offlineChannelReadyPeerDown => 'Ready (peer disconnected)';
+
+  @override
+  String get offlineNoDirectChannels => 'No direct channels yet.';
+
+  @override
+  String get offlineChannelValue => 'Value';
+
+  @override
+  String get offlineOutbound => 'Out';
+
+  @override
+  String get offlineInbound => 'In';
+
+  @override
+  String get offlinePayTestTitle => 'Test Payment';
+
+  @override
+  String get offlineInvoiceAmount => 'Invoice amount (nusan)';
+
+  @override
+  String get offlineCreateInvoice => 'Create Invoice';
+
+  @override
+  String get offlineInvoiceToPay => 'Invoice to pay';
+
+  @override
+  String get offlinePayNow => 'Pay';
 
   @override
   String get offlineLogTitle => 'Test Log';

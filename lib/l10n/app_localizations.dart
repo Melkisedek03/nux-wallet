@@ -3137,7 +3137,7 @@ abstract class AppLocalizations {
   /// No description provided for @offlineIntro.
   ///
   /// In id, this message translates to:
-  /// **'Uji tahap 1: dua node ELNUX tersambung sebagai peer lewat jembatan Bluetooth, tanpa internet. Channel dan pembayaran menyusul di tahap berikutnya. Nyalakan Bluetooth dan layanan Lokasi di kedua HP sebelum mulai.'**
+  /// **'Uji tahap 2: dua node ELNUX tersambung sebagai peer lewat jembatan Bluetooth, membuka channel langsung, lalu membayar Lightning saat kedua HP offline. Buka channel-nya saat kedua HP berdampingan dan pendana (HP yang membuka) sedang online; pembayaran offline memakai channel yang sudah siap. Nyalakan Bluetooth dan layanan Lokasi di kedua HP sebelum mulai.'**
   String get offlineIntro;
 
   /// No description provided for @offlineOwnNodeId.
@@ -3218,6 +3218,12 @@ abstract class AppLocalizations {
   /// **'Sambungkan Node Lightning'**
   String get offlineConnectNode;
 
+  /// No description provided for @offlineScan.
+  ///
+  /// In id, this message translates to:
+  /// **'Pindai QR'**
+  String get offlineScan;
+
   /// No description provided for @offlinePeersTitle.
   ///
   /// In id, this message translates to:
@@ -3241,6 +3247,126 @@ abstract class AppLocalizations {
   /// In id, this message translates to:
   /// **'Belum ada peer.'**
   String get offlineNoPeers;
+
+  /// No description provided for @offlineChannelTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Channel Langsung'**
+  String get offlineChannelTitle;
+
+  /// No description provided for @offlineTargetPeer.
+  ///
+  /// In id, this message translates to:
+  /// **'Peer tujuan'**
+  String get offlineTargetPeer;
+
+  /// No description provided for @offlineNoTargetPeer.
+  ///
+  /// In id, this message translates to:
+  /// **'belum dikenal'**
+  String get offlineNoTargetPeer;
+
+  /// No description provided for @offlineOnchainAddress.
+  ///
+  /// In id, this message translates to:
+  /// **'Alamat on-chain node (untuk dana channel)'**
+  String get offlineOnchainAddress;
+
+  /// No description provided for @offlineOnchainBalance.
+  ///
+  /// In id, this message translates to:
+  /// **'Saldo on-chain siap pakai'**
+  String get offlineOnchainBalance;
+
+  /// No description provided for @offlineChannelAmount.
+  ///
+  /// In id, this message translates to:
+  /// **'Jumlah channel (nusan)'**
+  String get offlineChannelAmount;
+
+  /// No description provided for @offlineOpenChannel.
+  ///
+  /// In id, this message translates to:
+  /// **'Buka Channel'**
+  String get offlineOpenChannel;
+
+  /// No description provided for @offlineChannelPending.
+  ///
+  /// In id, this message translates to:
+  /// **'Menunggu konfirmasi'**
+  String get offlineChannelPending;
+
+  /// No description provided for @offlineConfirmations.
+  ///
+  /// In id, this message translates to:
+  /// **'Konfirmasi'**
+  String get offlineConfirmations;
+
+  /// No description provided for @offlineChannelReady.
+  ///
+  /// In id, this message translates to:
+  /// **'Siap'**
+  String get offlineChannelReady;
+
+  /// No description provided for @offlineChannelReadyPeerDown.
+  ///
+  /// In id, this message translates to:
+  /// **'Siap (peer tidak tersambung)'**
+  String get offlineChannelReadyPeerDown;
+
+  /// No description provided for @offlineNoDirectChannels.
+  ///
+  /// In id, this message translates to:
+  /// **'Belum ada channel langsung.'**
+  String get offlineNoDirectChannels;
+
+  /// No description provided for @offlineChannelValue.
+  ///
+  /// In id, this message translates to:
+  /// **'Nilai'**
+  String get offlineChannelValue;
+
+  /// No description provided for @offlineOutbound.
+  ///
+  /// In id, this message translates to:
+  /// **'Keluar'**
+  String get offlineOutbound;
+
+  /// No description provided for @offlineInbound.
+  ///
+  /// In id, this message translates to:
+  /// **'Masuk'**
+  String get offlineInbound;
+
+  /// No description provided for @offlinePayTestTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Pembayaran Uji'**
+  String get offlinePayTestTitle;
+
+  /// No description provided for @offlineInvoiceAmount.
+  ///
+  /// In id, this message translates to:
+  /// **'Jumlah invoice (nusan)'**
+  String get offlineInvoiceAmount;
+
+  /// No description provided for @offlineCreateInvoice.
+  ///
+  /// In id, this message translates to:
+  /// **'Buat Invoice'**
+  String get offlineCreateInvoice;
+
+  /// No description provided for @offlineInvoiceToPay.
+  ///
+  /// In id, this message translates to:
+  /// **'Invoice yang akan dibayar'**
+  String get offlineInvoiceToPay;
+
+  /// No description provided for @offlinePayNow.
+  ///
+  /// In id, this message translates to:
+  /// **'Bayar'**
+  String get offlinePayNow;
 
   /// No description provided for @offlineLogTitle.
   ///

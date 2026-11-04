@@ -1707,7 +1707,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get offlineIntro =>
-      'Uji tahap 1: dua node ELNUX tersambung sebagai peer lewat jembatan Bluetooth, tanpa internet. Channel dan pembayaran menyusul di tahap berikutnya. Nyalakan Bluetooth dan layanan Lokasi di kedua HP sebelum mulai.';
+      'Uji tahap 2: dua node ELNUX tersambung sebagai peer lewat jembatan Bluetooth, membuka channel langsung, lalu membayar Lightning saat kedua HP offline. Buka channel-nya saat kedua HP berdampingan dan pendana (HP yang membuka) sedang online; pembayaran offline memakai channel yang sudah siap. Nyalakan Bluetooth dan layanan Lokasi di kedua HP sebelum mulai.';
 
   @override
   String get offlineOwnNodeId => 'ID Node HP Ini';
@@ -1749,6 +1749,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get offlineConnectNode => 'Sambungkan Node Lightning';
 
   @override
+  String get offlineScan => 'Pindai QR';
+
+  @override
   String get offlinePeersTitle => 'Peer Lightning';
 
   @override
@@ -1759,6 +1762,67 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get offlineNoPeers => 'Belum ada peer.';
+
+  @override
+  String get offlineChannelTitle => 'Channel Langsung';
+
+  @override
+  String get offlineTargetPeer => 'Peer tujuan';
+
+  @override
+  String get offlineNoTargetPeer => 'belum dikenal';
+
+  @override
+  String get offlineOnchainAddress =>
+      'Alamat on-chain node (untuk dana channel)';
+
+  @override
+  String get offlineOnchainBalance => 'Saldo on-chain siap pakai';
+
+  @override
+  String get offlineChannelAmount => 'Jumlah channel (nusan)';
+
+  @override
+  String get offlineOpenChannel => 'Buka Channel';
+
+  @override
+  String get offlineChannelPending => 'Menunggu konfirmasi';
+
+  @override
+  String get offlineConfirmations => 'Konfirmasi';
+
+  @override
+  String get offlineChannelReady => 'Siap';
+
+  @override
+  String get offlineChannelReadyPeerDown => 'Siap (peer tidak tersambung)';
+
+  @override
+  String get offlineNoDirectChannels => 'Belum ada channel langsung.';
+
+  @override
+  String get offlineChannelValue => 'Nilai';
+
+  @override
+  String get offlineOutbound => 'Keluar';
+
+  @override
+  String get offlineInbound => 'Masuk';
+
+  @override
+  String get offlinePayTestTitle => 'Pembayaran Uji';
+
+  @override
+  String get offlineInvoiceAmount => 'Jumlah invoice (nusan)';
+
+  @override
+  String get offlineCreateInvoice => 'Buat Invoice';
+
+  @override
+  String get offlineInvoiceToPay => 'Invoice yang akan dibayar';
+
+  @override
+  String get offlinePayNow => 'Bayar';
 
   @override
   String get offlineLogTitle => 'Catatan Uji';
