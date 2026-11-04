@@ -568,11 +568,14 @@ String _weekday(DateTime t, String locale) =>
 String _month(DateTime t, String locale) =>
     (locale == 'en' ? _monthsEn : _monthsId)[t.month - 1];
 
-String _hhmm(DateTime t) =>
-    '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+/// Jam laporan sampai detik (permintaan NUX 4 Nov): `22:24:35`.
+String _hhmmss(DateTime t) =>
+    '${t.hour.toString().padLeft(2, '0')}:'
+    '${t.minute.toString().padLeft(2, '0')}:'
+    '${t.second.toString().padLeft(2, '0')}';
 
 /// Baris periode mode shift, meniru contoh:
-/// `Wed,26 Mar 22:24-...(Still Open)`; shift tertutup menampilkan
+/// `Wed,26 Mar 22:24:35-...(Still Open)`; shift tertutup menampilkan
 /// jam tutup (tanggal ikut bila beda hari). Dipersingkat bertahap
 /// bila melewati 32 kolom.
 String formatShiftPeriod({
@@ -583,9 +586,9 @@ String formatShiftPeriod({
 }) {
   final start =
       '${_weekday(openedAt, locale)},${openedAt.day} '
-      '${_month(openedAt, locale)} ${_hhmm(openedAt)}';
+      '${_month(openedAt, locale)} ${_hhmmss(openedAt)}';
   final startShort =
-      '${openedAt.day} ${_month(openedAt, locale)} ${_hhmm(openedAt)}';
+      '${openedAt.day} ${_month(openedAt, locale)} ${_hhmmss(openedAt)}';
   if (closedAt == null) {
     for (final candidate in [
       '$start-...($stillOpenWord)',
@@ -602,8 +605,8 @@ String formatShiftPeriod({
       closedAt.month == openedAt.month &&
       closedAt.day == openedAt.day;
   final end = sameDay
-      ? _hhmm(closedAt)
-      : '${closedAt.day} ${_month(closedAt, locale)} ${_hhmm(closedAt)}';
+      ? _hhmmss(closedAt)
+      : '${closedAt.day} ${_month(closedAt, locale)} ${_hhmmss(closedAt)}';
   final full = '$start-$end';
   if (full.length <= reportWidth) return full;
   final short = '$startShort-$end';
@@ -615,11 +618,33 @@ String formatShiftPeriod({
 String formatDayPeriod({required DateTime day, required String locale}) =>
     '${_weekday(day, locale)}, ${day.day} ${_month(day, locale)} ${day.year}';
 
-/// Cap waktu footer laporan, meniru contoh: `03 Nov'26 07:55`.
+/// Cap waktu footer laporan, meniru contoh: `03 Nov'26 07:55:12`
+/// (sampai detik, sama seperti baris periode).
 String formatGeneratedStamp(DateTime t, String locale) {
   final yy = (t.year % 100).toString().padLeft(2, '0');
   return '${t.day.toString().padLeft(2, '0')} ${_month(t, locale)}\'$yy '
-      '${_hhmm(t)}';
+      '${_hhmmss(t)}';
+}
+
+/// Varian ringkas tanpa tahun (`03 Nov 07:55:12`) — dipakai baris
+/// footer bila label + cap lengkap melewati 32 kolom; detik tidak
+/// pernah dikorbankan, tahun yang disingkat.
+String formatGeneratedStampCompact(DateTime t, String locale) =>
+    '${t.day.toString().padLeft(2, '0')} ${_month(t, locale)} '
+    '${_hhmmss(t)}';
+
+/// Baris footer dokumen: label + cap waktu; jatuh ke cap ringkas
+/// (tanpa tahun) bila bentuk lengkapnya melewati lebar kertas.
+String _generatedFooter(
+  ShiftReportLabels labels,
+  DateTime generatedAt,
+  String locale,
+) {
+  final full =
+      '${labels.generatedOn}:${formatGeneratedStamp(generatedAt, locale)}';
+  if (full.length <= reportWidth) return full;
+  return '${labels.generatedOn}:'
+      '${formatGeneratedStampCompact(generatedAt, locale)}';
 }
 
 // ---------------------------------------------------------------------
@@ -722,7 +747,7 @@ ShiftReportDocuments buildShiftReportDocuments({
   required DateTime generatedAt,
   required String locale,
 }) {
-  final footer = '${labels.generatedOn}:${formatGeneratedStamp(generatedAt, locale)}';
+  final footer = _generatedFooter(labels, generatedAt, locale);
 
   // ---------------- Dokumen 1: ringkasan ----------------
   final s = <String>[];

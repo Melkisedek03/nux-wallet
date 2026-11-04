@@ -2504,8 +2504,10 @@ class _StoreModeScreenState extends State<StoreModeScreen>
     );
   }
 
-  /// Kartu shift berjalan: waktu buka, nomor shift, dan tombol
-  /// Tutup Shift yang membuka laporan shift.
+  /// Kartu shift berjalan: waktu buka, nomor shift, tombol
+  /// Laporan Penjualan (pemilih yang sama seperti panel tertutup —
+  /// laporan shift berjalan bisa dibuka kapan pun, tidak harus
+  /// menunggu Tutup Shift), dan tombol Tutup Shift.
   Widget _buildShiftCard(BuildContext context) {
     final l10n = context.l10n;
     final shift = _openShift!;
@@ -2553,6 +2555,18 @@ class _StoreModeScreenState extends State<StoreModeScreen>
             ],
           ),
           const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: _openReportChooser,
+            icon: const Icon(Icons.assessment_rounded, size: 19),
+            label: Text(l10n.storeSalesReport),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
           OutlinedButton.icon(
             onPressed: _requestCloseShift,
             icon: const Icon(Icons.stop_circle_outlined, size: 19),

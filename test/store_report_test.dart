@@ -339,36 +339,78 @@ void main() {
   });
 
   group('format periode', () {
-    test('shift berjalan meniru contoh; tertutup menampilkan jam tutup', () {
+    test('jam sampai detik; shift berjalan & tertutup tampil penuh', () {
       expect(
         formatShiftPeriod(
-          openedAt: DateTime(2026, 11, 2, 22, 24),
+          openedAt: DateTime(2026, 11, 2, 22, 24, 35),
           closedAt: null,
           locale: 'en',
           stillOpenWord: 'Still Open',
         ),
-        'Mon,2 Nov 22:24-...(Still Open)',
+        'Mon,2 Nov 22:24:35-(Still Open)',
       );
       expect(
         formatShiftPeriod(
-          openedAt: DateTime(2026, 11, 2, 22, 24),
-          closedAt: DateTime(2026, 11, 2, 23, 5),
+          openedAt: DateTime(2026, 11, 2, 22, 24, 35),
+          closedAt: DateTime(2026, 11, 2, 23, 5, 41),
           locale: 'en',
           stillOpenWord: 'Still Open',
         ),
-        'Mon,2 Nov 22:24-23:05',
+        'Mon,2 Nov 22:24:35-23:05:41',
       );
     });
 
     test('periode Indonesia dipersingkat agar muat 32 kolom', () {
       final line = formatShiftPeriod(
-        openedAt: DateTime(2026, 11, 2, 22, 24),
+        openedAt: DateTime(2026, 11, 2, 22, 24, 35),
         closedAt: null,
         locale: 'id',
         stillOpenWord: 'Masih Berjalan',
       );
       expect(line.length, lessThanOrEqualTo(32));
-      expect(line, 'Sen,2 Nov 22:24-(Masih Berjalan)');
+      expect(line, '2 Nov 22:24:35-(Masih Berjalan)');
+    });
+
+    test('dengan detik tetap muat 32 kolom: hari 2 digit & lintas hari',
+        () {
+      // Shift berjalan, tanggal 2 digit, kedua bahasa.
+      final openEn = formatShiftPeriod(
+        openedAt: DateTime(2026, 11, 12, 22, 24, 35),
+        closedAt: null,
+        locale: 'en',
+        stillOpenWord: 'Still Open',
+      );
+      expect(openEn, 'Thu,12 Nov 22:24:35-(Still Open)');
+      expect(openEn.length, lessThanOrEqualTo(32));
+      final openId = formatShiftPeriod(
+        openedAt: DateTime(2026, 11, 12, 22, 24, 35),
+        closedAt: null,
+        locale: 'id',
+        stillOpenWord: 'Masih Berjalan',
+      );
+      expect(openId, '12 Nov 22:24:35-(Masih Berjalan)');
+      expect(openId.length, lessThanOrEqualTo(32));
+      // Shift tertutup melewati tengah malam: tanggal tutup ikut.
+      final crossDay = formatShiftPeriod(
+        openedAt: DateTime(2026, 11, 12, 22, 24, 35),
+        closedAt: DateTime(2026, 11, 13, 1, 2, 3),
+        locale: 'en',
+        stillOpenWord: 'Still Open',
+      );
+      expect(crossDay, '12 Nov 22:24:35-13 Nov 01:02:03');
+      expect(crossDay.length, lessThanOrEqualTo(32));
+    });
+
+    test('cap footer sampai detik', () {
+      expect(
+        formatGeneratedStamp(DateTime(2026, 11, 3, 7, 55, 12), 'en'),
+        "03 Nov'26 07:55:12",
+      );
+      // Varian ringkas (tanpa tahun) untuk baris footer yang sempit.
+      expect(
+        formatGeneratedStampCompact(DateTime(2026, 11, 3, 7, 55, 12), 'en'),
+        '03 Nov 07:55:12',
+      );
     });
   });
 
@@ -386,7 +428,7 @@ void main() {
         ),
         summary: summary,
         details: details,
-        generatedAt: DateTime(2026, 11, 3, 7, 55),
+        generatedAt: DateTime(2026, 11, 3, 7, 55, 12),
         locale: 'en',
       );
 
@@ -394,7 +436,7 @@ void main() {
         '--------------------------------',
         '--      SELECTED REPORT       --',
         '--------------------------------',
-        'Mon,2 Nov 22:24-...(Still Open)',
+        'Mon,2 Nov 22:24:00-(Still Open)',
         '--------------------------------',
         'Item Qty                     807',
         'Sub Total                316.700',
@@ -425,7 +467,7 @@ void main() {
         '                ----------------',
         'VOID Total ORDER           4.500',
         '================================',
-        "Rpt.generated on:03 Nov'26 07:55",
+        "Rpt.generated on:03 Nov 07:55:12",
         '================================',
       ].join('\n');
       expect(docs.summary, expectedSummary);
@@ -455,7 +497,7 @@ void main() {
         'Item Bebas',
         '    1 x  50.000 =         50.000',
         '================================',
-        "Rpt.generated on:03 Nov'26 07:55",
+        "Rpt.generated on:03 Nov 07:55:12",
         '================================',
       ].join('\n');
       expect(docs.details, expectedDetails);
