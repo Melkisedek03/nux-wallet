@@ -139,6 +139,19 @@ class _StoreModeScreenState extends State<StoreModeScreen>
   bool _received = false;
   Timer? _celebrationTimer;
 
+  /// Penggulir dua tata letak layar: HP satu kolom memakai
+  /// [_pageScrollController] (seluruh halaman), tablet dua
+  /// panel memakai [_statusScrollController] (panel status —
+  /// panel perayaan penjualan tinggal di panel itu). Dipakai
+  /// untuk menggulir ke bawah tepat sesudah penjualan lunas
+  /// (permintaan NUX 4 Nov 2026).
+  final _pageScrollController = ScrollController();
+  final _statusScrollController = ScrollController();
+
+  /// Penanda blok perayaan penjualan lunas — sasaran
+  /// ensureVisible pelengkap sesudah gulir ke bawah.
+  final _celebrationKey = GlobalKey();
+
   /// Penerbitan poin sedang berjalan (kirim ke pelanggan) —
   /// tombol terbit dinonaktifkan & Tutup Shift terhalang sesaat.
   bool _issuing = false;
@@ -163,6 +176,8 @@ class _StoreModeScreenState extends State<StoreModeScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _celebrationTimer?.cancel();
+    _pageScrollController.dispose();
+    _statusScrollController.dispose();
     _searchController.dispose();
     _freeTitleController.dispose();
     super.dispose();
@@ -1265,6 +1280,7 @@ class _StoreModeScreenState extends State<StoreModeScreen>
       _resetOrderPanel();
     });
     CoinAlert.play();
+    _scrollToSaleCelebration();
     await _loadPendingIssues();
     _armCelebrationTimer();
   }
@@ -1278,6 +1294,45 @@ class _StoreModeScreenState extends State<StoreModeScreen>
       _saleRecord != null &&
       _saleRecord!.pointsEarned > 0 &&
       _saleRecord!.pointsIssueStatus == issueStatusPending;
+
+  /// Gulir halus ke bawah sampai panel perayaan penjualan
+  /// yang baru tampil terlihat (permintaan NUX 4 Nov 2026).
+  /// Panel perayaan ada di ujung panel status: pada tata
+  /// letak HP ia tinggal di gulir halaman utama, pada tablet
+  /// di gulir panel status — gulir controller mana pun yang
+  /// sedang terpasang (yang lain tidak punya klien). Tahap
+  /// kedua, satu frame sesudahnya, ensureVisible pada penanda
+  /// panel menutup sisa kasus extent yang belum final pada
+  /// frame pertama (mis. daftar poin tertunda ikut berubah).
+  /// Hanya dipanggil pada transisi penjualan menjadi lunas —
+  /// bukan saat VOID, tahan pesanan, atau membuka layar.
+  void _scrollToSaleCelebration() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      for (final controller in [
+        _pageScrollController,
+        _statusScrollController,
+      ]) {
+        if (!controller.hasClients) continue;
+        controller.animateTo(
+          controller.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeOut,
+        );
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final celebrationContext = _celebrationKey.currentContext;
+        if (celebrationContext != null) {
+          Scrollable.ensureVisible(
+            celebrationContext,
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    });
+  }
 
   void _armCelebrationTimer() {
     _celebrationTimer?.cancel();
@@ -1706,6 +1761,7 @@ class _StoreModeScreenState extends State<StoreModeScreen>
                 Expanded(
                   flex: 4,
                   child: SingleChildScrollView(
+                    controller: _statusScrollController,
                     padding: const EdgeInsets.fromLTRB(9, 4, 18, 18),
                     child: _buildStatusPanel(context),
                   ),
@@ -1714,6 +1770,7 @@ class _StoreModeScreenState extends State<StoreModeScreen>
             );
           }
           return SingleChildScrollView(
+            controller: _pageScrollController,
             padding: const EdgeInsets.fromLTRB(18, 4, 18, 18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2353,7 +2410,10 @@ class _StoreModeScreenState extends State<StoreModeScreen>
         ],
         const SizedBox(height: 16),
         if (_received && sale != null) ...[
-          Center(child: AnimatedCheckmark(size: 84)),
+          Center(
+            key: _celebrationKey,
+            child: AnimatedCheckmark(size: 84),
+          ),
           const SizedBox(height: 12),
           Text(
             l10n.storeSaleCompleted,
