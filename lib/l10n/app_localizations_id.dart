@@ -1296,7 +1296,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeReceiptBillNo => 'No. Bill';
 
   @override
-  String get storeReceiptTokenNo => 'No. Token';
+  String get storeReceiptTokenNo => 'No. Token/Outlet ID';
 
   @override
   String get storeReceiptItemHeader => 'Item';

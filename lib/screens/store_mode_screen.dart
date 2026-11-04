@@ -130,6 +130,13 @@ class _StoreModeScreenState extends State<StoreModeScreen>
   final _settingsStore = StoreSettingsStore();
   StoreSettings _settings = StoreSettings.defaults;
 
+  /// ID outlet perangkat ini untuk struk: 6 karakter pertama
+  /// node_id ELNUX perangkat (identitas cabang dari node_id —
+  /// ide NUX 4 Nov 2026), tampil sesudah nomor token.
+  /// '' selagi node belum terbaca; struk lalu hanya
+  /// menampilkan nomor token.
+  String _outletId = '';
+
   // --- Penjualan terakhir & panel sukses ---
   // (Penghitung token kini dinaikkan di dalam transaksi
   // pelunasan basis data — lihat recordSettledSale.)
@@ -206,7 +213,21 @@ class _StoreModeScreenState extends State<StoreModeScreen>
 
   /// Muat semua keadaan lokal, lalu jalankan migrasi v1 → v2
   /// satu kali (rancangan §7) sebelum layar dipakai.
+  /// Baca node_id dompet untuk ID outlet struk. Gagal (node
+  /// belum jalan) tidak menghalangi Mode Toko: struk cukup
+  /// tanpa ID outlet.
+  Future<void> _loadOutletId() async {
+    try {
+      final nodeId = await widget.lspService.ownNodeId();
+      if (!mounted) return;
+      setState(() => _outletId = outletIdFromNodeId(nodeId));
+    } catch (_) {
+      // Node belum berjalan — biarkan kosong.
+    }
+  }
+
   Future<void> _init() async {
+    unawaited(_loadOutletId());
     final settings = await _settingsStore.load();
     var shifts = await _shiftStore.load();
     final held = await _holdStore.load();
@@ -1654,6 +1675,7 @@ class _StoreModeScreenState extends State<StoreModeScreen>
       settings: _settings,
       shopName: shopName,
       footerText: footer,
+      outletId: _outletId,
     );
   }
 

@@ -675,7 +675,7 @@
   "storeReceiptCustomer": "Pelanggan",
   "storeReceiptDate": "Tanggal",
   "storeReceiptBillNo": "No. Bill",
-  "storeReceiptTokenNo": "No. Token",
+  "storeReceiptTokenNo": "No. Token/Outlet ID",
   "storeReceiptItemHeader": "Item",
   "storeReceiptAmountHeader": "Jumlah",
   "storeReceiptOrderDiscount": "Diskon Order",

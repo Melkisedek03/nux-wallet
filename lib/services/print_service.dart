@@ -278,9 +278,11 @@ class PrintService {
               ),
             ]);
           } else {
-            bytes += gen.text(
-              _asciiSafe('${'$label:'.padRight(12)}$value'),
-            );
+            // Label panjang (mis. "No. Token/Outlet ID:") melewati
+            // kolom label 12: beri SATU spasi, jangan rapat.
+            final raw = '$label:';
+            final head = raw.length >= 12 ? '$raw ' : raw.padRight(12);
+            bytes += gen.text(_asciiSafe('$head$value'));
           }
         case ReceiptItemsHeader(:final itemLabel, :final amountLabel):
           bytes += gen.row([

@@ -9,7 +9,7 @@ StoreReceiptLabels idLabels() => StoreReceiptLabels(
   customerLabel: 'Pelanggan',
   dateLabel: 'Tanggal',
   billNoLabel: 'No. Bill',
-  tokenNoLabel: 'No. Token',
+  tokenNoLabel: 'No. Token/Outlet ID',
   itemHeader: 'Item',
   amountHeader: 'Jumlah',
   discountLabel: 'Diskon',
@@ -63,6 +63,7 @@ StoreReceiptData richData({StoreSettings settings = StoreSettings.defaults}) {
     ),
     shopName: 'Kafe Nusantara',
     footerText: 'Terima kasih & silakan berkunjung kembali',
+    outletId: '02a3c4',
   );
 }
 
@@ -87,7 +88,8 @@ void main() {
       expect(data.totalQty, 3);
       expect(data.lineCount, 2);
       expect(data.shopCity, 'Jakarta');
-      expect(data.dateText, '03/11/2026');
+      expect(data.dateText, '03/11/2026 13:45');
+      expect(data.outletId, '02a3c4');
       expect(data.billNoText, 'INV261103-0001');
       expect(data.showBillNo, isTrue);
       expect(data.showTokenNo, isTrue);
@@ -110,6 +112,7 @@ void main() {
         settings: StoreSettings.defaults,
         shopName: 'Toko',
         footerText: '',
+        outletId: '',
       );
       expect(plain.showBillNo, isFalse);
       expect(plain.showTokenNo, isFalse);
@@ -128,9 +131,9 @@ void main() {
         '-' * 32,
         'Pelanggan:${' ' * 11}Advika Mate',
         '-' * 32,
-        'Tanggal:    03/11/2026',
+        'Tanggal:    03/11/2026 13:45',
         'No. Bill:   INV261103-0001',
-        'No. Token:  15',
+        'No. Token/Outlet ID: 15/02a3c4',
         '-' * 32,
         'Item${' ' * 22}Jumlah',
         '2 Kopi Tubruk${' ' * 11}Rp10.000',
@@ -172,6 +175,7 @@ void main() {
           settings: StoreSettings.defaults,
           shopName: 'Toko',
           footerText: '',
+          outletId: '',
         ),
         idLabels(),
       );
@@ -188,6 +192,20 @@ void main() {
       // Satu-satunya baris kalimat = keterangan nilai potongan;
       // perolehan poin (terbit maupun tertunda) tak dicetak.
       expect(texts, ['1 nusan = pot. Rp1']);
+    });
+  });
+
+  group('ID outlet dari node_id', () {
+    test('6 karakter pertama node_id; string pendek apa adanya', () {
+      expect(
+        outletIdFromNodeId(
+          '02a3c442a933b1f0a630d56151e84a19f17b662541b2e305a3878b825'
+          '5c572981a',
+        ),
+        '02a3c4',
+      );
+      expect(outletIdFromNodeId('02ab'), '02ab');
+      expect(outletIdFromNodeId(''), '');
     });
   });
 
@@ -224,6 +242,7 @@ void main() {
           settings: StoreSettings.defaults,
           shopName: 'Toko',
           footerText: '',
+          outletId: '',
         ),
         idLabels(),
       );

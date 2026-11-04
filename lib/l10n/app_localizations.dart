@@ -2381,7 +2381,7 @@ abstract class AppLocalizations {
   /// No description provided for @storeReceiptTokenNo.
   ///
   /// In id, this message translates to:
-  /// **'No. Token'**
+  /// **'No. Token/Outlet ID'**
   String get storeReceiptTokenNo;
 
   /// No description provided for @storeReceiptItemHeader.

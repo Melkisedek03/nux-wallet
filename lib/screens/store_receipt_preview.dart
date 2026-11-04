@@ -145,7 +145,13 @@ class _ReceiptCard extends StatelessWidget {
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(width: 98, child: Text('$label:', style: _base)),
+            // Label panjang ("No. Token/Outlet ID:") mendapat
+            // kotak lebih lebar — label pendek tetap sejajar
+            // seperti sebelumnya.
+            SizedBox(
+              width: label.length > 12 ? 164 : 98,
+              child: Text('$label:', style: _base, maxLines: 1),
+            ),
             Expanded(child: Text(value, style: _base)),
           ],
         );

@@ -675,7 +675,7 @@
   "storeReceiptCustomer": "Customer",
   "storeReceiptDate": "Date",
   "storeReceiptBillNo": "Bill No",
-  "storeReceiptTokenNo": "Token No",
+  "storeReceiptTokenNo": "Token No/Outlet ID",
   "storeReceiptItemHeader": "Item",
   "storeReceiptAmountHeader": "Amount",
   "storeReceiptOrderDiscount": "Order Discount",

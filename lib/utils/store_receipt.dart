@@ -53,6 +53,14 @@ String fitReceiptEllipsis(String text, int max) {
 String receiptItemLineText(int qty, String label) =>
     fitReceiptEllipsis('$qty $label', storeReceiptItemNameMaxChars);
 
+/// ID outlet perangkat: 6 karakter hex pertama node_id
+/// ELNUX perangkat ini — identitas cabang yang mengikuti
+/// dompet (node_id lahir dari frasa, jadi restore frasa =
+/// ID outlet yang sama; ide NUX 4 Nov 2026). Tampil di
+/// struk sesudah nomor token: "15/02a3c4".
+String outletIdFromNodeId(String nodeId) =>
+    nodeId.length <= 6 ? nodeId : nodeId.substring(0, 6);
+
 /// Label teks struk, diisi layar dari l10n bahasa aplikasi.
 /// Struktur & tata letak tetap; yang mengikuti bahasa hanya
 /// labelnya (pola yang sama dengan ShiftReportLabels).
@@ -134,7 +142,8 @@ class StoreReceiptData {
   final String shopCity;
   final String customerName;
 
-  /// Tanggal transaksi terformat 'dd/MM/yyyy' (gaya contoh).
+  /// Tanggal transaksi terformat 'dd/MM/yyyy HH:mm'
+  /// (jam:menit disertakan — permintaan NUX 4 Nov 2026).
   final String dateText;
   final int billNo;
 
@@ -142,6 +151,10 @@ class StoreReceiptData {
   /// [billNo] + tanggal record via [formatBillNo].
   final String billNoText;
   final int tokenNo;
+
+  /// ID outlet perangkat (6 karakter pertama node_id);
+  /// '' = tak terbaca — baris token tampil tanpa '/id'.
+  final String outletId;
   final bool showBillNo;
   final bool showTokenNo;
   final List<StoreReceiptItem> items;
@@ -178,6 +191,7 @@ class StoreReceiptData {
     required this.billNo,
     required this.billNoText,
     required this.tokenNo,
+    required this.outletId,
     required this.showBillNo,
     required this.showTokenNo,
     required this.items,
@@ -210,6 +224,7 @@ StoreReceiptData buildStoreReceiptData({
   required StoreSettings settings,
   required String shopName,
   required String footerText,
+  required String outletId,
 }) {
   final items = [
     for (final line in record.lines)
@@ -233,7 +248,9 @@ StoreReceiptData buildStoreReceiptData({
   final t = record.time;
   final dateText =
       '${t.day.toString().padLeft(2, '0')}/'
-      '${t.month.toString().padLeft(2, '0')}/${t.year}';
+      '${t.month.toString().padLeft(2, '0')}/${t.year} '
+      '${t.hour.toString().padLeft(2, '0')}:'
+      '${t.minute.toString().padLeft(2, '0')}';
   return StoreReceiptData(
     shopName: shopName,
     shopAddress: settings.storeAddress,
@@ -243,6 +260,7 @@ StoreReceiptData buildStoreReceiptData({
     billNo: record.billNo,
     billNoText: formatBillNo(t, record.billNo),
     tokenNo: record.tokenNo,
+    outletId: outletId,
     showBillNo: record.billNo > 0,
     showTokenNo: settings.showTokenNumber && record.tokenNo > 0,
     items: items,
@@ -418,7 +436,14 @@ List<StoreReceiptElement> buildStoreReceiptElements(
     out.add(ReceiptMetaRow(labels.billNoLabel, data.billNoText));
   }
   if (data.showTokenNo) {
-    out.add(ReceiptMetaRow(labels.tokenNoLabel, '${data.tokenNo}'));
+    out.add(
+      ReceiptMetaRow(
+        labels.tokenNoLabel,
+        data.outletId.isNotEmpty
+            ? '${data.tokenNo}/${data.outletId}'
+            : '${data.tokenNo}',
+      ),
+    );
   }
   out.add(const ReceiptDashedRule());
   out.add(ReceiptItemsHeader(labels.itemHeader, labels.amountHeader));
@@ -561,12 +586,12 @@ List<String> storeReceiptTextLines(List<StoreReceiptElement> elements) {
         if (spread) {
           out.add(_spread('$label:', value, width));
         } else {
-          final head = '$label:'.padRight(12);
-          out.add(
-            '$head$value'.length > width
-                ? '$head$value'.substring(0, width)
-                : '$head$value',
-          );
+          // Label panjang (mis. "No. Token/Outlet ID:") melewati
+          // kolom label 12: beri SATU spasi, jangan rapat ke nilai.
+          final raw = '$label:';
+          final head = raw.length >= 12 ? '$raw ' : raw.padRight(12);
+          final line = '$head$value';
+          out.add(line.length > width ? line.substring(0, width) : line);
         }
       case ReceiptItemsHeader(:final itemLabel, :final amountLabel):
         out.add(_spread(itemLabel, amountLabel, width));
