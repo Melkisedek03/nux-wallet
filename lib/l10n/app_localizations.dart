@@ -2351,7 +2351,7 @@ abstract class AppLocalizations {
   /// No description provided for @storeReceiptPointsRule.
   ///
   /// In id, this message translates to:
-  /// **'1 poin nusan = potongan Rp{rate} (ketentuan toko)'**
+  /// **'1 nusan = pot. Rp{rate}'**
   String storeReceiptPointsRule(String rate);
 
   /// No description provided for @storeReceiptPromo.
@@ -2405,7 +2405,7 @@ abstract class AppLocalizations {
   /// No description provided for @storeReceiptGrandTotal.
   ///
   /// In id, this message translates to:
-  /// **'TOTAL BAYAR'**
+  /// **'Bayar'**
   String get storeReceiptGrandTotal;
 
   /// No description provided for @storeReceiptPointsDiscountLabel.

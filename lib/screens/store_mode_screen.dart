@@ -1628,8 +1628,6 @@ class _StoreModeScreenState extends State<StoreModeScreen>
       noteWord: l10n.storeNoteWord,
       pointsDiscountLabel: (points) =>
           l10n.storeReceiptPointsDiscountLabel(_fmtRp(points)),
-      pointsEarnedText: (points) => l10n.storeReceiptPointsEarned(points),
-      pointsPendingText: (points) => l10n.storeReceiptPointsPending(points),
       pointsRuleText: (rate) => l10n.storeReceiptPointsRule(rate),
     );
   }

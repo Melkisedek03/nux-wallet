@@ -663,7 +663,7 @@
       }
     }
   },
-  "storeReceiptPointsRule": "1 poin nusan = potongan Rp{rate} (ketentuan toko)",
+  "storeReceiptPointsRule": "1 nusan = pot. Rp{rate}",
   "@storeReceiptPointsRule": {
     "placeholders": {
       "rate": {
@@ -679,7 +679,7 @@
   "storeReceiptItemHeader": "Item",
   "storeReceiptAmountHeader": "Jumlah",
   "storeReceiptOrderDiscount": "Diskon Order",
-  "storeReceiptGrandTotal": "TOTAL BAYAR",
+  "storeReceiptGrandTotal": "Bayar",
   "storeReceiptPointsDiscountLabel": "Diskon poin nusan ({points} poin)",
   "@storeReceiptPointsDiscountLabel": {
     "placeholders": {

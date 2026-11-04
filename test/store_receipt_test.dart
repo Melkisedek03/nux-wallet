@@ -14,17 +14,14 @@ StoreReceiptLabels idLabels() => StoreReceiptLabels(
   amountHeader: 'Jumlah',
   discountLabel: 'Diskon',
   orderDiscountLabel: 'Diskon Order',
-  grandTotalLabel: 'TOTAL BAYAR',
+  grandTotalLabel: 'Bayar',
   cashLabel: 'Tunai',
   changeLabel: 'Kembalian',
   qrisLabel: 'QRIS',
   promoLabel: 'Tanpa pembayaran (promosi)',
   noteWord: 'Catatan',
   pointsDiscountLabel: (p) => 'Diskon poin nusan (${formatRupiah(p)} poin)',
-  pointsEarnedText: (p) => 'Poin nusan diperoleh: +${formatRupiah(p)} poin',
-  pointsPendingText: (p) =>
-      'Poin nusan diperoleh: +${formatRupiah(p)} poin (belum diterbitkan)',
-  pointsRuleText: (rate) => '1 poin nusan = potongan Rp$rate (ketentuan toko)',
+  pointsRuleText: (rate) => '1 nusan = pot. Rp$rate',
 );
 
 /// Transaksi contoh lengkap: diskon baris (persen) + diskon
@@ -143,20 +140,18 @@ void main() {
         'Diskon poin nusan (2.000 poin)',
         '${' ' * 24}-Rp2.000',
         '-' * 32,
-        'TOTAL BAYAR${' ' * 13}Rp20.000',
+        'Bayar${' ' * 19}Rp20.000',
         'Tunai${' ' * 19}Rp50.000',
         'Kembalian${' ' * 15}Rp30.000',
-        'Poin nusan diperoleh: +20.000',
-        'poin',
-        '1 poin nusan = potongan Rp1',
-        '(ketentuan toko)',
+        '1 nusan = pot. Rp1',
+        '',
         '     Terima kasih & silakan',
         '       berkunjung kembali',
       ]);
     });
 
-    test('tanpa nama pelanggan tidak ada baris Customer; poin '
-        'tertunda memakai teks belum diterbitkan', () {
+    test('tanpa nama pelanggan tidak ada baris Customer; baris '
+        'perolehan poin tidak dicetak walau ada poin tertunda', () {
       final record = buildCompletedOrder(
         time: DateTime(2026, 11, 3, 9, 0),
         lines: const [OrderLine(label: 'Teh', unitPriceRp: 3000, qty: 1)],
@@ -185,7 +180,9 @@ void main() {
           .whereType<ReceiptTextLine>()
           .map((e) => e.text)
           .toList();
-      expect(texts.first, contains('belum diterbitkan'));
+      // Satu-satunya baris kalimat = keterangan nilai potongan;
+      // perolehan poin (terbit maupun tertunda) tak dicetak.
+      expect(texts, ['1 nusan = pot. Rp1']);
     });
   });
 

@@ -204,6 +204,8 @@ class _ReceiptCard extends StatelessWidget {
         );
       case ReceiptTextLine(:final text):
         return Text(text, style: _base);
+      case ReceiptSpacer():
+        return const SizedBox(height: 18);
     }
   }
 

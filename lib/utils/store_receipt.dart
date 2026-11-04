@@ -11,9 +11,11 @@
 ///
 /// Yang TIDAK dikorbankan oleh layout itu (pedoman miniPOS §4
 /// tetap wajib): baris diskon (baris/order), baris diskon poin
-/// nusan, TOTAL BAYAR sebagai Grand Total, Tunai/Kembalian atau
-/// metode QRIS, "Poin nusan diperoleh", dan baris ketentuan
-/// nilai potongan per poin. Dan struk WAJIB selalu rekonsiliasi:
+/// nusan, "Bayar" sebagai Grand Total, Tunai/Kembalian atau
+/// metode QRIS, dan baris ketentuan nilai potongan per poin.
+/// (Baris perolehan poin tidak lagi dicetak — keputusan NUX
+/// 4 Nov 2026; perolehan tetap tampil di aplikasi saat
+/// penerbitan.) Dan struk WAJIB selalu rekonsiliasi:
 /// Σ item (kotor) − diskon baris − diskon order − diskon poin
 /// = Grand Total (cacat contoh — Grand Total tak sama dengan
 /// jumlah item — tidak ditiru).
@@ -49,10 +51,6 @@ class StoreReceiptLabels {
   /// Label baris diskon poin: "Diskon poin nusan (2.000 poin)".
   final String Function(int points) pointsDiscountLabel;
 
-  /// Baris perolehan poin (sudah diterbitkan / belum).
-  final String Function(int points) pointsEarnedText;
-  final String Function(int points) pointsPendingText;
-
   /// Baris ketentuan nilai potongan: menerima nilai per poin
   /// yang SUDAH terformat ("1.000"), mengembalikan kalimat
   /// lengkapnya.
@@ -74,8 +72,6 @@ class StoreReceiptLabels {
     required this.promoLabel,
     required this.noteWord,
     required this.pointsDiscountLabel,
-    required this.pointsEarnedText,
-    required this.pointsPendingText,
     required this.pointsRuleText,
   });
 }
@@ -356,6 +352,13 @@ class ReceiptTextLine extends StoreReceiptElement {
   const ReceiptTextLine(this.text);
 }
 
+/// Baris kosong: jeda satu baris — pemisah visual antara
+/// keterangan nilai potongan dan footer (permintaan NUX
+/// 4 Nov 2026).
+class ReceiptSpacer extends StoreReceiptElement {
+  const ReceiptSpacer();
+}
+
 String _rp(int rp) => 'Rp${formatRupiah(rp)}';
 
 /// Susun urutan elemen struk dari [data] + [labels] — urutan
@@ -436,15 +439,9 @@ List<StoreReceiptElement> buildStoreReceiptElements(
   } else {
     out.add(ReceiptRow(labels.promoLabel, _rp(0)));
   }
-  if (data.pointsEnabled && data.pointsEarned > 0) {
-    out.add(
-      ReceiptTextLine(
-        data.pointsIssueStatus == issueStatusIssued
-            ? labels.pointsEarnedText(data.pointsEarned)
-            : labels.pointsPendingText(data.pointsEarned),
-      ),
-    );
-  }
+  // Baris perolehan poin TIDAK dicetak di struk (keputusan
+  // NUX 4 Nov 2026) — perolehan tetap tampil di aplikasi
+  // pada panel penerbitan sesudah lunas.
   if (data.pointsEnabled) {
     out.add(
       ReceiptTextLine(
@@ -453,6 +450,9 @@ List<StoreReceiptElement> buildStoreReceiptElements(
     );
   }
   if (data.footerText.isNotEmpty) {
+    // Jeda satu baris antara keterangan nilai potongan
+    // (baris program poin terakhir) dan footer.
+    if (data.pointsEnabled) out.add(const ReceiptSpacer());
     out.add(ReceiptCenterText(data.footerText));
   }
   return out;
@@ -554,6 +554,8 @@ List<String> storeReceiptTextLines(List<StoreReceiptElement> elements) {
         out.add(_spread(label, amountText, width));
       case ReceiptTextLine(:final text):
         out.addAll(_wrap(text, width));
+      case ReceiptSpacer():
+        out.add('');
     }
   }
   return out;

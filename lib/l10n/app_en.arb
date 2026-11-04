@@ -663,7 +663,7 @@
       }
     }
   },
-  "storeReceiptPointsRule": "1 nusan point = Rp{rate} discount (store policy)",
+  "storeReceiptPointsRule": "1 nusan = Rp{rate} off",
   "@storeReceiptPointsRule": {
     "placeholders": {
       "rate": {
@@ -679,7 +679,7 @@
   "storeReceiptItemHeader": "Item",
   "storeReceiptAmountHeader": "Amount",
   "storeReceiptOrderDiscount": "Order Discount",
-  "storeReceiptGrandTotal": "GRAND TOTAL",
+  "storeReceiptGrandTotal": "Pay",
   "storeReceiptPointsDiscountLabel": "Nusan points discount ({points} pts)",
   "@storeReceiptPointsDiscountLabel": {
     "placeholders": {

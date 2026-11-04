@@ -1278,7 +1278,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String storeReceiptPointsRule(String rate) {
-    return '1 nusan point = Rp$rate discount (store policy)';
+    return '1 nusan = Rp$rate off';
   }
 
   @override
@@ -1306,7 +1306,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeReceiptOrderDiscount => 'Order Discount';
 
   @override
-  String get storeReceiptGrandTotal => 'GRAND TOTAL';
+  String get storeReceiptGrandTotal => 'Pay';
 
   @override
   String storeReceiptPointsDiscountLabel(String points) {
