@@ -1793,7 +1793,10 @@ class _ProfilePage extends StatelessWidget {
           // Baris Uji Offline — spike jembatan Bluetooth antar-HP
           // (tahap 1: dua node tersambung sebagai peer tanpa
           // internet). Layar eksperimental khusus testnet; tidak
-          // memengaruhi alur dompet normal.
+          // memengaruhi alur dompet normal. Baris ini hanya tampil
+          // di build testnet, sejajar dengan listener node yang
+          // juga hanya dipasang di testnet.
+          if (isTestnet)
           GestureDetector(
             onTap: () => Navigator.push(
               context,
