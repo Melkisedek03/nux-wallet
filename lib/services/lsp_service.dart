@@ -102,6 +102,12 @@ class LspService {
           : null,
       trustedPeers0Conf: [PublicKey(hex: lspNodeId)],
       probingLiquidityLimitMultiplier: BigInt.from(3),
+      // Mode offline: node boleh start walaupun electrs tidak
+      // terjangkau (start ldk-node sebaliknya menggagalkan boot
+      // saat chain source tidak bisa disambungkan atau estimasi
+      // fee pertamanya gagal). Boot normal tidak berubah: flag
+      // mati dan kegagalan yang sama tetap menghentikan boot.
+      tolerateOfflineStart: offlineMode,
     );
 
     final chainConfig = ChainDataSourceConfig.electrum(
