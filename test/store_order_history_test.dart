@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nux_wallet/services/store_order_history.dart';
 import 'package:nux_wallet/utils/store_mode_logic.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'store_test_db.dart';
 
 CompletedOrder sample({
   required DateTime time,
@@ -92,9 +93,9 @@ void main() {
       expect(decoded.single.grandTotalRp, 10000);
     });
 
-    test('store append + load lewat SharedPreferences', () async {
+    test('store append + load lewat basis data SQLite', () async {
       SharedPreferences.setMockInitialValues({});
-      final store = StoreOrderHistoryStore();
+      final store = StoreOrderHistoryStore(database: newTestStoreDatabase());
       await store.append(sample(time: DateTime(2026, 11, 3, 9)));
       await store.append(sample(time: DateTime(2026, 11, 3, 10)));
       final loaded = await store.load();
@@ -236,7 +237,7 @@ void main() {
 
     test('replace menukar status penerbitan record ber-id sama', () async {
       SharedPreferences.setMockInitialValues({});
-      final store = StoreOrderHistoryStore();
+      final store = StoreOrderHistoryStore(database: newTestStoreDatabase());
       final order = buildCompletedOrder(
         id: 'r9',
         time: DateTime(2026, 11, 3, 12, 0),

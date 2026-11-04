@@ -3,6 +3,7 @@ import 'package:nux_wallet/services/store_draft.dart';
 import 'package:nux_wallet/services/store_hold.dart';
 import 'package:nux_wallet/utils/store_mode_logic.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'store_test_db.dart';
 
 List<OrderLine> sampleLines() => const [
   OrderLine(
@@ -56,7 +57,7 @@ void main() {
 
     test('roundtrip lewat SharedPreferences + clear mengosongkan', () async {
       SharedPreferences.setMockInitialValues({});
-      final store = StoreDraftStore();
+      final store = StoreDraftStore(database: newTestStoreDatabase());
       expect(await store.load(), isNull);
       await store.save(
         lines: sampleLines(),
@@ -72,14 +73,14 @@ void main() {
 
     test('pesanan kosong tidak pernah tersimpan sebagai draf', () async {
       SharedPreferences.setMockInitialValues({});
-      final store = StoreDraftStore();
+      final store = StoreDraftStore(database: newTestStoreDatabase());
       await store.save(lines: const [], orderDiscount: null);
       expect(await store.load(), isNull);
     });
 
     test('draf baru menimpa draf lama (slot tunggal)', () async {
       SharedPreferences.setMockInitialValues({});
-      final store = StoreDraftStore();
+      final store = StoreDraftStore(database: newTestStoreDatabase());
       await store.save(lines: sampleLines(), orderDiscount: null);
       const newer = [
         OrderLine(label: 'Teh', unitPriceRp: 3000, qty: 1),

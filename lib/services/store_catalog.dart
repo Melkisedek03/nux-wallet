@@ -1,8 +1,9 @@
 import 'dart:convert';
 
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite/sqflite.dart';
 
 import '../utils/store_mode_logic.dart';
+import 'store_database.dart';
 
 /// Satu produk di katalog lokal Mode Toko.
 ///
@@ -166,19 +167,68 @@ List<CatalogItem> filterCatalogItems(List<CatalogItem> items, String query) {
   ];
 }
 
-/// Penyimpanan katalog Mode Toko di SharedPreferences.
+/// Tulis seluruh katalog sebagai baris tabel catalog_items
+/// lewat [executor] — urutan daftar dipertahankan lewat urutan
+/// tulis (rowid). Dipakai store katalog & impor satu-kali.
+Future<void> insertCatalogRows(
+  DatabaseExecutor executor,
+  List<CatalogItem> items,
+) async {
+  await executor.delete('catalog_items');
+  for (final item in items) {
+    await executor.insert('catalog_items', {
+      'code': item.code,
+      'name': item.name,
+      'price_rp': item.priceRp,
+      'category': item.category,
+      'discount_kind': item.defaultDiscount?.kind.name,
+      'discount_value': item.defaultDiscount?.value,
+    });
+  }
+}
+
+/// Penyimpanan katalog Mode Toko di SQLite (store_pos.db,
+/// tabel catalog_items) — sejak migrasi 4 Nov 2026
+/// menggantikan SharedPreferences.
 ///
-/// Pola sama seperti Bolt12OfferStore/SavedInvoiceStore: kegagalan
-/// baca dianggap "katalog kosong" (fail-open) dan kegagalan tulis
-/// ditelan — katalog adalah data kasir yang bisa dibangun ulang,
-/// bukan sumber kebenaran dana.
+/// Kegagalan baca dianggap "katalog kosong" (fail-open) dan
+/// kegagalan tulis ditelan — katalog adalah data kasir yang
+/// bisa dibangun ulang, bukan sumber kebenaran dana.
 class StoreCatalogStore {
+  /// Kunci SharedPreferences era lama (sumber impor satu-kali).
   static const String storageKey = 'store_catalog_items_v2';
+
+  StoreCatalogStore({StoreDatabase? database})
+    : _database = database ?? StoreDatabase.instance;
+
+  final StoreDatabase _database;
 
   Future<List<CatalogItem>> load() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      return decodeCatalog(prefs.getString(storageKey));
+      final db = await _database.database;
+      final rows = await db.query('catalog_items', orderBy: 'rowid ASC');
+      return [
+        for (final row in rows)
+          CatalogItem(
+            code: row['code'] as String,
+            name: row['name'] as String,
+            priceRp: (row['price_rp'] as num).toInt(),
+            category: row['category'] is String
+                ? row['category'] as String
+                : '',
+            defaultDiscount: switch (row['discount_kind']) {
+              'percent' when row['discount_value'] is num =>
+                Discount.percent(
+                  (row['discount_value'] as num).toInt() > 100
+                      ? 100
+                      : (row['discount_value'] as num).toInt(),
+                ),
+              'fixed' when row['discount_value'] is num =>
+                Discount.fixed((row['discount_value'] as num).toInt()),
+              _ => null,
+            },
+          ),
+      ];
     } catch (_) {
       return const [];
     }
@@ -186,8 +236,10 @@ class StoreCatalogStore {
 
   Future<void> save(List<CatalogItem> items) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(storageKey, encodeCatalog(items));
+      final db = await _database.database;
+      await db.transaction((txn) async {
+        await insertCatalogRows(txn, items);
+      });
     } catch (_) {
       // Abaikan — katalog sesi ini tetap tampil.
     }

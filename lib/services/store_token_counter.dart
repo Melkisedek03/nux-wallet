@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:shared_preferences/shared_preferences.dart';
+import 'store_database.dart';
 
 /// Penghitung nomor TOKEN antrean harian Mode Toko ("Token No"
 /// pada struk): nomor urut yang mulai dari 1 setiap tanggal
@@ -91,14 +91,24 @@ StoreTokenCounterState decodeTokenCounter(String? raw) {
   return StoreTokenCounterState.fromJson(parsed);
 }
 
-/// Penyimpanan penghitung token di SharedPreferences.
+/// Penyimpanan penghitung token di SQLite (store_pos.db,
+/// tabel store_kv — keadaannya snapshot JSON kecil yang sama
+/// seperti era SharedPreferences). Pelunasan berjalan menaikkan
+/// penghitung ini di dalam transaksi basis datanya sendiri
+/// (StoreOrderHistoryStore.recordSettledSale); store ini tetap
+/// menjadi jalur baca/tulis umumnya.
 class StoreTokenCounterStore {
   static const String storageKey = 'store_token_counter_v1';
 
+  StoreTokenCounterStore({StoreDatabase? database})
+    : _database = database ?? StoreDatabase.instance;
+
+  final StoreDatabase _database;
+
   Future<StoreTokenCounterState> load() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      return decodeTokenCounter(prefs.getString(storageKey));
+      final db = await _database.database;
+      return decodeTokenCounter(await storeKvGet(db, storageKey));
     } catch (_) {
       return StoreTokenCounterState.empty;
     }
@@ -106,8 +116,8 @@ class StoreTokenCounterStore {
 
   Future<void> save(StoreTokenCounterState state) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(storageKey, encodeTokenCounter(state));
+      final db = await _database.database;
+      await storeKvSet(db, storageKey, encodeTokenCounter(state));
     } catch (_) {
       // Abaikan — nomor sesi ini tetap diterbitkan ke kasir.
     }

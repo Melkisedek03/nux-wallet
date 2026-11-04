@@ -1,8 +1,7 @@
 import 'dart:convert';
 
-import 'package:shared_preferences/shared_preferences.dart';
-
 import '../utils/store_mode_logic.dart';
+import 'store_database.dart';
 import 'store_order_history.dart';
 
 /// Satu pesanan Mode Toko yang DITAHAN kasir — tamu bayar
@@ -141,7 +140,10 @@ List<HeldOrder> decodeHeldOrders(String? raw) {
   return orders;
 }
 
-/// Penyimpanan daftar tahan Mode Toko di SharedPreferences.
+/// Penyimpanan daftar tahan Mode Toko di SQLite (store_pos.db,
+/// tabel store_kv — daftar tahan adalah snapshot JSON murni,
+/// bentuk simpanannya tidak berubah dari era
+/// SharedPreferences; hanya mesinnya yang pindah).
 ///
 /// Batas simpan [maxRecords] entri TERBARU (pola yang sama
 /// dengan riwayat pesanan & shift): menahan adalah parkir
@@ -152,10 +154,15 @@ class HeldOrderStore {
   static const String storageKey = 'store_held_orders_v2';
   static const int maxRecords = 50;
 
+  HeldOrderStore({StoreDatabase? database})
+    : _database = database ?? StoreDatabase.instance;
+
+  final StoreDatabase _database;
+
   Future<List<HeldOrder>> load() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      return decodeHeldOrders(prefs.getString(storageKey));
+      final db = await _database.database;
+      return decodeHeldOrders(await storeKvGet(db, storageKey));
     } catch (_) {
       return const [];
     }
@@ -177,8 +184,9 @@ class HeldOrderStore {
       final trimmed = orders.length > maxRecords
           ? orders.sublist(orders.length - maxRecords)
           : orders;
-      final prefs = await SharedPreferences.getInstance();
-      return await prefs.setString(storageKey, encodeHeldOrders(trimmed));
+      final db = await _database.database;
+      await storeKvSet(db, storageKey, encodeHeldOrders(trimmed));
+      return true;
     } catch (_) {
       return false;
     }

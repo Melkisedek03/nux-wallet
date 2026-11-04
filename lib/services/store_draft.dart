@@ -1,8 +1,7 @@
 import 'dart:convert';
 
-import 'package:shared_preferences/shared_preferences.dart';
-
 import '../utils/store_mode_logic.dart';
+import 'store_database.dart';
 import 'store_hold.dart';
 
 /// Draf pesanan Mode Toko — jaring pengaman background
@@ -40,12 +39,19 @@ HeldOrder? decodeDraftOrder(String? raw) {
   return HeldOrder.fromJson(parsed);
 }
 
-/// Penyimpanan slot draf di SharedPreferences. Semua operasi
-/// fail-open seperti penyimpanan lokal Mode Toko lain: draf
-/// adalah jaring pengaman, kegagalannya tidak boleh menjatuhkan
-/// layar kasir.
+/// Penyimpanan slot draf di SQLite (store_pos.db, tabel
+/// store_kv — draf adalah snapshot JSON murni, bentuk
+/// simpanannya tidak berubah dari era SharedPreferences).
+/// Semua operasi fail-open seperti penyimpanan lokal Mode Toko
+/// lain: draf adalah jaring pengaman, kegagalannya tidak boleh
+/// menjatuhkan layar kasir.
 class StoreDraftStore {
   static const String storageKey = 'store_draft_order_v1';
+
+  StoreDraftStore({StoreDatabase? database})
+    : _database = database ?? StoreDatabase.instance;
+
+  final StoreDatabase _database;
 
   /// Simpan [lines] + [orderDiscount] sebagai draf (menimpa
   /// draf sebelumnya — hanya draf terakhir yang berlaku).
@@ -61,8 +67,8 @@ class StoreDraftStore {
         lines: lines,
         orderDiscount: orderDiscount,
       );
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(storageKey, encodeDraftOrder(draft));
+      final db = await _database.database;
+      await storeKvSet(db, storageKey, encodeDraftOrder(draft));
     } catch (_) {
       // Abaikan — jaring pengaman tidak boleh mengganggu kasir.
     }
@@ -71,8 +77,8 @@ class StoreDraftStore {
   /// Muat draf tersimpan; null bila tidak ada / tidak sah.
   Future<HeldOrder?> load() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      return decodeDraftOrder(prefs.getString(storageKey));
+      final db = await _database.database;
+      return decodeDraftOrder(await storeKvGet(db, storageKey));
     } catch (_) {
       return null;
     }
@@ -84,8 +90,8 @@ class StoreDraftStore {
   /// hantu di kunjungan berikutnya.
   Future<void> clear() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(storageKey);
+      final db = await _database.database;
+      await storeKvDelete(db, storageKey);
     } catch (_) {
       // Abaikan — sama seperti di atas.
     }

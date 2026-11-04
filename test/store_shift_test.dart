@@ -4,6 +4,7 @@ import 'package:nux_wallet/services/store_order_history.dart';
 import 'package:nux_wallet/services/store_shift.dart';
 import 'package:nux_wallet/utils/store_mode_logic.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'store_test_db.dart';
 
 void main() {
   group('model shift', () {
@@ -80,7 +81,7 @@ void main() {
 
     test('store simpan + muat lewat SharedPreferences', () async {
       SharedPreferences.setMockInitialValues({});
-      final store = StoreShiftStore();
+      final store = StoreShiftStore(database: newTestStoreDatabase());
       await store.save([
         StoreShift(openedAt: DateTime(2026, 11, 2, 22, 24)),
       ]);

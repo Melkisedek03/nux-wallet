@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nux_wallet/services/store_token_counter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'store_test_db.dart';
 
 void main() {
   group('penghitung token harian', () {
@@ -50,11 +51,12 @@ void main() {
 
     test('store: next() menerbitkan berurutan & tersimpan', () async {
       SharedPreferences.setMockInitialValues({});
-      final store = StoreTokenCounterStore();
+      final db = newTestStoreDatabase();
+      final store = StoreTokenCounterStore(database: db);
       final now = DateTime(2026, 11, 3, 12, 0);
       expect(await store.next(now), 1);
       expect(await store.next(now), 2);
-      expect(await StoreTokenCounterStore().next(now), 3);
+      expect(await StoreTokenCounterStore(database: db).next(now), 3);
       // Hari berikutnya mulai lagi dari 1.
       expect(await store.next(DateTime(2026, 11, 4, 9, 0)), 1);
     });

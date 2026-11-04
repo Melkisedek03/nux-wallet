@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nux_wallet/services/store_settings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'store_test_db.dart';
 
 void main() {
   group('pengaturan toko', () {
@@ -82,7 +83,7 @@ void main() {
 
     test('store roundtrip lewat SharedPreferences + fail-open', () async {
       SharedPreferences.setMockInitialValues({});
-      final store = StoreSettingsStore();
+      final store = StoreSettingsStore(database: newTestStoreDatabase());
       expect(await store.load(), StoreSettings.defaults);
       const s = StoreSettings(storeName: 'Toko C', earnStepRp: 2000);
       await store.save(s);
@@ -90,7 +91,7 @@ void main() {
       SharedPreferences.setMockInitialValues({
         StoreSettingsStore.storageKey: '###rusak###',
       });
-      expect(await StoreSettingsStore().load(), StoreSettings.defaults);
+      expect(await StoreSettingsStore(database: newTestStoreDatabase()).load(), StoreSettings.defaults);
     });
   });
 }

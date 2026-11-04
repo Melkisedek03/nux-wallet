@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nux_wallet/services/store_hold.dart';
 import 'package:nux_wallet/utils/store_mode_logic.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'store_test_db.dart';
 
 HeldOrder sample({
   String id = 'h1',
@@ -64,7 +65,7 @@ void main() {
   group('store tahan', () {
     test('roundtrip lewat SharedPreferences', () async {
       SharedPreferences.setMockInitialValues({});
-      final store = HeldOrderStore();
+      final store = HeldOrderStore(database: newTestStoreDatabase());
       expect(await store.load(), isEmpty);
       final orders = [sample(), sample(id: 'h2')];
       await store.save(orders);
@@ -75,12 +76,12 @@ void main() {
       SharedPreferences.setMockInitialValues({
         HeldOrderStore.storageKey: '###rusak###',
       });
-      expect(await HeldOrderStore().load(), isEmpty);
+      expect(await HeldOrderStore(database: newTestStoreDatabase()).load(), isEmpty);
     });
 
     test('batas 50 entri: yang tertua dibuang, terbaru dipertahankan', () async {
       SharedPreferences.setMockInitialValues({});
-      final store = HeldOrderStore();
+      final store = HeldOrderStore(database: newTestStoreDatabase());
       final many = [
         for (var i = 0; i < 55; i++)
           sample(

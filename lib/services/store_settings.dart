@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:shared_preferences/shared_preferences.dart';
+import 'store_database.dart';
 
 /// Pengaturan Toko Mode Toko v2: identitas toko untuk struk dan
 /// parameter program poin nusan milik toko ini.
@@ -179,14 +179,22 @@ StoreSettings decodeStoreSettings(String? raw) {
   return StoreSettings.fromJson(parsed);
 }
 
-/// Penyimpanan pengaturan toko di SharedPreferences.
+/// Penyimpanan pengaturan toko di SQLite (store_pos.db, tabel
+/// store_kv — pengaturan adalah snapshot JSON murni, jadi
+/// bentuk simpanannya tidak berubah dari era
+/// SharedPreferences; hanya mesinnya yang pindah).
 class StoreSettingsStore {
   static const String storageKey = 'store_settings_v1';
 
+  StoreSettingsStore({StoreDatabase? database})
+    : _database = database ?? StoreDatabase.instance;
+
+  final StoreDatabase _database;
+
   Future<StoreSettings> load() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      return decodeStoreSettings(prefs.getString(storageKey));
+      final db = await _database.database;
+      return decodeStoreSettings(await storeKvGet(db, storageKey));
     } catch (_) {
       return StoreSettings.defaults;
     }
@@ -194,8 +202,8 @@ class StoreSettingsStore {
 
   Future<void> save(StoreSettings settings) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(storageKey, encodeStoreSettings(settings));
+      final db = await _database.database;
+      await storeKvSet(db, storageKey, encodeStoreSettings(settings));
     } catch (_) {
       // Abaikan — pengaturan sesi ini tetap berlaku di layar.
     }

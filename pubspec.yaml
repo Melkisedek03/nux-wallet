@@ -41,6 +41,14 @@ dependencies:
   # Pilihan tema Gelap/Terang tersimpan antar-buka aplikasi.
   shared_preferences: ^2.5.3
 
+  # Basis data lokal Mode Toko (keputusan NUX 4 Nov 2026):
+  # katalog, pesanan, shift, dan data transaksional toko hidup
+  # di SQLite (satu berkas store_pos.db) — transaksi atomik &
+  # query berindeks untuk fondasi fitur berbayar. path dipakai
+  # menyusun lokasi berkas basis data & arsip riwayat.
+  sqflite: ^2.4.2
+  path: ^1.9.1
+
   # Lokalisasi (l10n): delegasi Material/Cupertino + format intl.
   flutter_localizations:
     sdk: flutter
@@ -121,6 +129,10 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
+  # Backend SQLite untuk test di host (VM/desktop): test store
+  # Mode Toko membuka basis data sungguhan lewat factory FFI.
+  sqflite_common_ffi: ^2.3.6
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

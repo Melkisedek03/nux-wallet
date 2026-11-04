@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nux_wallet/services/store_catalog.dart';
 import 'package:nux_wallet/utils/store_mode_logic.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'store_test_db.dart';
 
 void main() {
   group('katalog JSON', () {
@@ -143,9 +144,9 @@ void main() {
   });
 
   group('store', () {
-    test('roundtrip lewat SharedPreferences', () async {
+    test('roundtrip lewat basis data SQLite', () async {
       SharedPreferences.setMockInitialValues({});
-      final store = StoreCatalogStore();
+      final store = StoreCatalogStore(database: newTestStoreDatabase());
       expect(await store.load(), isEmpty);
       final items = [
         const CatalogItem(code: 'A1', name: 'Kopi', priceRp: 5000),
@@ -158,7 +159,7 @@ void main() {
       SharedPreferences.setMockInitialValues({
         StoreCatalogStore.storageKey: '###rusak###',
       });
-      expect(await StoreCatalogStore().load(), isEmpty);
+      expect(await StoreCatalogStore(database: newTestStoreDatabase()).load(), isEmpty);
     });
   });
 }

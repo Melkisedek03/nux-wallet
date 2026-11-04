@@ -16,7 +16,6 @@ import '../services/store_hold.dart';
 import '../services/store_order_history.dart';
 import '../services/store_settings.dart';
 import '../services/store_shift.dart';
-import '../services/store_token_counter.dart';
 import '../utils/animated_checkmark.dart';
 import '../utils/bolt11_info.dart';
 import '../utils/bolt12_info.dart';
@@ -133,8 +132,9 @@ class _StoreModeScreenState extends State<StoreModeScreen>
   StoreSettings _settings = StoreSettings.defaults;
 
   // --- Penjualan terakhir & panel sukses ---
+  // (Penghitung token kini dinaikkan di dalam transaksi
+  // pelunasan basis data — lihat recordSettledSale.)
   final _historyStore = StoreOrderHistoryStore();
-  final _tokenCounterStore = StoreTokenCounterStore();
   CompletedOrder? _saleRecord;
   bool _received = false;
   Timer? _celebrationTimer;
@@ -1225,7 +1225,11 @@ class _StoreModeScreenState extends State<StoreModeScreen>
     );
     if (result == null || !mounted) return;
     if (result.isVoid) {
-      await _historyStore.append(result);
+      await _historyStore.append(
+        result.withReceiptMeta(
+          shiftOpenedMs: _openShift?.openedAt.millisecondsSinceEpoch,
+        ),
+      );
       if (!mounted) return;
       setState(_resetOrderPanel);
       ScaffoldMessenger.of(
@@ -1233,26 +1237,26 @@ class _StoreModeScreenState extends State<StoreModeScreen>
       ).showSnackBar(SnackBar(content: Text(context.l10n.storeVoidRecorded)));
       return;
     }
-    // Cap metadata struk TEPAT saat pencatatan: Bill No =
-    // nomor urut lunas pada TANGGAL transaksi (lintas shift,
-    // diturunkan dari record tanggal itu; tampil sebagai
-    // INV<YYMMDD>-<urut 4 digit>), Token No = nomor antrean
-    // harian dari penghitungnya (naik sekali per transaksi
-    // lunas, hanya bila pengaturan toko menampilkannya).
+    // Cap metadata struk TEPAT saat pencatatan, di dalam SATU
+    // transaksi basis data (recordSettledSale): Bill No = nomor
+    // urut lunas pada TANGGAL transaksi (lintas shift, dari
+    // record tanggal itu; tampil INV<YYMMDD>-<urut 4 digit>),
+    // Token No = nomor antrean harian dari penghitungnya (naik
+    // sekali per transaksi lunas, hanya bila pengaturan toko
+    // menampilkannya), tulis record + bersihkan draf — atomik,
+    // tidak ada lagi penulisan setengah jadi antar-store.
     var settled = result;
     final shift = _openShift;
     if (shift != null) {
-      final history = await _historyStore.load();
-      final tokenNo = _settings.showTokenNumber
-          ? await _tokenCounterStore.next(DateTime.now())
-          : 0;
-      if (!mounted) return;
-      settled = result.withReceiptMeta(
-        billNo: nextBillSeqForDate(history, result.time),
-        tokenNo: tokenNo,
+      settled = await _historyStore.recordSettledSale(
+        result,
+        stampMeta: true,
+        issueToken: _settings.showTokenNumber,
+        shiftOpenedMs: shift.openedAt.millisecondsSinceEpoch,
       );
+    } else {
+      await _historyStore.append(result);
     }
-    await _historyStore.append(settled);
     if (!mounted) return;
     setState(() {
       _session = _session.recordSale(settled.grandTotalRp);

@@ -1,6 +1,8 @@
 import 'dart:convert';
 
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite/sqflite.dart';
+
+import 'store_database.dart';
 
 /// Satu shift kasir Mode Toko: dibuka kasir dengan tombol Buka
 /// Shift, ditutup dengan Tutup Shift. Semua record pesanan toko
@@ -116,15 +118,54 @@ StoreShift? openShiftIn(List<StoreShift> shifts) {
   return null;
 }
 
-/// Penyimpanan shift Mode Toko di SharedPreferences.
+/// Tulis seluruh daftar shift sebagai baris tabel shifts lewat
+/// [executor]. Dipakai store shift & impor satu-kali.
+Future<void> insertShiftRows(
+  DatabaseExecutor executor,
+  List<StoreShift> shifts,
+) async {
+  await executor.delete('shifts');
+  for (final shift in shifts) {
+    await executor.insert('shifts', {
+      'opened_ms': shift.openedAt.millisecondsSinceEpoch,
+      'closed_ms': shift.closedAt?.millisecondsSinceEpoch,
+      'era': shift.era,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+}
+
+/// Penyimpanan shift Mode Toko di SQLite (store_pos.db, tabel
+/// shifts) — sejak migrasi 4 Nov 2026 menggantikan
+/// SharedPreferences. Shift yang sedang terbuka adalah baris
+/// ber-closed_ms null, sama seperti sebelumnya.
 class StoreShiftStore {
+  /// Kunci SharedPreferences era lama (sumber impor satu-kali).
   static const String storageKey = 'store_shifts_v1';
   static const int maxRecords = 200;
 
+  StoreShiftStore({StoreDatabase? database})
+    : _database = database ?? StoreDatabase.instance;
+
+  final StoreDatabase _database;
+
   Future<List<StoreShift>> load() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      return decodeShifts(prefs.getString(storageKey));
+      final db = await _database.database;
+      final rows = await db.query('shifts', orderBy: 'opened_ms ASC');
+      return [
+        for (final row in rows)
+          StoreShift(
+            openedAt: DateTime.fromMillisecondsSinceEpoch(
+              (row['opened_ms'] as num).toInt(),
+            ),
+            closedAt: row['closed_ms'] is num
+                ? DateTime.fromMillisecondsSinceEpoch(
+                    (row['closed_ms'] as num).toInt(),
+                  )
+                : null,
+            era: row['era'] == 'rp' ? 'rp' : 'nusan',
+          ),
+      ];
     } catch (_) {
       return const [];
     }
@@ -135,8 +176,10 @@ class StoreShiftStore {
       final trimmed = shifts.length > maxRecords
           ? shifts.sublist(shifts.length - maxRecords)
           : shifts;
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(storageKey, encodeShifts(trimmed));
+      final db = await _database.database;
+      await db.transaction((txn) async {
+        await insertShiftRows(txn, trimmed);
+      });
     } catch (_) {
       // Abaikan — keadaan shift di layar tetap yang berlaku sesi ini.
     }
