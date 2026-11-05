@@ -200,6 +200,11 @@ class StoreReceiptData {
   final String? payMethod;
   final int cashReceivedRp;
   final int changeRp;
+
+  /// Pembayaran efektif record (dari effectivePaymentsOf):
+  /// lebih dari satu = struk mencetak satu baris per metode
+  /// (split payment); satu/kosong = jalur tampilan lama.
+  final List<OrderPayment> paymentLines;
   final int pointsEarned;
 
   /// Status penerbitan poin record ('issued'/'pending'/…).
@@ -232,6 +237,7 @@ class StoreReceiptData {
     required this.payMethod,
     required this.cashReceivedRp,
     required this.changeRp,
+    this.paymentLines = const [],
     required this.pointsEarned,
     required this.pointsIssueStatus,
     required this.pointsEnabled,
@@ -293,7 +299,7 @@ StoreReceiptData buildStoreReceiptData({
         reprintAt == null ? null : receiptTimestampText(reprintAt),
     cashierName: record.operatorName,
     billNo: record.billNo,
-    billNoText: formatBillNo(t, record.billNo),
+    billNoText: formatBillNo(t, record.billNo, outletId: outletId),
     tokenNo: record.tokenNo,
     outletId: outletId,
     showBillNo: record.billNo > 0,
@@ -310,6 +316,7 @@ StoreReceiptData buildStoreReceiptData({
     payMethod: record.payMethod,
     cashReceivedRp: record.cashReceivedRp,
     changeRp: record.changeRp,
+    paymentLines: effectivePaymentsOf(record),
     pointsEarned: record.pointsEarned,
     pointsIssueStatus: record.pointsIssueStatus,
     pointsEnabled: settings.pointsEnabled,
@@ -325,11 +332,19 @@ StoreReceiptData buildStoreReceiptData({
 /// nomor urut per tanggal yang tersimpan di record.
 /// Contoh (dari permintaan NUX): 3 Nov 2026 urut 2 →
 /// 'INV261103-0002'.
-String formatBillNo(DateTime time, int seq) {
+///
+/// Fase B (5 Nov 2026): bila [outletId] terisi (id cabang
+/// dari node_id perangkat), formatnya membawa prefix outlet:
+/// 'INV-<outlet>-<YYMMDD>-<urut 4>' — nomor unik per cabang
+/// walau tanggal & urutnya sama di cabang lain.
+String formatBillNo(DateTime time, int seq, {String outletId = ''}) {
   final yy = (time.year % 100).toString().padLeft(2, '0');
   final mm = time.month.toString().padLeft(2, '0');
   final dd = time.day.toString().padLeft(2, '0');
-  return 'INV$yy$mm$dd-${seq.toString().padLeft(4, '0')}';
+  final seqText = seq.toString().padLeft(4, '0');
+  return outletId.isEmpty
+      ? 'INV$yy$mm$dd-$seqText'
+      : 'INV-$outletId-$yy$mm$dd-$seqText';
 }
 
 /// Nomor urut bill berikutnya untuk TANGGAL kalender lokal
@@ -452,6 +467,16 @@ class ReceiptSpacer extends StoreReceiptElement {
 
 String _rp(int rp) => 'Rp${formatRupiah(rp)}';
 
+/// Label metode bayar di struk: tunai & QRIS dari label
+/// terlokalisasi; metode master lain tampil dengan namanya
+/// sendiri persis seperti yang diatur toko.
+String _receiptMethodLabel(StoreReceiptLabels labels, String method) =>
+    method == payMethodCash
+        ? labels.cashLabel
+        : method == payMethodQris
+            ? labels.qrisLabel
+            : method;
+
 /// Kepala baris meta struk untuk perender teks & cetak:
 /// "Tanggal:" / "No. Bill:" / "Order/Outlet:" diikuti nilainya.
 /// Label + ':' dirapatkan ke kolom 10 (permintaan NUX 4 Nov
@@ -558,13 +583,32 @@ List<StoreReceiptElement> buildStoreReceiptElements(
   }
   out.add(const ReceiptDashedRule());
   out.add(ReceiptGrandTotal(labels.grandTotalLabel, _rp(data.grandTotalRp)));
-  if (data.payMethod == payMethodCash) {
+  if (data.paymentLines.length > 1) {
+    // Split payment: satu baris per metode sejumlah yang
+    // DITERAPKAN ke tagihan, lalu kembalian bila ada.
+    for (final payment in data.paymentLines) {
+      out.add(
+        ReceiptRow(
+          _receiptMethodLabel(labels, payment.method),
+          _rp(payment.amountRp),
+        ),
+      );
+    }
+    if (data.changeRp > 0) {
+      out.add(ReceiptRow(labels.changeLabel, _rp(data.changeRp)));
+    }
+  } else if (data.payMethod == payMethodCash) {
     out.add(ReceiptRow(labels.cashLabel, _rp(data.cashReceivedRp)));
     if (data.changeRp > 0) {
       out.add(ReceiptRow(labels.changeLabel, _rp(data.changeRp)));
     }
-  } else if (data.payMethod == payMethodQris) {
-    out.add(ReceiptRow(labels.qrisLabel, _rp(data.grandTotalRp)));
+  } else if (data.payMethod != null) {
+    out.add(
+      ReceiptRow(
+        _receiptMethodLabel(labels, data.payMethod!),
+        _rp(data.grandTotalRp),
+      ),
+    );
   } else {
     out.add(ReceiptRow(labels.promoLabel, _rp(0)));
   }

@@ -4,6 +4,7 @@ import 'package:share_plus/share_plus.dart';
 import '../locale_controller.dart';
 import '../theme.dart';
 import '../services/print_service.dart';
+import '../services/store_hold.dart';
 import '../services/store_order_history.dart';
 import '../services/store_report_export.dart';
 import '../services/store_shift.dart';
@@ -65,6 +66,11 @@ class _StoreShiftReportScreenState extends State<StoreShiftReportScreen> {
       invUnit: l10n.storeReportInvUnit,
       cashLabel: l10n.storeReportCash,
       qrisLabel: l10n.storeReportQris,
+      incomeLabel: l10n.storeReportIncome,
+      openingFloatLabel: l10n.storeReportOpeningFloat,
+      cashPositionLabel: l10n.storeReportCashPosition,
+      heldInfoLabel: l10n.storeReportHeldInfo,
+      heldTotalLabel: l10n.storeReportHeldTotal,
       pointsIssued: l10n.storeReportPointsIssued,
       pointsPending: l10n.storeReportPointsPending,
       pointsRedeemed: l10n.storeReportPointsRedeemed,
@@ -116,6 +122,32 @@ class _StoreShiftReportScreenState extends State<StoreShiftReportScreen> {
 
     final summary = aggregateShiftSales(orders, from: from, to: to);
     final details = aggregateMenuDetails(orders, from: from, to: to);
+    // Info Order Ditahan: pesanan yang ditahan di dalam
+    // jendela ini dan MASIH tertahan saat laporan dibuat
+    // (pasangan info VOID — permintaan NUX 5 Nov 2026).
+    final held = await HeldOrderStore().load();
+    if (!mounted) return;
+    final heldInWindow = [
+      for (final h in held)
+        if (!h.heldAt.isBefore(from) && h.heldAt.isBefore(to)) h,
+    ];
+    final heldInfo = (
+      count: heldInWindow.length,
+      totalRp: heldInWindow.fold(0, (sum, h) => sum + h.grandTotalRp),
+    );
+    // Modal: untuk laporan shift = modal shift itu; untuk
+    // laporan per tanggal = jumlah modal semua shift yang
+    // dibuka pada hari itu.
+    late final int openingFloat;
+    if (shift != null) {
+      openingFloat = shift.openingFloatRp;
+    } else {
+      final shifts = await _shiftStore.load();
+      if (!mounted) return;
+      openingFloat = shifts
+          .where((s) => !s.openedAt.isBefore(from) && s.openedAt.isBefore(to))
+          .fold(0, (sum, s) => sum + s.openingFloatRp);
+    }
     final docs = buildShiftReportDocuments(
       labels: _labels(),
       periodLine: _periodLine,
@@ -124,6 +156,8 @@ class _StoreShiftReportScreenState extends State<StoreShiftReportScreen> {
       details: details,
       generatedAt: now,
       locale: _locale,
+      openingFloatRp: openingFloat,
+      heldInfo: heldInfo,
     );
     setState(() {
       _summaryText = docs.summary;

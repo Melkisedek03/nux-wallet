@@ -27,6 +27,67 @@ const issueStatusWaived = 'waived';
 const payMethodCash = 'cash';
 const payMethodQris = 'qris';
 
+/// Penanda payMethod record yang dibayar dengan LEBIH DARI
+/// satu metode (split payment, 5 Nov 2026): rincian sebenarnya
+/// ada di daftar pembayaran record (CompletedOrder.payments).
+const payMethodSplit = 'split';
+
+/// Satu pembayaran dalam satu bill: metode + jumlah rupiah
+/// yang DITERAPKAN ke tagihan lewat metode itu. Untuk tunai,
+/// jumlah terapan bisa lebih kecil dari uang yang diserahkan
+/// (selisihnya kembalian — uang diserahkan tercatat terpisah
+/// di CompletedOrder.cashReceivedRp). Metode non-tunai selalu
+/// tepat (tidak pernah lebih).
+class OrderPayment {
+  /// Metode: [payMethodCash] untuk tunai; selain itu nama
+  /// metode dari master metode bayar toko (mis. 'QRIS',
+  /// 'DANA' — atau 'qris' warisan record lama).
+  final String method;
+  final int amountRp;
+
+  const OrderPayment({required this.method, required this.amountRp});
+
+  bool get isCash => method == payMethodCash;
+
+  Map<String, Object?> toJson() => {'m': method, 'a': amountRp};
+
+  static OrderPayment? fromJson(Object? raw) {
+    if (raw is! Map) return null;
+    final m = raw['m'];
+    final a = raw['a'];
+    if (m is! String || m.isEmpty || a is! num || a <= 0) return null;
+    return OrderPayment(method: m, amountRp: a.toInt());
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is OrderPayment &&
+      other.method == method &&
+      other.amountRp == amountRp;
+
+  @override
+  int get hashCode => Object.hash(method, amountRp);
+}
+
+/// Daftar pembayaran EFEKTIF sebuah record: daftar tersimpan
+/// bila ada; record lama (satu metode) dipetakan ke satu
+/// pembayaran sejumlah totalnya; promosi (tanpa metode) →
+/// kosong. Inilah satu-satunya dasar agregasi per metode,
+/// income, dan posisi tunai — jangan agregasi dari payMethod
+/// mentah.
+List<OrderPayment> effectivePaymentsOf(CompletedOrder order) {
+  if (order.payments.isNotEmpty) return order.payments;
+  final method = order.payMethod;
+  if (method == null || order.grandTotalRp <= 0) return const [];
+  return [OrderPayment(method: method, amountRp: order.grandTotalRp)];
+}
+
+/// Jumlah TUNAI yang diterapkan ke tagihan oleh record ini
+/// (bahan posisi laci: modal + ini; non-tunai tidak ikut).
+int cashAppliedRpOf(CompletedOrder order) => effectivePaymentsOf(order)
+    .where((p) => p.isCash)
+    .fold(0, (sum, p) => sum + p.amountRp);
+
 /// Satu pesanan Mode Toko yang SELESAI — lunas ATAU batal (VOID) —
 /// tersimpan lengkap sebagai bahan laporan penjualan per shift
 /// (print 58mm + PDF). Lihat `lib/utils/store_report.dart` untuk
@@ -160,6 +221,12 @@ class CompletedOrder {
   final String operatorId;
   final String operatorName;
 
+  /// Rincian pembayaran per metode (split payment): kosong
+  /// untuk record satu-metode lama & promosi — pembacaan
+  /// agregat WAJIB lewat effectivePaymentsOf yang memetakan
+  /// record lama ke bentuk yang sama.
+  final List<OrderPayment> payments;
+
   const CompletedOrder({
     this.id = '',
     required this.time,
@@ -187,6 +254,7 @@ class CompletedOrder {
     this.shiftOpenedMs,
     this.operatorId = '',
     this.operatorName = '',
+    this.payments = const [],
   });
 
   bool get isRupiahEra => era == storeEraRupiah;
@@ -226,6 +294,7 @@ class CompletedOrder {
       shiftOpenedMs: shiftOpenedMs,
       operatorId: operatorId,
       operatorName: operatorName,
+      payments: payments,
     );
   }
 
@@ -264,6 +333,7 @@ class CompletedOrder {
       shiftOpenedMs: shiftOpenedMs,
       operatorId: operatorId,
       operatorName: operatorName,
+      payments: payments,
     );
   }
 
@@ -301,6 +371,7 @@ class CompletedOrder {
       shiftOpenedMs: shiftOpenedMs,
       operatorId: operatorId,
       operatorName: operatorName,
+      payments: payments,
     );
   }
 
@@ -343,6 +414,7 @@ class CompletedOrder {
       shiftOpenedMs: shiftOpenedMs ?? this.shiftOpenedMs,
       operatorId: operatorId,
       operatorName: operatorName,
+      payments: payments,
     );
   }
 
@@ -375,6 +447,8 @@ class CompletedOrder {
     if (shiftOpenedMs != null) 'shiftOpenedMs': shiftOpenedMs,
     if (operatorId.isNotEmpty) 'operatorId': operatorId,
     if (operatorName.isNotEmpty) 'operatorName': operatorName,
+    if (payments.isNotEmpty)
+      'payments': payments.map((p) => p.toJson()).toList(),
   };
 
   /// Baca satu record; null bila bentuknya tidak sah (waktu/baris/
@@ -429,9 +503,10 @@ class CompletedOrder {
       grandTotalRp: grandTotal.toInt(),
       paymentHashHex: hash is String && hash.isNotEmpty ? hash : null,
       isVoid: raw['status'] == 'void',
-      payMethod: method == payMethodCash || method == payMethodQris
-          ? method as String
-          : null,
+      // Metode: 'cash'/'qris' warisan, nama metode master,
+      // atau 'split' — semua string tak kosong diterima apa
+      // adanya (rincian split ada di payments).
+      payMethod: method is String && method.isNotEmpty ? method : null,
       cashReceivedRp: intOr0(raw['cashReceivedRp']),
       changeRp: intOr0(raw['changeRp']),
       pointsRedeemed: intOr0(raw['pointsRedeemed']),
@@ -467,6 +542,7 @@ class CompletedOrder {
       operatorName: raw['operatorName'] is String
           ? raw['operatorName'] as String
           : '',
+      payments: _paymentsFromJson(raw['payments']),
     );
   }
 
@@ -498,6 +574,7 @@ class CompletedOrder {
       other.shiftOpenedMs == shiftOpenedMs &&
       other.operatorId == operatorId &&
       other.operatorName == operatorName &&
+      _linesEqual(other.payments, payments) &&
       _linesEqual(other.lines, lines);
 
   @override
@@ -529,16 +606,37 @@ class CompletedOrder {
       operatorId,
       operatorName,
       Object.hashAll(lines),
+      Object.hashAll(payments),
     ),
   );
 }
 
-bool _linesEqual(List<OrderLine> a, List<OrderLine> b) {
+bool _linesEqual<T>(List<T> a, List<T> b) {
   if (a.length != b.length) return false;
   for (var i = 0; i < a.length; i++) {
     if (a[i] != b[i]) return false;
   }
   return true;
+}
+
+/// Baca daftar pembayaran dari nilai JSON (daftar map) —
+/// entri rusak dilewati; bukan daftar → kosong.
+List<OrderPayment> _paymentsFromJson(Object? raw) {
+  if (raw is! List) return const [];
+  return [
+    for (final entry in raw)
+      if (OrderPayment.fromJson(entry) case final p?) p,
+  ];
+}
+
+/// Baca daftar pembayaran dari kolom SQLite (string JSON).
+List<OrderPayment> _paymentsFromColumn(Object? raw) {
+  if (raw is! String || raw.trim().isEmpty) return const [];
+  try {
+    return _paymentsFromJson(jsonDecode(raw));
+  } catch (_) {
+    return const [];
+  }
 }
 
 Map<String, Object?> _discountToJson(Discount? d) => {
@@ -637,6 +735,8 @@ CompletedOrder buildCompletedOrder({
   String customerName = '',
   String operatorId = '',
   String operatorName = '',
+  List<OrderPayment> payments = const [],
+  int changeRp = 0,
 }) {
   final subtotal = orderSubtotalRp(lines);
   final orderDisc = orderDiscountAmountRp(lines, orderDiscount);
@@ -659,9 +759,15 @@ CompletedOrder buildCompletedOrder({
     isVoid: isVoid,
     payMethod: payMethod,
     cashReceivedRp: cashReceivedRp,
-    changeRp: payMethod == payMethodCash
-        ? cashChangeRp(receivedRp: cashReceivedRp, dueRp: grand)
-        : 0,
+    // Kembalian: jalur split meneruskannya terhitung pemanggil
+    // (kelebihan total bayar atas tagihan); jalur tunai tunggal
+    // lama menghitungnya dari uang diterima seperti biasa.
+    changeRp: payments.isNotEmpty
+        ? changeRp
+        : payMethod == payMethodCash
+            ? cashChangeRp(receivedRp: cashReceivedRp, dueRp: grand)
+            : 0,
+    payments: payments,
     pointsRedeemed: pointsRedeemed,
     pointsDiscountRp: pointsDiscountRp,
     pointsEarned: pointsEarned,
@@ -765,6 +871,9 @@ Future<void> insertCompletedOrder(
     'grand_total_rp': order.grandTotalRp,
     'payment_hash': order.paymentHashHex,
     'pay_method': order.payMethod,
+    'payments': order.payments.isEmpty
+        ? null
+        : jsonEncode(order.payments.map((p) => p.toJson()).toList()),
     'cash_received_rp': order.cashReceivedRp,
     'change_rp': order.changeRp,
     'points_redeemed': order.pointsRedeemed,
@@ -850,9 +959,8 @@ CompletedOrder _orderFromRows(
     grandTotalRp: intOr0(row['grand_total_rp']),
     paymentHashHex: hash is String && hash.isNotEmpty ? hash : null,
     isVoid: row['status'] == 'void',
-    payMethod: method == payMethodCash || method == payMethodQris
-        ? method as String
-        : null,
+    payMethod: method is String && method.isNotEmpty ? method : null,
+    payments: _paymentsFromColumn(row['payments']),
     cashReceivedRp: intOr0(row['cash_received_rp']),
     changeRp: intOr0(row['change_rp']),
     pointsRedeemed: intOr0(row['points_redeemed']),

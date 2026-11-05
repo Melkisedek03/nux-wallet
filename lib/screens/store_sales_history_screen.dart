@@ -31,7 +31,12 @@ class StoreSalesHistoryScreen extends StatefulWidget {
     required this.receiptDataFor,
     this.onVoidApproval,
     this.onVoidSale,
+    this.outletId = '',
   });
+
+  /// ID outlet perangkat (prefix nota Fase B) untuk format
+  /// nomor bill di daftar & detail.
+  final String outletId;
 
   /// Label struk (bahasa aktif) dari layar Mode Toko.
   final StoreReceiptLabels receiptLabels;
@@ -63,6 +68,22 @@ class _StoreSalesHistoryScreenState extends State<StoreSalesHistoryScreen> {
   List<CompletedOrder> _orders = const [];
   bool _loading = true;
 
+  /// Filter tanggal daftar (permintaan NUX 5 Nov 2026):
+  /// bawaan HARI INI — data lama dilihat lewat chip Kemarin
+  /// atau pemilih tanggal, bukan menumpuk di daftar utama.
+  DateTime _filterDay = DateTime.now();
+
+  List<CompletedOrder> get _visibleOrders => [
+        for (final o in _orders)
+          if (o.time.year == _filterDay.year &&
+              o.time.month == _filterDay.month &&
+              o.time.day == _filterDay.day)
+            o,
+      ];
+
+  bool _isDay(DateTime day, DateTime other) =>
+      day.year == other.year && day.month == other.month && day.day == other.day;
+
   @override
   void initState() {
     super.initState();
@@ -81,13 +102,15 @@ class _StoreSalesHistoryScreenState extends State<StoreSalesHistoryScreen> {
   }
 
   String _billTitle(CompletedOrder record) => record.billNo > 0
-      ? formatBillNo(record.time, record.billNo)
+      ? formatBillNo(record.time, record.billNo, outletId: widget.outletId)
       : receiptTimestampText(record.time);
 
   String _methodLabel(CompletedOrder record) {
     final l10n = context.l10n;
     if (record.payMethod == payMethodCash) return l10n.storeCash;
     if (record.payMethod == payMethodQris) return l10n.storeQris;
+    if (record.payMethod == payMethodSplit) return l10n.storeMethodSplit;
+    if (record.payMethod != null) return record.payMethod!;
     return record.grandTotalRp == 0 ? l10n.storeReceiptPromo : '—';
   }
 
@@ -124,21 +147,74 @@ class _StoreSalesHistoryScreenState extends State<StoreSalesHistoryScreen> {
           ? const Center(
               child: CircularProgressIndicator(color: Color(0xFF34D399)),
             )
-          : _orders.isEmpty
-              ? Center(
-                  child: Text(
-                    l10n.storeSalesHistoryEmpty,
-                    style: TextStyle(color: context.palette.muted),
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Bar filter tanggal: Hari Ini / Kemarin /
+                // pilih tanggal bebas.
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 14, 18, 4),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ChoiceChip(
+                        label: Text(l10n.storeFilterToday),
+                        selected: _isDay(_filterDay, DateTime.now()),
+                        onSelected: (_) =>
+                            setState(() => _filterDay = DateTime.now()),
+                      ),
+                      ChoiceChip(
+                        label: Text(l10n.storeFilterYesterday),
+                        selected: _isDay(
+                          _filterDay,
+                          DateTime.now().subtract(const Duration(days: 1)),
+                        ),
+                        onSelected: (_) => setState(
+                          () => _filterDay =
+                              DateTime.now().subtract(const Duration(days: 1)),
+                        ),
+                      ),
+                      ActionChip(
+                        avatar: const Icon(Icons.calendar_month_rounded,
+                            size: 17),
+                        label: Text(
+                          '${_filterDay.day.toString().padLeft(2, '0')}/'
+                          '${_filterDay.month.toString().padLeft(2, '0')}/'
+                          '${_filterDay.year}',
+                        ),
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: _filterDay,
+                            firstDate: DateTime(2025),
+                            lastDate: DateTime.now(),
+                          );
+                          if (picked != null && mounted) {
+                            setState(() => _filterDay = picked);
+                          }
+                        },
+                      ),
+                    ],
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-                  itemCount: _orders.length,
-                  itemBuilder: (context, i) {
-                    final record = _orders[i];
-                    return _saleRow(context, record);
-                  },
                 ),
+                Expanded(
+                  child: _visibleOrders.isEmpty
+                      ? Center(
+                          child: Text(
+                            l10n.storeSalesHistoryEmpty,
+                            style: TextStyle(color: context.palette.muted),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+                          itemCount: _visibleOrders.length,
+                          itemBuilder: (context, i) =>
+                              _saleRow(context, _visibleOrders[i]),
+                        ),
+                ),
+              ],
+            ),
     );
   }
 

@@ -2828,6 +2828,162 @@ abstract class AppLocalizations {
   /// **'Kasir'**
   String get storeReceiptCashier;
 
+  /// No description provided for @storePayAmountLabel.
+  ///
+  /// In id, this message translates to:
+  /// **'Jumlah'**
+  String get storePayAmountLabel;
+
+  /// No description provided for @storeAddPayMethod.
+  ///
+  /// In id, this message translates to:
+  /// **'Tambah Metode Bayar'**
+  String get storeAddPayMethod;
+
+  /// No description provided for @storeNonCashOverNote.
+  ///
+  /// In id, this message translates to:
+  /// **'Metode non-tunai tidak boleh melebihi sisa tagihan.'**
+  String get storeNonCashOverNote;
+
+  /// No description provided for @storeMethodSplit.
+  ///
+  /// In id, this message translates to:
+  /// **'Gabungan'**
+  String get storeMethodSplit;
+
+  /// No description provided for @storeFilterToday.
+  ///
+  /// In id, this message translates to:
+  /// **'Hari Ini'**
+  String get storeFilterToday;
+
+  /// No description provided for @storeFilterYesterday.
+  ///
+  /// In id, this message translates to:
+  /// **'Kemarin'**
+  String get storeFilterYesterday;
+
+  /// No description provided for @storeReportIncome.
+  ///
+  /// In id, this message translates to:
+  /// **'Income'**
+  String get storeReportIncome;
+
+  /// No description provided for @storeReportOpeningFloat.
+  ///
+  /// In id, this message translates to:
+  /// **'Modal'**
+  String get storeReportOpeningFloat;
+
+  /// No description provided for @storeReportCashPosition.
+  ///
+  /// In id, this message translates to:
+  /// **'Posisi Tunai'**
+  String get storeReportCashPosition;
+
+  /// No description provided for @storeReportHeldInfo.
+  ///
+  /// In id, this message translates to:
+  /// **'Order Ditahan'**
+  String get storeReportHeldInfo;
+
+  /// No description provided for @storeReportHeldTotal.
+  ///
+  /// In id, this message translates to:
+  /// **'Total Order Ditahan'**
+  String get storeReportHeldTotal;
+
+  /// No description provided for @storeOpeningFloatTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Modal Awal Shift'**
+  String get storeOpeningFloatTitle;
+
+  /// No description provided for @storeOpeningFloatHint.
+  ///
+  /// In id, this message translates to:
+  /// **'Uang tunai di laci saat shift dibuka (untuk kembalian). Boleh Rp0 — hanya pembayaran tunai yang menambah posisi laci; metode non-tunai tidak memengaruhinya.'**
+  String get storeOpeningFloatHint;
+
+  /// No description provided for @storeOpeningFloatLabel.
+  ///
+  /// In id, this message translates to:
+  /// **'Modal di Laci'**
+  String get storeOpeningFloatLabel;
+
+  /// No description provided for @storePayMethodsTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Metode Bayar Non-Tunai'**
+  String get storePayMethodsTitle;
+
+  /// No description provided for @storePayMethodsHint.
+  ///
+  /// In id, this message translates to:
+  /// **'Metode yang ditawarkan pada dropdown halaman pembayaran (Tunai selalu tersedia). Ketuk × untuk menghapus.'**
+  String get storePayMethodsHint;
+
+  /// No description provided for @storePayMethodNameLabel.
+  ///
+  /// In id, this message translates to:
+  /// **'Nama Metode Baru'**
+  String get storePayMethodNameLabel;
+
+  /// No description provided for @storePayMethodAdd.
+  ///
+  /// In id, this message translates to:
+  /// **'Tambah'**
+  String get storePayMethodAdd;
+
+  /// No description provided for @storeTelegramTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Kirim Laporan via Telegram'**
+  String get storeTelegramTitle;
+
+  /// No description provided for @storeTelegramHint.
+  ///
+  /// In id, this message translates to:
+  /// **'Laporan shift terkirim otomatis ke Telegram saat shift ditutup — langsung dari aplikasi, tanpa server perantara. Buat bot lewat @BotFather, isi token botnya dan ID chat tujuan di bawah.'**
+  String get storeTelegramHint;
+
+  /// No description provided for @storeTelegramTokenLabel.
+  ///
+  /// In id, this message translates to:
+  /// **'Token Bot Telegram'**
+  String get storeTelegramTokenLabel;
+
+  /// No description provided for @storeTelegramTokenHint.
+  ///
+  /// In id, this message translates to:
+  /// **'Dari BotFather, contoh: 123456789:AA…'**
+  String get storeTelegramTokenHint;
+
+  /// No description provided for @storeTelegramChatLabel.
+  ///
+  /// In id, this message translates to:
+  /// **'ID Chat Tujuan'**
+  String get storeTelegramChatLabel;
+
+  /// No description provided for @storeTelegramChatHint.
+  ///
+  /// In id, this message translates to:
+  /// **'ID numerik chat atau grup tujuan laporan'**
+  String get storeTelegramChatHint;
+
+  /// No description provided for @storeTelegramSent.
+  ///
+  /// In id, this message translates to:
+  /// **'Laporan shift terkirim ke Telegram.'**
+  String get storeTelegramSent;
+
+  /// No description provided for @storeTelegramFailed.
+  ///
+  /// In id, this message translates to:
+  /// **'Laporan Telegram gagal terkirim — periksa koneksi & pengaturannya.'**
+  String get storeTelegramFailed;
+
   /// No description provided for @staticCodeLabelTitle.
   ///
   /// In id, this message translates to:

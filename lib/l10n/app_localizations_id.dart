@@ -1528,6 +1528,90 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeReceiptCashier => 'Kasir';
 
   @override
+  String get storePayAmountLabel => 'Jumlah';
+
+  @override
+  String get storeAddPayMethod => 'Tambah Metode Bayar';
+
+  @override
+  String get storeNonCashOverNote =>
+      'Metode non-tunai tidak boleh melebihi sisa tagihan.';
+
+  @override
+  String get storeMethodSplit => 'Gabungan';
+
+  @override
+  String get storeFilterToday => 'Hari Ini';
+
+  @override
+  String get storeFilterYesterday => 'Kemarin';
+
+  @override
+  String get storeReportIncome => 'Income';
+
+  @override
+  String get storeReportOpeningFloat => 'Modal';
+
+  @override
+  String get storeReportCashPosition => 'Posisi Tunai';
+
+  @override
+  String get storeReportHeldInfo => 'Order Ditahan';
+
+  @override
+  String get storeReportHeldTotal => 'Total Order Ditahan';
+
+  @override
+  String get storeOpeningFloatTitle => 'Modal Awal Shift';
+
+  @override
+  String get storeOpeningFloatHint =>
+      'Uang tunai di laci saat shift dibuka (untuk kembalian). Boleh Rp0 — hanya pembayaran tunai yang menambah posisi laci; metode non-tunai tidak memengaruhinya.';
+
+  @override
+  String get storeOpeningFloatLabel => 'Modal di Laci';
+
+  @override
+  String get storePayMethodsTitle => 'Metode Bayar Non-Tunai';
+
+  @override
+  String get storePayMethodsHint =>
+      'Metode yang ditawarkan pada dropdown halaman pembayaran (Tunai selalu tersedia). Ketuk × untuk menghapus.';
+
+  @override
+  String get storePayMethodNameLabel => 'Nama Metode Baru';
+
+  @override
+  String get storePayMethodAdd => 'Tambah';
+
+  @override
+  String get storeTelegramTitle => 'Kirim Laporan via Telegram';
+
+  @override
+  String get storeTelegramHint =>
+      'Laporan shift terkirim otomatis ke Telegram saat shift ditutup — langsung dari aplikasi, tanpa server perantara. Buat bot lewat @BotFather, isi token botnya dan ID chat tujuan di bawah.';
+
+  @override
+  String get storeTelegramTokenLabel => 'Token Bot Telegram';
+
+  @override
+  String get storeTelegramTokenHint => 'Dari BotFather, contoh: 123456789:AA…';
+
+  @override
+  String get storeTelegramChatLabel => 'ID Chat Tujuan';
+
+  @override
+  String get storeTelegramChatHint =>
+      'ID numerik chat atau grup tujuan laporan';
+
+  @override
+  String get storeTelegramSent => 'Laporan shift terkirim ke Telegram.';
+
+  @override
+  String get storeTelegramFailed =>
+      'Laporan Telegram gagal terkirim — periksa koneksi & pengaturannya.';
+
+  @override
   String get staticCodeLabelTitle => 'Label Kode Bayar';
 
   @override

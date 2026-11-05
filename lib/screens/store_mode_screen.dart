@@ -12,6 +12,7 @@ import '../services/print_service.dart';
 import '../services/store_catalog.dart';
 import '../services/store_customers.dart';
 import '../services/store_draft.dart';
+import '../services/store_telegram.dart';
 import '../services/store_hold.dart';
 import '../services/store_operators.dart';
 import '../services/store_order_history.dart';
@@ -24,6 +25,7 @@ import '../utils/coin_alert.dart';
 import '../utils/format.dart';
 import '../utils/friendly_error.dart';
 import '../utils/receive_watch.dart';
+import '../utils/rupiah_input.dart';
 import '../utils/store_migration.dart';
 import '../utils/store_mode_logic.dart';
 import '../utils/store_receipt.dart';
@@ -440,14 +442,126 @@ class _StoreModeScreenState extends State<StoreModeScreen>
   // Shift kasir (alur NUX: Open Shift dulu, Close Shift penutup)
   // ------------------------------------------------------------------
 
+  /// Dialog input Modal awal laci saat membuka shift
+  /// (permintaan NUX 5 Nov 2026): kolom besar/tebal berformat
+  /// ribuan saat mengetik + kartu pecahan akumulatif seperti
+  /// halaman pembayaran. Bawaan Rp0 — batal mengembalikan
+  /// null (shift tidak jadi dibuka).
+  Future<int?> _promptOpeningFloat() async {
+    final l10n = context.l10n;
+    final controller = TextEditingController(text: '0');
+    var value = 0;
+    final result = await showDialog<int>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) {
+          void setValue(int v) {
+            value = v;
+            controller.text = formatRupiahInput(
+              v,
+              thousandsSep: l10n.localeName == 'en' ? ',' : '.',
+            );
+            setLocal(() {});
+          }
+
+          return AlertDialog(
+            backgroundColor: ctx.palette.card,
+            title: Text(l10n.storeOpeningFloatTitle),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    l10n.storeOpeningFloatHint,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: ctx.palette.muted,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      RupiahAmountFormatter(
+                        thousandsSep: l10n.localeName == 'en' ? ',' : '.',
+                      ),
+                    ],
+                    onChanged: (v) =>
+                        setLocal(() => value = parseRupiahAmount(v)),
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: l10n.storeOpeningFloatLabel,
+                      prefixText: 'Rp ',
+                      filled: true,
+                      fillColor: ctx.palette.cardAlt,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ActionChip(
+                        label: const Text('Rp0'),
+                        onPressed: () => setValue(0),
+                      ),
+                      for (final denom in const [
+                        5000,
+                        10000,
+                        20000,
+                        50000,
+                        100000,
+                      ])
+                        ActionChip(
+                          label: Text('+${formatRupiah(denom)}'),
+                          onPressed: () => setValue(
+                            cashAddDenomRp(currentRp: value, denomRp: denom),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(l10n.cancel),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, value),
+                child: Text(l10n.storeShiftOpen),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    controller.dispose();
+    return result;
+  }
+
   Future<void> _openShiftAction() async {
     if (_openShift != null) return;
+    final openingFloat = await _promptOpeningFloat();
+    if (openingFloat == null || !mounted) return;
     final me = _operator;
     final shift = StoreShift(
       openedAt: DateTime.now(),
       era: storeEraRupiah,
       operatorId: me?.id ?? '',
       operatorName: me?.name ?? '',
+      openingFloatRp: openingFloat,
     );
     final next = [..._shifts, shift];
     await _shiftStore.save(next);
@@ -464,6 +578,43 @@ class _StoreModeScreenState extends State<StoreModeScreen>
     });
   }
 
+  /// Posisi tunai laci untuk [shift] dari [records]: modal
+  /// awal + tunai yang diterapkan ke tagihan dalam jendela
+  /// shift (non-tunai tidak ikut — permintaan NUX 5 Nov
+  /// 2026).
+  ({int cashSalesRp, int positionRp}) _shiftCashPosition(
+    StoreShift shift,
+    List<CompletedOrder> records,
+  ) {
+    var cashSales = 0;
+    for (final record in records) {
+      if (!record.isRupiahEra || record.isVoid) continue;
+      if (!shift.containsTime(record.time)) continue;
+      cashSales += cashAppliedRpOf(record);
+    }
+    return (
+      cashSalesRp: cashSales,
+      positionRp: shift.openingFloatRp + cashSales,
+    );
+  }
+
+  /// Blok teks posisi tunai untuk dialog konfirmasi tutup
+  /// shift: Modal, tunai terjual, posisi terakhir di laci.
+  Widget _cashPositionText(
+    BuildContext ctx,
+    StoreShift shift,
+    List<CompletedOrder> records,
+  ) {
+    final l10n = ctx.l10n;
+    final pos = _shiftCashPosition(shift, records);
+    return Text(
+      '${l10n.storeReportOpeningFloat}: Rp${_fmtRp(shift.openingFloatRp)}\n'
+      '${l10n.storeReportCash}: Rp${_fmtRp(pos.cashSalesRp)}\n'
+      '${l10n.storeReportCashPosition}: Rp${_fmtRp(pos.positionRp)}',
+      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+    );
+  }
+
   /// Tutup shift. Terhalang sesaat selama penerbitan poin
   /// berjalan (supaya status record tidak berpacu dengan
   /// penutupan). Sesudah bersih, tutup berhasil dan laporan
@@ -478,6 +629,9 @@ class _StoreModeScreenState extends State<StoreModeScreen>
       ).showSnackBar(SnackBar(content: Text(l10n.storeCloseShiftBlocked)));
       return;
     }
+    // Record untuk posisi tunai di dialog konfirmasi.
+    final records = await _historyStore.load();
+    if (!mounted) return;
     if (_heldOrders.isNotEmpty) {
       // Peringatan khusus (keputusan NUX 3 Nov 2026): masih ada
       // pesanan ditahan yang BELUM dibayar — kasir harus sadar
@@ -491,11 +645,19 @@ class _StoreModeScreenState extends State<StoreModeScreen>
         builder: (ctx) => AlertDialog(
           backgroundColor: ctx.palette.card,
           title: Text(l10n.storeCloseShiftHeldTitle),
-          content: Text(
-            l10n.storeCloseShiftHeldBody(
-              _heldOrders.length,
-              'Rp${_fmtRp(heldTotal)}',
-            ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.storeCloseShiftHeldBody(
+                  _heldOrders.length,
+                  'Rp${_fmtRp(heldTotal)}',
+                ),
+              ),
+              const SizedBox(height: 12),
+              _cashPositionText(ctx, shift, records),
+            ],
           ),
           actions: [
             TextButton(
@@ -518,7 +680,15 @@ class _StoreModeScreenState extends State<StoreModeScreen>
       builder: (ctx) => AlertDialog(
         backgroundColor: ctx.palette.card,
         title: Text(l10n.storeCloseShiftConfirmTitle),
-        content: Text(l10n.storeCloseShiftConfirmBody),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.storeCloseShiftConfirmBody),
+            const SizedBox(height: 12),
+            _cashPositionText(ctx, shift, records),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -533,6 +703,61 @@ class _StoreModeScreenState extends State<StoreModeScreen>
     );
     if (confirmed != true || !mounted) return;
     await _performCloseShift(shift);
+  }
+
+  /// Susun ringkasan shift tertutup & kirim ke Telegram
+  /// owner (Bot API, tanpa server perantara). Isi = angka
+  /// laporan shift yang sama: periode, kasir, invoice,
+  /// income, per metode, modal & posisi tunai, VOID, order
+  /// ditahan, poin. Snack memberi tahu hasil kirimnya.
+  Future<void> _sendShiftReportTelegram(StoreShift closed) async {
+    final l10n = context.l10n;
+    final records = await _historyStore.load();
+    final summary = aggregateShiftSales(
+      records,
+      from: closed.openedAt,
+      to: closed.windowEnd(DateTime.now()),
+    );
+    final pos = _shiftCashPosition(closed, records);
+    final heldInWindow = _heldOrders
+        .where(
+          (h) =>
+              !h.heldAt.isBefore(closed.openedAt) &&
+              h.heldAt.isBefore(closed.windowEnd(DateTime.now())),
+        )
+        .toList();
+    final lines = <String>[
+      '📊 ${l10n.storeReportSummaryTitle} — '
+          '${_settings.storeName.isEmpty ? l10n.storeMode : _settings.storeName}',
+      formatShiftPeriod(
+        openedAt: closed.openedAt,
+        closedAt: closed.closedAt,
+        locale: l10n.localeName.startsWith('en') ? 'en' : 'id',
+        stillOpenWord: l10n.storeShiftStillOpen,
+      ),
+      if (closed.operatorName.isNotEmpty)
+        '${l10n.storeReceiptCashier}: ${closed.operatorName}',
+      '${l10n.storeReportInvoices}: ${summary.invoiceCount}',
+      '${l10n.storeReportIncome}: Rp${_fmtRp(summary.incomeRp)}',
+      for (final entry in summary.methodTotalsRp.entries)
+        '${entry.key == payMethodCash ? l10n.storeCash : entry.key}: '
+            'Rp${_fmtRp(entry.value)}',
+      '${l10n.storeReportOpeningFloat}: Rp${_fmtRp(closed.openingFloatRp)}',
+      '${l10n.storeReportCashPosition}: Rp${_fmtRp(pos.positionRp)}',
+      'VOID: ${summary.voids.count}',
+      '${l10n.storeReportHeldInfo}: ${heldInWindow.length} '
+          '(Rp${_fmtRp(heldInWindow.fold(0, (s, h) => s + h.grandTotalRp))})',
+      if (summary.pointsIssued > 0 || summary.pointsRedeemed > 0)
+        '${l10n.storeReportPointsIssued}: ${summary.pointsIssued} • '
+            '${l10n.storeReportPointsRedeemed}: ${summary.pointsRedeemed}',
+    ];
+    final sent = await sendTelegramMessage(
+      botToken: _settings.telegramBotToken,
+      chatId: _settings.telegramChatId,
+      text: lines.join('\n'),
+    );
+    if (!mounted) return;
+    _snack(sent ? l10n.storeTelegramSent : l10n.storeTelegramFailed);
   }
 
   /// Eksekusi tutup shift sesudah semua pagar & konfirmasi
@@ -556,6 +781,13 @@ class _StoreModeScreenState extends State<StoreModeScreen>
       _shifts = next;
       _openShift = null;
     });
+    // Kirim laporan ke Telegram owner bila dikonfigurasi
+    // (permintaan NUX 5 Nov 2026): berjalan di latar, hasil
+    // diberitahukan lewat snack — kegagalannya tidak
+    // mengubah fakta shift yang sudah tertutup.
+    if (_settings.telegramConfigured) {
+      _sendShiftReportTelegram(closed);
+    }
     final view = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1932,6 +2164,7 @@ class _StoreModeScreenState extends State<StoreModeScreen>
               _receiptData(record, printerSettings, reprintAt: reprintAt),
           onVoidApproval: () => _requireAdminApproval('sale-void'),
           onVoidSale: _voidSettledSale,
+          outletId: _outletId,
         ),
       ),
     );
@@ -1951,7 +2184,7 @@ class _StoreModeScreenState extends State<StoreModeScreen>
     final me = _operator;
     if (me != null) {
       final bill = record.billNo > 0
-          ? formatBillNo(record.time, record.billNo)
+          ? formatBillNo(record.time, record.billNo, outletId: _outletId)
           : record.id;
       await _auditStore.append(
         operator: me,
@@ -3295,10 +3528,29 @@ class _StorePaymentPage extends StatefulWidget {
   State<_StorePaymentPage> createState() => _StorePaymentPageState();
 }
 
+/// Satu baris pembayaran pada halaman penyelesaian: metode +
+/// jumlah yang diketik kasir. Jumlah TUNAI adalah uang yang
+/// diserahkan (boleh melebihi sisa — kelebihannya kembalian);
+/// jumlah non-tunai harus tepat (tidak boleh melebihi sisa
+/// tagihan). Alokasi jumlah TERAPAN per metode dihitung saat
+/// penyelesaian di _settle.
+class _PayEntry {
+  String method;
+  final TextEditingController controller = TextEditingController();
+  int amountRp = 0;
+
+  _PayEntry(this.method);
+
+  bool get isCash => method == payMethodCash;
+}
+
 class _StorePaymentPageState extends State<_StorePaymentPage> {
   final _pointsController = TextEditingController();
-  final _cashController = TextEditingController();
   final _customerController = TextEditingController();
+
+  /// Baris-baris pembayaran bill ini (split payment —
+  /// permintaan NUX 5 Nov 2026). Mulai dari satu baris Tunai.
+  final List<_PayEntry> _entries = [_PayEntry(payMethodCash)];
   // Penukaran poin model JURNAL: offer pelanggan yang terpindai
   // + saldo jurnalnya di toko ini. Klaim yang diterapkan
   // (_redeemApplied) mengunci _redeemPoints sebagai potongan;
@@ -3313,8 +3565,25 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
   bool _redeemApplied = false;
   int _redeemPoints = 0;
   String? _redeemError;
-  String _method = payMethodCash;
-  int _cashRp = 0;
+
+  /// Total yang sudah diketik kasir di semua baris bayar.
+  int get _paidTotalRp => _entries.fold(0, (sum, e) => sum + e.amountRp);
+
+  /// Total baris NON-tunai — tidak boleh melebihi sisa
+  /// tagihan (non-tunai tidak mengenal kembalian).
+  int get _nonCashTotalRp => _entries
+      .where((e) => !e.isCash)
+      .fold(0, (sum, e) => sum + e.amountRp);
+
+  /// Penyelesaian sah: total menutup sisa tagihan dan bagian
+  /// non-tunai tidak melampaui sisa (kelebihan hanya boleh
+  /// berasal dari tunai = kembalian).
+  bool get _canSettle =>
+      _remainingRp > 0 &&
+      _paidTotalRp >= _remainingRp &&
+      _nonCashTotalRp <= _remainingRp;
+
+  int get _changeRp => _paidTotalRp - _remainingRp;
 
   int get _dueBeforePoints =>
       orderDueRp(widget.lines, widget.orderDiscount);
@@ -3356,10 +3625,16 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
   @override
   void dispose() {
     _pointsController.dispose();
-    _cashController.dispose();
+    for (final entry in _entries) {
+      entry.controller.dispose();
+    }
     _customerController.dispose();
     super.dispose();
   }
+
+  /// Pemisah ribuan kolom nominal mengikuti locale aplikasi.
+  String get _thousandsSep =>
+      context.l10n.localeName == 'en' ? ',' : '.';
 
   // ---------------- Penukaran poin (jurnal toko) ----------------
 
@@ -3454,16 +3729,48 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
 
   // ---------------- Penyelesaian ----------------
 
-  void _settle(String? method) {
+  /// Selesaikan pembayaran dari baris-baris bayar saat ini:
+  /// alokasikan jumlah TERAPAN per metode (non-tunai penuh
+  /// lebih dulu, tunai menutup sisanya; kelebihan tunai =
+  /// kembalian dan tidak tercatat sebagai pembayaran).
+  /// Promosi Rp0 (sisa 0) menyelesaikan tanpa pembayaran.
+  void _settle() {
     final now = DateTime.now();
+    final payments = <OrderPayment>[];
+    var tenderedCash = 0;
+    if (_remainingRp > 0) {
+      var left = _remainingRp;
+      for (final entry in _entries) {
+        if (entry.isCash) tenderedCash += entry.amountRp;
+      }
+      for (final entry in _entries.where((e) => !e.isCash)) {
+        if (entry.amountRp <= 0) continue;
+        payments.add(
+          OrderPayment(method: entry.method, amountRp: entry.amountRp),
+        );
+        left -= entry.amountRp;
+      }
+      for (final entry in _entries.where((e) => e.isCash)) {
+        if (entry.amountRp <= 0 || left <= 0) continue;
+        final applied = entry.amountRp < left ? entry.amountRp : left;
+        payments.add(OrderPayment(method: payMethodCash, amountRp: applied));
+        left -= applied;
+      }
+    }
     final record = buildCompletedOrder(
       id: now.microsecondsSinceEpoch.toString(),
       time: now,
       lines: widget.lines,
       orderDiscount: widget.orderDiscount,
       paymentHashHex: null,
-      payMethod: method,
-      cashReceivedRp: method == payMethodCash ? _cashRp : 0,
+      payMethod: payments.isEmpty
+          ? null
+          : payments.length == 1
+              ? payments.single.method
+              : payMethodSplit,
+      payments: payments,
+      cashReceivedRp: tenderedCash,
+      changeRp: _remainingRp > 0 && _changeRp > 0 ? _changeRp : 0,
       pointsRedeemed: _redeemApplied ? _redeemPoints : 0,
       pointsRedeemOffer: _redeemApplied ? _redeemOffer : null,
       pointsDiscountRp: _pointsDiscountRp,
@@ -3515,15 +3822,57 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
     );
   }
 
-  void _setCash(int value) {
-    _cashController.text = value.toString();
-    setState(() => _cashRp = value);
+  /// Baris tunai pertama (dibuat bila belum ada) — sasaran
+  /// kartu pecahan & tombol Uang Pas seperti perilaku lama.
+  _PayEntry _cashEntry() {
+    final existing = _entries.where((e) => e.isCash).firstOrNull;
+    if (existing != null) return existing;
+    final entry = _PayEntry(payMethodCash);
+    _entries.insert(0, entry);
+    return entry;
   }
+
+  void _setEntryAmount(_PayEntry entry, int value) {
+    entry.controller.text = formatRupiahInput(
+      value,
+      thousandsSep: _thousandsSep,
+    );
+    setState(() => entry.amountRp = value);
+  }
+
+  void _setCash(int value) => _setEntryAmount(_cashEntry(), value);
 
   /// Kartu pecahan: tambahkan pecahan ke uang diterima saat ini
   /// (akumulasi di atas ketikan manual maupun ketukan sebelumnya).
-  void _addCash(int denom) =>
-      _setCash(cashAddDenomRp(currentRp: _cashRp, denomRp: denom));
+  void _addCash(int denom) => _setCash(
+        cashAddDenomRp(currentRp: _cashEntry().amountRp, denomRp: denom),
+      );
+
+  /// Tambah baris bayar baru: metode pertama yang belum
+  /// dipakai (Tunai selalu boleh walau sudah ada — digabung
+  /// saat alokasi), terisi sisa yang belum tertutup.
+  void _addEntry() {
+    final used = _entries.map((e) => e.method).toSet();
+    final next = widget.settings.paymentMethods
+        .where((m) => !used.contains(m))
+        .firstOrNull;
+    final entry = _PayEntry(next ?? payMethodCash);
+    final left = _remainingRp - _paidTotalRp;
+    if (left > 0) {
+      entry.amountRp = left;
+      entry.controller.text = formatRupiahInput(
+        left,
+        thousandsSep: _thousandsSep,
+      );
+    }
+    setState(() => _entries.add(entry));
+  }
+
+  void _removeEntry(_PayEntry entry) {
+    if (_entries.length <= 1) return;
+    entry.controller.dispose();
+    setState(() => _entries.remove(entry));
+  }
 
   // ---------------- Build ----------------
 
@@ -3616,7 +3965,7 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
                   ),
                 const SizedBox(height: 10),
                 ElevatedButton(
-                  onPressed: () => _settle(null),
+                  onPressed: _settle,
                   style: _settleButtonStyle(),
                   child: Text(
                     l10n.storeSettlePromo,
@@ -3627,126 +3976,159 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
                   ),
                 ),
               ] else ...[
-                SegmentedButton<String>(
-                  segments: [
-                    ButtonSegment(
-                      value: payMethodCash,
-                      icon: const Icon(Icons.payments_rounded, size: 18),
-                      label: Text(l10n.storeCash),
-                    ),
-                    ButtonSegment(
-                      value: payMethodQris,
-                      icon: const Icon(Icons.qr_code_2_rounded, size: 18),
-                      label: Text(l10n.storeQris),
-                    ),
-                  ],
-                  selected: {_method},
-                  onSelectionChanged: (s) =>
-                      setState(() => _method = s.first),
-                ),
-                const SizedBox(height: 14),
-                if (_method == payMethodCash) ...[
-                  TextField(
-                    controller: _cashController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
-                    onChanged: (v) =>
-                        setState(() => _cashRp = int.tryParse(v) ?? 0),
-                    decoration: InputDecoration(
-                      labelText: l10n.storeCashReceived,
-                      prefixText: 'Rp ',
-                      filled: true,
-                      fillColor: context.palette.cardAlt,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+                // Baris-baris pembayaran (split payment):
+                // tiap baris = dropdown metode + kolom jumlah.
+                // Kolom jumlah besar & tebal dengan format
+                // ribuan saat mengetik (permintaan NUX).
+                for (var i = 0; i < _entries.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 10),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      ActionChip(
-                        label: const Text('Rp0'),
-                        onPressed: () => _setCash(0),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: context.palette.cardAlt,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: DropdownButton<String>(
+                          value: _entries[i].method,
+                          underline: const SizedBox.shrink(),
+                          items: [
+                            DropdownMenuItem(
+                              value: payMethodCash,
+                              child: Text(l10n.storeCash),
+                            ),
+                            for (final m in widget.settings.paymentMethods)
+                              DropdownMenuItem(value: m, child: Text(m)),
+                          ],
+                          onChanged: (v) {
+                            if (v == null) return;
+                            setState(() => _entries[i].method = v);
+                          },
+                        ),
                       ),
-                      ActionChip(
-                        label: Text(l10n.storeCashExact),
-                        onPressed: () => _setCash(remaining),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: _entries[i].controller,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            RupiahAmountFormatter(
+                              thousandsSep: _thousandsSep,
+                            ),
+                          ],
+                          onChanged: (v) => setState(
+                            () => _entries[i].amountRp =
+                                parseRupiahAmount(v),
+                          ),
+                          style: const TextStyle(
+                            fontSize: 21,
+                            fontWeight: FontWeight.w800,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: _entries[i].isCash
+                                ? l10n.storeCashReceived
+                                : l10n.storePayAmountLabel,
+                            prefixText: 'Rp ',
+                            filled: true,
+                            fillColor: context.palette.cardAlt,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
                       ),
-                      for (final denom in const [
-                        5000,
-                        10000,
-                        20000,
-                        50000,
-                        100000,
-                      ])
-                        ActionChip(
-                          label: Text('+${formatRupiah(denom)}'),
-                          onPressed: () => _addCash(denom),
+                      if (_entries.length > 1)
+                        IconButton(
+                          onPressed: () => _removeEntry(_entries[i]),
+                          icon: const Icon(Icons.remove_circle_outline,
+                              size: 20),
                         ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  if (_cashRp >= remaining && _cashRp > 0)
-                    Text(
-                      '${l10n.storeChange} Rp${formatRupiah(cashChangeRp(receivedRp: _cashRp, dueRp: remaining))}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF34D399),
-                      ),
-                    )
-                  else if (_cashRp > 0)
-                    Text(
-                      l10n.storeCashShort(
-                        formatRupiah(remaining - _cashRp),
-                      ),
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Colors.redAccent,
-                      ),
-                    ),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed:
-                        cashCanSettle(receivedRp: _cashRp, dueRp: remaining)
-                        ? () => _settle(payMethodCash)
-                        : null,
-                    style: _settleButtonStyle(),
-                    child: Text(
-                      l10n.storeSettle,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ] else ...[
-                  Text(
-                    l10n.storeQrisNote,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: context.palette.muted,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: () => _settle(payMethodQris),
-                    style: _settleButtonStyle(),
-                    child: Text(
-                      l10n.storeSettleQris,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
                 ],
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: _addEntry,
+                    icon: const Icon(Icons.add_circle_outline, size: 19),
+                    label: Text(l10n.storeAddPayMethod),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ActionChip(
+                      label: const Text('Rp0'),
+                      onPressed: () => _setCash(0),
+                    ),
+                    ActionChip(
+                      label: Text(l10n.storeCashExact),
+                      onPressed: () => _setCash(
+                        remaining - _nonCashTotalRp < 0
+                            ? 0
+                            : remaining - _nonCashTotalRp,
+                      ),
+                    ),
+                    for (final denom in const [
+                      5000,
+                      10000,
+                      20000,
+                      50000,
+                      100000,
+                    ])
+                      ActionChip(
+                        label: Text('+${formatRupiah(denom)}'),
+                        onPressed: () => _addCash(denom),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                if (_nonCashTotalRp > remaining)
+                  Text(
+                    l10n.storeNonCashOverNote,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.redAccent,
+                    ),
+                  )
+                else if (_canSettle)
+                  Text(
+                    _changeRp > 0
+                        ? '${l10n.storeChange} Rp${formatRupiah(_changeRp)}'
+                        : l10n.storeCashExact,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF34D399),
+                    ),
+                  )
+                else if (_paidTotalRp > 0)
+                  Text(
+                    l10n.storeCashShort(
+                      formatRupiah(remaining - _paidTotalRp),
+                    ),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.redAccent,
+                    ),
+                  ),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  onPressed: _canSettle ? _settle : null,
+                  style: _settleButtonStyle(),
+                  child: Text(
+                    l10n.storeSettle,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
               ],
               if (_earnedPreview > 0) ...[
                 const SizedBox(height: 14),

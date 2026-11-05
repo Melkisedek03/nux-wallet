@@ -97,7 +97,7 @@ void main() {
       expect(data.shopCity, 'Jakarta');
       expect(data.dateText, '03/11/2026 13:45');
       expect(data.outletId, '02a3c4');
-      expect(data.billNoText, 'INV261103-0001');
+      expect(data.billNoText, 'INV-02a3c4-261103-0001');
       expect(data.showBillNo, isTrue);
       expect(data.showTokenNo, isTrue);
     });
@@ -151,7 +151,7 @@ void main() {
         'Pelanggan:${' ' * 11}Advika Mate',
         '-' * 32,
         'Tanggal:  03/11/2026 13:45',
-        'No. Bill: INV261103-0001',
+        'No. Bill: INV-02a3c4-261103-0001',
         'Order/Outlet: 15/02a3c4',
         '-' * 32,
         'Item${' ' * 22}Jumlah',
@@ -410,6 +410,11 @@ void main() {
         'tumbuh alami di atas 9999', () {
       final d = DateTime(2026, 11, 3, 13, 45);
       expect(formatBillNo(d, 1), 'INV261103-0001');
+      // Fase B: prefix outlet dari node_id perangkat.
+      expect(
+        formatBillNo(d, 1, outletId: '02a3c4'),
+        'INV-02a3c4-261103-0001',
+      );
       // Contoh persis dari permintaan NUX.
       expect(formatBillNo(d, 2), 'INV261103-0002');
       expect(formatBillNo(d, 99), 'INV261103-0099');

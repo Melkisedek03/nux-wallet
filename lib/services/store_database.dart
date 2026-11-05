@@ -89,7 +89,7 @@ class StoreDatabase {
     final path = await (_dbPathProvider?.call() ?? _defaultDbPath());
     final db = await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onUpgrade: (db, oldVersion, newVersion) async {
         // v2: kolom jurnal poin pada orders — offer penerima
         // penerbitan & offer penukaran (penukaran model jurnal
@@ -137,6 +137,17 @@ class StoreDatabase {
             'CREATE INDEX idx_customers_name ON customers(name)',
           );
         }
+        // v5: modal awal laci per shift (opening_float_rp) dan
+        // rincian pembayaran per metode per record (payments,
+        // JSON) untuk split payment — permintaan NUX 5 Nov
+        // 2026.
+        if (oldVersion < 5) {
+          await db.execute(
+            "ALTER TABLE shifts ADD COLUMN opening_float_rp "
+            "INTEGER NOT NULL DEFAULT 0",
+          );
+          await db.execute("ALTER TABLE orders ADD COLUMN payments TEXT");
+        }
       },
       onCreate: (db, version) async {
         await db.execute('''
@@ -160,6 +171,7 @@ CREATE TABLE orders(
   grand_total_rp INTEGER NOT NULL,
   payment_hash TEXT,
   pay_method TEXT,
+  payments TEXT,
   cash_received_rp INTEGER NOT NULL DEFAULT 0,
   change_rp INTEGER NOT NULL DEFAULT 0,
   points_redeemed INTEGER NOT NULL DEFAULT 0,
@@ -201,7 +213,8 @@ CREATE TABLE shifts(
   closed_ms INTEGER,
   era TEXT NOT NULL DEFAULT 'nusan',
   operator_id TEXT NOT NULL DEFAULT '',
-  operator_name TEXT NOT NULL DEFAULT ''
+  operator_name TEXT NOT NULL DEFAULT '',
+  opening_float_rp INTEGER NOT NULL DEFAULT 0
 )''');
         await db.execute('''
 CREATE TABLE store_kv(

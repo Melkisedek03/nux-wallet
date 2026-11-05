@@ -37,6 +37,12 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
   final _maxPercentController = TextEditingController();
   final _footerController = TextEditingController();
   final _thresholdController = TextEditingController();
+  final _methodController = TextEditingController();
+  final _tgTokenController = TextEditingController();
+  final _tgChatController = TextEditingController();
+
+  /// Master metode bayar non-tunai yang sedang disunting.
+  List<String> _methods = const [];
   bool _pointsEnabled = true;
   bool _showToken = true;
   bool _loading = true;
@@ -66,6 +72,9 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
     _maxPercentController.dispose();
     _footerController.dispose();
     _thresholdController.dispose();
+    _methodController.dispose();
+    _tgTokenController.dispose();
+    _tgChatController.dispose();
     super.dispose();
   }
 
@@ -86,6 +95,9 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
       _showToken = settings.showTokenNumber;
       _thresholdController.text =
           settings.adminDiscountThresholdPercent.toString();
+      _methods = List.of(settings.paymentMethods);
+      _tgTokenController.text = settings.telegramBotToken;
+      _tgChatController.text = settings.telegramChatId;
       _loading = false;
     });
   }
@@ -129,6 +141,9 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
       showTokenNumber: _showToken,
       receiptFooterText: _footerController.text.trim(),
       adminDiscountThresholdPercent: threshold,
+      paymentMethods: normalizePaymentMethods(_methods),
+      telegramBotToken: _tgTokenController.text.trim(),
+      telegramChatId: _tgChatController.text.trim(),
     );
     await _store.save(settings);
     if (!mounted) return;
@@ -328,6 +343,115 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
                 Text(
                   l10n.storeSettingsDiscountThresholdHint,
                   style: TextStyle(fontSize: 12, color: context.palette.muted),
+                ),
+                const SizedBox(height: 22),
+                // Master metode bayar non-tunai (permintaan
+                // NUX 5 Nov 2026): tampil sebagai pilihan
+                // dropdown di halaman pembayaran.
+                Text(
+                  l10n.storePayMethodsTitle,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  l10n.storePayMethodsHint,
+                  style: TextStyle(fontSize: 12, color: context.palette.muted),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final method in _methods)
+                      Chip(
+                        label: Text(method),
+                        onDeleted: () =>
+                            setState(() => _methods.remove(method)),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _methodController,
+                        textCapitalization: TextCapitalization.words,
+                        decoration: InputDecoration(
+                          labelText: l10n.storePayMethodNameLabel,
+                          filled: true,
+                          fillColor: context.palette.cardAlt,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton(
+                      onPressed: () {
+                        final name = _methodController.text.trim();
+                        if (name.isEmpty) return;
+                        final next = normalizePaymentMethods([
+                          ..._methods,
+                          name,
+                        ]);
+                        _methodController.clear();
+                        setState(() => _methods = next);
+                      },
+                      child: Text(l10n.storePayMethodAdd),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 22),
+                // Kirim Laporan via Telegram (hanya admin —
+                // layar ini bergerbang PIN): token bot dari
+                // BotFather + id chat owner; laporan terkirim
+                // saat shift ditutup.
+                Text(
+                  l10n.storeTelegramTitle,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  l10n.storeTelegramHint,
+                  style: TextStyle(fontSize: 12, color: context.palette.muted),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _tgTokenController,
+                  decoration: InputDecoration(
+                    labelText: l10n.storeTelegramTokenLabel,
+                    hintText: l10n.storeTelegramTokenHint,
+                    filled: true,
+                    fillColor: context.palette.cardAlt,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _tgChatController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: l10n.storeTelegramChatLabel,
+                    hintText: l10n.storeTelegramChatHint,
+                    filled: true,
+                    fillColor: context.palette.cardAlt,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: 12),

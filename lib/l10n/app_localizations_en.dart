@@ -1527,6 +1527,90 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeReceiptCashier => 'Cashier';
 
   @override
+  String get storePayAmountLabel => 'Amount';
+
+  @override
+  String get storeAddPayMethod => 'Add Payment Method';
+
+  @override
+  String get storeNonCashOverNote =>
+      'Non-cash methods cannot exceed the remaining total.';
+
+  @override
+  String get storeMethodSplit => 'Split';
+
+  @override
+  String get storeFilterToday => 'Today';
+
+  @override
+  String get storeFilterYesterday => 'Yesterday';
+
+  @override
+  String get storeReportIncome => 'Income';
+
+  @override
+  String get storeReportOpeningFloat => 'Float';
+
+  @override
+  String get storeReportCashPosition => 'Cash Position';
+
+  @override
+  String get storeReportHeldInfo => 'Held Orders';
+
+  @override
+  String get storeReportHeldTotal => 'Held Total ORDER';
+
+  @override
+  String get storeOpeningFloatTitle => 'Shift Opening Float';
+
+  @override
+  String get storeOpeningFloatHint =>
+      'Cash in the drawer when the shift opens (for change). Rp0 is fine — only cash payments add to the drawer position; non-cash methods do not affect it.';
+
+  @override
+  String get storeOpeningFloatLabel => 'Drawer Float';
+
+  @override
+  String get storePayMethodsTitle => 'Non-Cash Payment Methods';
+
+  @override
+  String get storePayMethodsHint =>
+      'Methods offered in the payment page dropdown (Cash is always available). Tap × to remove.';
+
+  @override
+  String get storePayMethodNameLabel => 'New Method Name';
+
+  @override
+  String get storePayMethodAdd => 'Add';
+
+  @override
+  String get storeTelegramTitle => 'Send Report via Telegram';
+
+  @override
+  String get storeTelegramHint =>
+      'The shift report is sent to Telegram automatically when a shift is closed — straight from the app, no middleman server. Create a bot via @BotFather, then fill in its token and the destination chat ID below.';
+
+  @override
+  String get storeTelegramTokenLabel => 'Telegram Bot Token';
+
+  @override
+  String get storeTelegramTokenHint => 'From BotFather, e.g. 123456789:AA…';
+
+  @override
+  String get storeTelegramChatLabel => 'Destination Chat ID';
+
+  @override
+  String get storeTelegramChatHint =>
+      'Numeric ID of the destination chat or group';
+
+  @override
+  String get storeTelegramSent => 'Shift report sent to Telegram.';
+
+  @override
+  String get storeTelegramFailed =>
+      'Telegram report failed to send — check the connection & settings.';
+
+  @override
   String get staticCodeLabelTitle => 'Payment Code Label';
 
   @override

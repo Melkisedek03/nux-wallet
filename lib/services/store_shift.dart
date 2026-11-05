@@ -27,12 +27,20 @@ class StoreShift {
   final String operatorId;
   final String operatorName;
 
+  /// Modal awal laci (rupiah tunai) yang diinput kasir saat
+  /// membuka shift — permintaan NUX 5 Nov 2026. Hanya
+  /// pembayaran TUNAI yang menggerakkan posisi laci dari
+  /// angka ini; metode non-tunai tidak memengaruhi modal/
+  /// posisi tunai. 0 untuk shift sebelum fitur ini.
+  final int openingFloatRp;
+
   const StoreShift({
     required this.openedAt,
     this.closedAt,
     this.era = 'nusan',
     this.operatorId = '',
     this.operatorName = '',
+    this.openingFloatRp = 0,
   });
 
   bool get isOpen => closedAt == null;
@@ -44,6 +52,7 @@ class StoreShift {
         era: era,
         operatorId: operatorId,
         operatorName: operatorName,
+        openingFloatRp: openingFloatRp,
       );
 
   /// Ujung jendela laporan shift ini: waktu tutup, atau [now]
@@ -65,6 +74,7 @@ class StoreShift {
     if (era != 'nusan') 'era': era,
     if (operatorId.isNotEmpty) 'operatorId': operatorId,
     if (operatorName.isNotEmpty) 'operatorName': operatorName,
+    if (openingFloatRp != 0) 'openingFloatRp': openingFloatRp,
   };
 
   /// Baca satu shift; null bila bentuknya tidak sah (waktu buka
@@ -91,6 +101,9 @@ class StoreShift {
       operatorName: raw['operatorName'] is String
           ? raw['operatorName'] as String
           : '',
+      openingFloatRp: raw['openingFloatRp'] is num
+          ? (raw['openingFloatRp'] as num).toInt()
+          : 0,
     );
   }
 
@@ -103,7 +116,8 @@ class StoreShift {
           closedAt?.millisecondsSinceEpoch &&
       other.era == era &&
       other.operatorId == operatorId &&
-      other.operatorName == operatorName;
+      other.operatorName == operatorName &&
+      other.openingFloatRp == openingFloatRp;
 
   @override
   int get hashCode => Object.hash(
@@ -112,6 +126,7 @@ class StoreShift {
     era,
     operatorId,
     operatorName,
+    openingFloatRp,
   );
 }
 
@@ -161,6 +176,7 @@ Future<void> insertShiftRows(
       'era': shift.era,
       'operator_id': shift.operatorId,
       'operator_name': shift.operatorName,
+      'opening_float_rp': shift.openingFloatRp,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 }
@@ -201,6 +217,9 @@ class StoreShiftStore {
             operatorName: row['operator_name'] is String
                 ? row['operator_name'] as String
                 : '',
+            openingFloatRp: row['opening_float_rp'] is num
+                ? (row['opening_float_rp'] as num).toInt()
+                : 0,
           ),
       ];
     } catch (_) {

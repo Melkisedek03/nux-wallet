@@ -61,6 +61,22 @@ class StoreSettings {
   /// keputusan NUX 4 Nov 2026). Bawaan 50%.
   final int adminDiscountThresholdPercent;
 
+  /// Master metode bayar NON-TUNAI toko (permintaan NUX
+  /// 5 Nov 2026): nama-nama yang ditawarkan dropdown halaman
+  /// pembayaran sesudah Tunai. Bawaan QRIS/DANA/OVO; owner
+  /// bebas menambah/menghapus dari Pengaturan Toko. Tunai
+  /// tidak termasuk daftar ini — ia selalu tersedia.
+  final List<String> paymentMethods;
+
+  /// Token bot Telegram (dari BotFather) + id chat tujuan
+  /// untuk fitur Kirim Laporan via Telegram: laporan shift
+  /// terkirim otomatis saat shift ditutup, langsung dari
+  /// aplikasi lewat Bot API (tanpa server perantara).
+  /// Keduanya kosong = fitur mati. Hanya admin yang bisa
+  /// mengubahnya (layar Pengaturan memang bergerbang PIN).
+  final String telegramBotToken;
+  final String telegramChatId;
+
   const StoreSettings({
     this.storeName = '',
     this.pointsEnabled = true,
@@ -73,7 +89,17 @@ class StoreSettings {
     this.showTokenNumber = true,
     this.receiptFooterText = '',
     this.adminDiscountThresholdPercent = 50,
+    this.paymentMethods = defaultPaymentMethods,
+    this.telegramBotToken = '',
+    this.telegramChatId = '',
   });
+
+  /// Metode bayar non-tunai bawaan toko baru.
+  static const List<String> defaultPaymentMethods = ['QRIS', 'DANA', 'OVO'];
+
+  /// Fitur Telegram siap pakai bila kedua isian terisi.
+  bool get telegramConfigured =>
+      telegramBotToken.trim().isNotEmpty && telegramChatId.trim().isNotEmpty;
 
   static const defaults = StoreSettings();
 
@@ -90,6 +116,9 @@ class StoreSettings {
     bool? showTokenNumber,
     String? receiptFooterText,
     int? adminDiscountThresholdPercent,
+    List<String>? paymentMethods,
+    String? telegramBotToken,
+    String? telegramChatId,
   }) => StoreSettings(
     storeName: storeName ?? this.storeName,
     pointsEnabled: pointsEnabled ?? this.pointsEnabled,
@@ -105,6 +134,9 @@ class StoreSettings {
     receiptFooterText: receiptFooterText ?? this.receiptFooterText,
     adminDiscountThresholdPercent:
         adminDiscountThresholdPercent ?? this.adminDiscountThresholdPercent,
+    paymentMethods: paymentMethods ?? this.paymentMethods,
+    telegramBotToken: telegramBotToken ?? this.telegramBotToken,
+    telegramChatId: telegramChatId ?? this.telegramChatId,
   );
 
   Map<String, Object?> toJson() => {
@@ -119,6 +151,9 @@ class StoreSettings {
     'showTokenNumber': showTokenNumber,
     'receiptFooterText': receiptFooterText,
     'adminDiscountThresholdPercent': adminDiscountThresholdPercent,
+    'paymentMethods': paymentMethods,
+    if (telegramBotToken.isNotEmpty) 'telegramBotToken': telegramBotToken,
+    if (telegramChatId.isNotEmpty) 'telegramChatId': telegramChatId,
   };
 
   /// Baca pengaturan dari JSON; field yang hilang/tak sah jatuh
@@ -140,6 +175,9 @@ class StoreSettings {
     final showToken = raw['showTokenNumber'];
     final footer = raw['receiptFooterText'];
     final adminPct = raw['adminDiscountThresholdPercent'];
+    final methods = raw['paymentMethods'];
+    final tgToken = raw['telegramBotToken'];
+    final tgChat = raw['telegramChatId'];
     return StoreSettings(
       storeName: name is String ? name.trim() : '',
       pointsEnabled: enabled is bool ? enabled : true,
@@ -163,6 +201,16 @@ class StoreSettings {
           adminPct is num && adminPct >= 0 && adminPct <= 100
               ? adminPct.toInt()
               : 50,
+      // Master metode bayar: daftar nama tak kosong, duplikat
+      // (peka huruf besar/kecil) dibuang; bukan daftar → bawaan.
+      paymentMethods: methods is List
+          ? normalizePaymentMethods([
+              for (final m in methods)
+                if (m is String) m,
+            ])
+          : defaultPaymentMethods,
+      telegramBotToken: tgToken is String ? tgToken.trim() : '',
+      telegramChatId: tgChat is String ? tgChat.trim() : '',
     );
   }
 
@@ -180,7 +228,10 @@ class StoreSettings {
       other.showTokenNumber == showTokenNumber &&
       other.receiptFooterText == receiptFooterText &&
       other.adminDiscountThresholdPercent ==
-          adminDiscountThresholdPercent;
+          adminDiscountThresholdPercent &&
+      other.telegramBotToken == telegramBotToken &&
+      other.telegramChatId == telegramChatId &&
+      _stringListEquals(other.paymentMethods, paymentMethods);
 
   @override
   int get hashCode => Object.hash(
@@ -195,7 +246,35 @@ class StoreSettings {
     showTokenNumber,
     receiptFooterText,
     adminDiscountThresholdPercent,
+    telegramBotToken,
+    telegramChatId,
+    Object.hashAll(paymentMethods),
   );
+}
+
+/// Normalisasi master metode bayar: trim, buang kosong &
+/// duplikat (tak peka huruf besar/kecil), maksimal 20 nama.
+/// Daftar kosong SAH (toko hanya menerima tunai + tidak ada
+/// dropdown non-tunai) — keputusan owner, bukan kerusakan.
+List<String> normalizePaymentMethods(List<String> raw) {
+  final seen = <String>{};
+  final out = <String>[];
+  for (final name in raw) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) continue;
+    if (!seen.add(trimmed.toLowerCase())) continue;
+    out.add(trimmed);
+    if (out.length >= 20) break;
+  }
+  return out;
+}
+
+bool _stringListEquals(List<String> a, List<String> b) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
 }
 
 String encodeStoreSettings(StoreSettings settings) =>

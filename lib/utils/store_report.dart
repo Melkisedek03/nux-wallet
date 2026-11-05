@@ -47,6 +47,16 @@ class ShiftReportLabels {
   final String cashLabel;
   final String qrisLabel;
 
+  /// Label baris-baris laporan 5 Nov 2026: Income (total
+  /// diterima), Modal (modal awal laci), Posisi Tunai
+  /// (modal + tunai terjual), dan blok info Order Ditahan
+  /// (pasangan info VOID untuk pesanan yang ditahan).
+  final String incomeLabel;
+  final String openingFloatLabel;
+  final String cashPositionLabel;
+  final String heldInfoLabel;
+  final String heldTotalLabel;
+
   /// Label blok poin: poin diterbitkan (sudah terkirim),
   /// poin tertunda (belum diterbitkan), poin ditukar.
   final String pointsIssued;
@@ -79,6 +89,11 @@ class ShiftReportLabels {
     required this.invUnit,
     required this.cashLabel,
     required this.qrisLabel,
+    required this.incomeLabel,
+    required this.openingFloatLabel,
+    required this.cashPositionLabel,
+    required this.heldInfoLabel,
+    required this.heldTotalLabel,
     required this.pointsIssued,
     required this.pointsPending,
     required this.pointsRedeemed,
@@ -232,6 +247,12 @@ class ShiftSalesSummary {
   final List<CategorySales> categories;
   final VoidSalesSummary voids;
 
+  /// Total diterima per metode bayar (kunci tampilan: 'cash'
+  /// untuk tunai, selain itu nama metode — 'qris' warisan
+  /// dinormalisasi ke 'QRIS'). Dari daftar pembayaran efektif
+  /// tiap record, jadi split payment terhitung per bagiannya.
+  final Map<String, int> methodTotalsRp;
+
   const ShiftSalesSummary({
     required this.invoiceCount,
     required this.itemQty,
@@ -250,7 +271,18 @@ class ShiftSalesSummary {
     required this.pointsRedeemed,
     required this.categories,
     required this.voids,
+    this.methodTotalsRp = const {},
   });
+
+  /// Income toko pada jendela ini: seluruh rupiah yang
+  /// sungguh diterima dari penjualan lunas (permintaan NUX
+  /// 5 Nov 2026 — angka yang sama dengan total penjualan
+  /// lunas, ditampilkan dengan labelnya sendiri di laporan).
+  int get incomeRp => totalRp;
+
+  /// Tunai yang masuk laci dari penjualan jendela ini (bahan
+  /// posisi tunai = modal awal + angka ini).
+  int get cashSalesRp => methodTotalsRp[payMethodCash] ?? 0;
 }
 
 int _compareCategoryNames(String a, String b) {
@@ -289,6 +321,7 @@ ShiftSalesSummary aggregateShiftSales(
   var vGross = 0;
   var vDiscount = 0;
   var vTotal = 0;
+  final methodTotals = <String, int>{};
 
   for (final order in orders) {
     if (!order.isRupiahEra) continue;
@@ -318,16 +351,33 @@ ShiftSalesSummary aggregateShiftSales(
     orderDiscount += orderDisc < 0 ? 0 : orderDisc;
     pointsDiscount += order.pointsDiscountRp;
     total += order.grandTotalRp;
-    switch (order.payMethod) {
-      case payMethodCash:
-        cashCount++;
-        cashTotal += order.grandTotalRp;
-      case payMethodQris:
-        qrisCount++;
-        qrisTotal += order.grandTotalRp;
-      default:
-        // Tanpa metode & tidak batal = promosi penuh Rp0.
-        promoCount++;
+    // Pembayaran per metode dari daftar pembayaran EFEKTIF
+    // (split payment terhitung per bagian; record lama satu
+    // metode dipetakan ke jumlah totalnya). Tanpa pembayaran
+    // sama sekali & tidak batal = promosi penuh Rp0.
+    final effective = effectivePaymentsOf(order);
+    if (effective.isEmpty) {
+      promoCount++;
+    } else {
+      var hasCash = false;
+      var hasQris = false;
+      for (final payment in effective) {
+        final key = payment.isCash
+            ? payMethodCash
+            : payment.method == payMethodQris
+                ? 'QRIS'
+                : payment.method;
+        methodTotals[key] = (methodTotals[key] ?? 0) + payment.amountRp;
+        if (payment.isCash) {
+          hasCash = true;
+          cashTotal += payment.amountRp;
+        } else if (key == 'QRIS') {
+          hasQris = true;
+          qrisTotal += payment.amountRp;
+        }
+      }
+      if (hasCash) cashCount++;
+      if (hasQris) qrisCount++;
     }
     pointsRedeemed += order.pointsRedeemed;
     if (order.pointsIssueStatus == issueStatusIssued) {
@@ -380,6 +430,7 @@ ShiftSalesSummary aggregateShiftSales(
       discountRp: vDiscount,
       totalRp: vTotal,
     ),
+    methodTotalsRp: methodTotals,
   );
 }
 
@@ -746,6 +797,8 @@ ShiftReportDocuments buildShiftReportDocuments({
   required List<MenuSalesGroup> details,
   required DateTime generatedAt,
   required String locale,
+  int? openingFloatRp,
+  ({int count, int totalRp})? heldInfo,
 }) {
   final footer = _generatedFooter(labels, generatedAt, locale);
 
@@ -774,13 +827,45 @@ ShiftReportDocuments buildShiftReportDocuments({
   }
   s.add(_shortRule);
   s.add(_row('*${labels.totalOrder}', _fmt(summary.totalRp)));
+  s.add(_row('*${labels.incomeLabel}', _fmt(summary.incomeRp)));
   s.add(_hr);
-  s.add(_tender(labels.cashLabel, _fmt(summary.cashTotalRp)));
-  s.add(_tender(labels.qrisLabel, _fmt(summary.qrisTotalRp)));
+  // Tender per metode dari total per metode agregasi: tunai
+  // dulu, lalu QRIS, lalu metode master lain sesuai abjad.
+  final methodKeys = summary.methodTotalsRp.keys.toList()
+    ..sort((a, b) {
+      int rank(String k) => k == payMethodCash ? 0 : (k == 'QRIS' ? 1 : 2);
+      final r = rank(a).compareTo(rank(b));
+      return r != 0 ? r : a.toLowerCase().compareTo(b.toLowerCase());
+    });
+  for (final key in methodKeys) {
+    final label = key == payMethodCash
+        ? labels.cashLabel
+        : key == 'QRIS'
+            ? labels.qrisLabel
+            : key;
+    s.add(_tender(label, _fmt(summary.methodTotalsRp[key]!)));
+  }
+  if (openingFloatRp != null) {
+    s.add(_tender(labels.openingFloatLabel, _fmt(openingFloatRp)));
+    s.add(
+      _tender(
+        labels.cashPositionLabel,
+        _fmt(openingFloatRp + summary.cashSalesRp),
+      ),
+    );
+  }
   s.add(
     _tender(labels.invoicesLabel, '${summary.invoiceCount} ${labels.invUnit}'),
   );
   s.add(_tender('**VOID', '${summary.voids.count} ${labels.invUnit}'));
+  if (heldInfo != null) {
+    s.add(
+      _tender(
+        '**${labels.heldInfoLabel}',
+        '${heldInfo.count} ${labels.invUnit}',
+      ),
+    );
+  }
   if (summary.pointsIssued > 0 ||
       summary.pointsRedeemed > 0 ||
       summary.pointsPending > 0) {
@@ -812,6 +897,16 @@ ShiftReportDocuments buildShiftReportDocuments({
     s.add(_row(labels.voidDiscount, '-${_fmt(v.discountRp)}'));
     s.add(_shortRule);
     s.add(_row(labels.voidTotalOrder, _fmt(v.totalRp)));
+  }
+  // Blok Order Ditahan — pasangan info VOID (permintaan NUX
+  // 5 Nov 2026): pesanan yang ditahan di dalam jendela dan
+  // masih tertahan saat laporan dibuat.
+  if (heldInfo != null && heldInfo.count > 0) {
+    s.add(_hr);
+    s.add(
+      _row('**${labels.heldInfoLabel}', '(${heldInfo.count} ${labels.invUnit})'),
+    );
+    s.add(_row(labels.heldTotalLabel, _fmt(heldInfo.totalRp)));
   }
   s.add(_eq);
   s.add(footer);
