@@ -630,7 +630,15 @@ List<StoreReceiptElement> buildStoreReceiptElements(
     // Jeda satu baris antara keterangan nilai potongan
     // (baris program poin terakhir) dan footer.
     if (data.pointsEnabled) out.add(const ReceiptSpacer());
-    out.add(ReceiptCenterText(data.footerText));
+    // Tiap baris footer = elemen tengah sendiri: baris baru
+    // eksplisit (teks bawaan maupun isian toko) tidak boleh
+    // digabung/dibungkus ulang oleh perender — di printer
+    // 58mm pembungkusan ulang firmware memotong kata di
+    // tengah ("berkunjun" / "g"; permintaan NUX 5 Nov 2026).
+    for (final line in data.footerText.split('\n')) {
+      final trimmed = line.trim();
+      if (trimmed.isNotEmpty) out.add(ReceiptCenterText(trimmed));
+    }
   }
   return out;
 }

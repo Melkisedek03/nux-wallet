@@ -1628,7 +1628,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get storeReceiptFooterDefault =>
-      'Terima kasih & silakan berkunjung kembali';
+      'Terima Kasih\nSilakan berkunjung kembali';
 
   @override
   String get storeShareReceipt => 'Bagikan Struk';

@@ -60,6 +60,7 @@ CompletedOrder richRecord() {
 StoreReceiptData richData({
   StoreSettings settings = StoreSettings.defaults,
   DateTime? reprintAt,
+  String footerText = 'Terima Kasih\nSilakan berkunjung kembali',
 }) {
   return buildStoreReceiptData(
     record: richRecord(),
@@ -68,7 +69,7 @@ StoreReceiptData richData({
       storeCity: 'Jakarta',
     ),
     shopName: 'Kafe Nusantara',
-    footerText: 'Terima kasih & silakan berkunjung kembali',
+    footerText: footerText,
     outletId: '02a3c4',
     reprintAt: reprintAt,
   );
@@ -172,9 +173,32 @@ void main() {
         '+20.000 nusan',
         '1 nusan = pot. Rp1',
         '',
-        '     Terima kasih & silakan',
-        '       berkunjung kembali',
+        '          Terima Kasih',
+        '   Silakan berkunjung kembali',
       ]);
+    });
+
+    test('footer dua baris: tiap baris elemen tengah sendiri, '
+        'tidak dibungkus ulang', () {
+      final elements = buildStoreReceiptElements(richData(), idLabels());
+      final centers = elements.whereType<ReceiptCenterText>().toList();
+      expect(centers[centers.length - 2].text, 'Terima Kasih');
+      expect(centers.last.text, 'Silakan berkunjung kembali');
+      final lines = storeReceiptTextLines(elements);
+      expect(lines[lines.length - 2], '          Terima Kasih');
+      expect(lines.last, '   Silakan berkunjung kembali');
+    });
+
+    test('footer satu baris (isian toko lama) tetap dibungkus '
+        'kata per kata seperti sebelumnya', () {
+      final lines = storeReceiptTextLines(
+        buildStoreReceiptElements(
+          richData(footerText: 'Terima kasih & silakan berkunjung kembali'),
+          idLabels(),
+        ),
+      );
+      expect(lines[lines.length - 2], '     Terima kasih & silakan');
+      expect(lines.last, '       berkunjung kembali');
     });
 
     test('salinan reprint: banner + waktu cetak ulang tepat '

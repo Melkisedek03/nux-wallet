@@ -787,7 +787,7 @@
       }
     }
   },
-  "storeReceiptFooterDefault": "Thank You & Visit Again",
+  "storeReceiptFooterDefault": "Thank You\nPlease Visit Again",
   "storeShareReceipt": "Share Receipt",
   "storeReceiptPreviewTitle": "Receipt",
   "storeShareReceiptFailed": "Could not create the receipt image.",

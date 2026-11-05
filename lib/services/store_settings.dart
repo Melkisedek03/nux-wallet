@@ -51,8 +51,10 @@ class StoreSettings {
   final bool showTokenNumber;
 
   /// Teks penutup struk toko (footer ucapan); '' = teks bawaan
-  /// bahasa aplikasi ("Terima kasih & silakan berkunjung
-  /// kembali" / "Thank You & Visit Again").
+  /// bahasa aplikasi, dua baris ("Terima Kasih" / "Silakan
+  /// berkunjung kembali"; EN "Thank You" / "Please Visit
+  /// Again") — baris baru eksplisit supaya printer 58mm tidak
+  /// membungkus ulang dan memotong kata di tengah.
   final String receiptFooterText;
 
   /// Ambang diskon manual (persen dari basisnya) yang masih

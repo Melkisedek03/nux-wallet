@@ -3011,7 +3011,7 @@ abstract class AppLocalizations {
   /// No description provided for @storeReceiptFooterDefault.
   ///
   /// In id, this message translates to:
-  /// **'Terima kasih & silakan berkunjung kembali'**
+  /// **'Terima Kasih\nSilakan berkunjung kembali'**
   String get storeReceiptFooterDefault;
 
   /// No description provided for @storeShareReceipt.

@@ -1626,7 +1626,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get storeReceiptFooterDefault => 'Thank You & Visit Again';
+  String get storeReceiptFooterDefault => 'Thank You\nPlease Visit Again';
 
   @override
   String get storeShareReceipt => 'Share Receipt';
