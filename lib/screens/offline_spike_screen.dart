@@ -304,6 +304,15 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
   }
 
   Future<void> _openChannel() async {
+    if (widget.lspService.isOfflineMode) {
+      _addLog(
+        'Buka channel ditolak: sesi ini dimulai tanpa internet, node tidak '
+        'punya akses ke rantai sehingga siaran pendanaan tidak akan sampai '
+        'ke jaringan. Mulai ulang aplikasi dengan internet untuk membuka '
+        'channel.',
+      );
+      return;
+    }
     final target = _targetPeerId;
     if (target == null || !_peerConnected(target)) {
       _addLog('Peer seberang belum tersambung; buka channel ditunda.');
@@ -391,7 +400,10 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
 
   bool get _canOpenChannel {
     final target = _targetPeerId;
-    return target != null && _peerConnected(target);
+    return canOpenDirectChannel(
+      peerConnected: target != null && _peerConnected(target),
+      sessionOffline: widget.lspService.isOfflineMode,
+    );
   }
 
   static String _shortId(String hex) {
@@ -724,6 +736,29 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
                   '${l10n.offlineOnchainBalance}: ${_onchainSats == null ? '—' : '${formatNusan(_onchainSats! * BigInt.from(1000))} nusan'}',
                   style: const TextStyle(fontSize: 12.5),
                 ),
+                if (widget.lspService.isOfflineMode) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.cloud_off,
+                        size: 16,
+                        color: Colors.orange,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          l10n.offlineOpenBlockedOfflineSession,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            color: Colors.orange,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 12),
                 TextField(
                   controller: _channelAmountController,

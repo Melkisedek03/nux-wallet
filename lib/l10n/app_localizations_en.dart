@@ -1867,6 +1867,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get offlineOpenChannel => 'Open Channel';
 
   @override
+  String get offlineOpenBlockedOfflineSession =>
+      'This session started without internet, so the node has no chain access and a new channel\'s funding broadcast cannot reach the network. Restart the app with internet to open a channel.';
+
+  @override
   String get offlineChannelPending => 'Awaiting confirmations';
 
   @override

@@ -121,4 +121,31 @@ void main() {
       expect(bridgeCounterpartId(peers, _lspId), isNull);
     });
   });
+
+  group('canOpenDirectChannel', () {
+    test('peer tersambung dan sesi online: boleh', () {
+      expect(
+        canOpenDirectChannel(peerConnected: true, sessionOffline: false),
+        isTrue,
+      );
+    });
+
+    test('peer tersambung tapi sesi offline: ditolak', () {
+      expect(
+        canOpenDirectChannel(peerConnected: true, sessionOffline: true),
+        isFalse,
+      );
+    });
+
+    test('peer belum tersambung: ditolak di kedua mode sesi', () {
+      expect(
+        canOpenDirectChannel(peerConnected: false, sessionOffline: false),
+        isFalse,
+      );
+      expect(
+        canOpenDirectChannel(peerConnected: false, sessionOffline: true),
+        isFalse,
+      );
+    });
+  });
 }
