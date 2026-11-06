@@ -54,3 +54,16 @@ String? bridgeCounterpartId(
   if (candidates.length != 1) return null;
   return candidates.single;
 }
+
+/// Apakah channel langsung boleh dibuka: peer seberang harus tersambung
+/// DAN sesi tidak boleh dimulai dalam mode offline. Pada sesi offline node
+/// tidak punya akses ke rantai, sehingga siaran transaksi pendanaan tidak
+/// akan sampai ke jaringan dan channel menggantung menunggu konfirmasi
+/// yang tidak akan pernah datang; membuka channel dalam keadaan itu
+/// ditolak sejak awal.
+bool canOpenDirectChannel({
+  required bool peerConnected,
+  required bool sessionOffline,
+}) {
+  return peerConnected && !sessionOffline;
+}

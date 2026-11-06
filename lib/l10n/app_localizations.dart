@@ -3446,6 +3446,12 @@ abstract class AppLocalizations {
   /// **'Buka Channel'**
   String get offlineOpenChannel;
 
+  /// No description provided for @offlineOpenBlockedOfflineSession.
+  ///
+  /// In id, this message translates to:
+  /// **'Sesi ini dimulai tanpa internet, jadi node tidak punya akses ke rantai dan siaran pendanaan channel baru tidak akan sampai ke jaringan. Mulai ulang aplikasi dengan internet untuk membuka channel.'**
+  String get offlineOpenBlockedOfflineSession;
+
   /// No description provided for @offlineChannelPending.
   ///
   /// In id, this message translates to:
