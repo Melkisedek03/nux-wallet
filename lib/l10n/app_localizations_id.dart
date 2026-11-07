@@ -93,6 +93,12 @@ class AppLocalizationsId extends AppLocalizations {
   String get totalBalance => 'Total Saldo';
 
   @override
+  String get balanceViaLsp => 'Via LSP';
+
+  @override
+  String get balanceDirectChannel => 'Channel langsung';
+
+  @override
   String get networkTestnet => 'Lightning Network • Testnet';
 
   @override

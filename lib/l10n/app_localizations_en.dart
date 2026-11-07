@@ -94,6 +94,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get totalBalance => 'Total Balance';
 
   @override
+  String get balanceViaLsp => 'Via LSP';
+
+  @override
+  String get balanceDirectChannel => 'Direct channels';
+
+  @override
   String get networkTestnet => 'Lightning Network • Testnet';
 
   @override
