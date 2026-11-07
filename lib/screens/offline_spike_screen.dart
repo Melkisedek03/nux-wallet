@@ -15,6 +15,7 @@ import '../services/offline_bridge.dart';
 import '../services/offline_spike_utils.dart';
 import '../theme.dart';
 import 'scan_screen.dart';
+import 'send_screen.dart';
 import '../utils/coin_alert.dart';
 import '../utils/format.dart';
 
@@ -302,6 +303,19 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
     }
     setState(() => _hostNodeIdController.text = hex);
     _addLog('ID node host terisi dari pindaian QR.');
+  }
+
+  /// Pindai QR invoice dari HP seberang dan isi kolom bayar, sama
+  /// seperti layar Kirim produksi: hasil pindai dinormalisasi dengan
+  /// [normalizeInvoice] (buang awalan "lightning:", samakan huruf).
+  Future<void> _scanInvoiceToPay() async {
+    final result = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const ScanScreen()),
+    );
+    if (result == null || !mounted) return;
+    setState(() => _payInvoiceController.text = normalizeInvoice(result));
+    _addLog('Invoice terisi dari pindaian QR.');
   }
 
   /// Sambungkan node ke peer host dengan coba-ulang: kegagalan
@@ -905,6 +919,26 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
                 ),
                 if (_createdInvoice != null) ...[
                   const SizedBox(height: 10),
+                  // QR invoice: HP seberang memindainya untuk mengisi
+                  // kolom bayar tanpa salin-tempel, sama seperti layar
+                  // Terima produksi. Teks mentah tetap ditampilkan di
+                  // bawahnya sebagai cadangan.
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: QrImageView(
+                        data: _createdInvoice!,
+                        version: QrVersions.auto,
+                        size: 220,
+                        backgroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
                   SelectableText(
                     _createdInvoice!,
                     style: const TextStyle(
@@ -935,6 +969,11 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
                   decoration: InputDecoration(
                     labelText: l10n.offlineInvoiceToPay,
                     border: const OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.qr_code_scanner_rounded),
+                      tooltip: l10n.offlineScan,
+                      onPressed: _scanInvoiceToPay,
+                    ),
                   ),
                   style: const TextStyle(
                     fontSize: 11.5,
