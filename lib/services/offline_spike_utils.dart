@@ -1,5 +1,7 @@
 import 'package:ldk_node/src/generated/api/types.dart';
 
+import '../utils/format.dart';
+
 /// Logika murni layar Uji Offline Lightning tahap 2 — dipisah
 /// dari widget supaya bisa diuji tanpa perangkat: parsing nominal,
 /// penyaringan channel langsung (bukan channel LSP), dan penentuan
@@ -24,6 +26,48 @@ BigInt? parseNusanToMsat(String raw) {
   return msat;
 }
 
+/// Parse nominal kolom buka channel menjadi msat. Berbeda dari
+/// [parseNusanToMsat] (yang membaca '.' sebagai pemisah desimal),
+/// nominal channel mengikuti aturan isian nominal bersama aplikasi
+/// ([parseAmountInputToMsat], locale id: '.' pemisah ribuan, ','
+/// desimal) — persis seperti tampilan nominal di aplikasi sendiri,
+/// jadi "25.000" terbaca dua puluh lima ribu nusan, bukan 25, dan
+/// "1.000.000" sah. Channel hanya boleh bernilai nusan bulat, jadi
+/// hasil berpecahan (sisa msat di luar kelipatan 1.000, mis. "25,5")
+/// ditolak sebagai null; nol juga null (bawaan parser bersama).
+BigInt? parseChannelAmountToMsat(String raw) {
+  final msat = parseAmountInputToMsat(raw, DisplayUnit.nusan);
+  if (msat == null) return null;
+  if (msat % BigInt.from(1000) != BigInt.zero) return null;
+  return msat;
+}
+
+/// Apakah transaksi pendanaan channel ini sudah terlihat di rantai:
+/// keluaran pendanaannya dikenal DAN sekurang-kurangnya satu
+/// konfirmasi tercatat (atau channel sudah siap, yang berarti jumlah
+/// konfirmasi wajibnya tercapai). Sengaja BUKAN berdasar event siaran
+/// internal node: event itu pernah terpicu untuk siaran yang hilang di
+/// tengah jalan (channel zombie, Nov 2026), jadi satu-satunya bukti
+/// yang dipercaya adalah visibilitas di rantai itu sendiri.
+bool fundingVisibleOnChain(ChannelDetails channel) {
+  if (channel.fundingTxo == null) return false;
+  return channel.isChannelReady || (channel.confirmations ?? 0) >= 1;
+}
+
+/// TXID pendanaan dari [channels] yang sudah terlihat di rantai dan
+/// belum ada di [celebratedTxids] — calon perayaan "pendanaan akhirnya
+/// tersiar", sekali per transaksi pendanaan.
+List<String> uncelebratedVisibleFundingTxids(
+  List<ChannelDetails> channels,
+  Set<String> celebratedTxids,
+) {
+  return channels
+      .where(fundingVisibleOnChain)
+      .map((c) => c.fundingTxo!.txid.hash)
+      .where((txid) => !celebratedTxids.contains(txid))
+      .toList();
+}
+
 /// Channel langsung antar-HP dari daftar semua channel node:
 /// semua channel yang pihak seberangnya BUKAN node LSP
 /// [lspNodeIdHex]. Channel LSP tidak pernah ditampilkan di layar
@@ -42,10 +86,7 @@ List<ChannelDetails> directChannels(
 /// sedang tersambung dan bukan LSP. Mengembalikan null bila tidak
 /// ada atau ada lebih dari satu calon (ambigu — pemanggil memakai
 /// ID yang dimasukkan/diingat saja).
-String? bridgeCounterpartId(
-  List<PeerDetails> peers,
-  String lspNodeIdHex,
-) {
+String? bridgeCounterpartId(List<PeerDetails> peers, String lspNodeIdHex) {
   final lsp = lspNodeIdHex.toLowerCase();
   final candidates = peers
       .where((p) => p.isConnected && p.nodeId.hex.toLowerCase() != lsp)
