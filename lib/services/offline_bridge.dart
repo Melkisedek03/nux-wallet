@@ -4,6 +4,15 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:nearby_connections/nearby_connections.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// Jeda sambung-ulang jembatan untuk percobaan ke-[attempt]
+/// (0-based): 2, 4, 8, 16 detik, lalu mentok 30 detik. Murni
+/// supaya bisa diuji satuan.
+Duration offlineResumeBackoff(int attempt) {
+  final seconds = 2 << attempt;
+  return Duration(seconds: seconds > 30 ? 30 : seconds);
+}
 
 /// Pembingkaian aliran byte jembatan offline: potongan byte dari
 /// socket TCP dipotong menjadi bingkai berukuran maks
@@ -117,10 +126,25 @@ class OfflineBridgeService {
   OfflineBridgeService({this.onChanged, this.onLog});
 
   /// Dipanggil setiap kali keadaan berubah (untuk setState UI).
-  final void Function()? onChanged;
+  /// Bisa diganti-ganti: layanan ini sekarang milik aplikasi
+  /// (singleton global), layar hanya menumpang memasang callback
+  /// selama ia tampil dan melepasnya saat ditutup.
+  void Function()? onChanged;
 
   /// Catatan kejadian terbaca manusia untuk layar uji.
-  final void Function(String message)? onLog;
+  void Function(String message)? onLog;
+
+  /// Penyambung peer Lightning untuk peran tamu, dipasang oleh
+  /// pemilik aplikasi (main.dart) karena hanya ia yang memegang
+  /// LspService: menyambungkan node ke ID [nodeIdHex] lewat
+  /// listener lokal jembatan. Dipakai tombol sambung manual dan
+  /// sambung-ulang otomatis setiap kali tautan terbentuk kembali.
+  Future<void> Function(String nodeIdHex)? peerConnector;
+
+  /// Riwayat catatan kejadian (terbaru di akhir, maks 200 baris)
+  /// supaya layar yang baru dibuka bisa menampilkan kejadian
+  /// selama ia tidak tampil — jembatan tidak lagi mati bersamanya.
+  final List<String> logHistory = [];
 
   static const String serviceId = 'org.nusacoin.elnux.offline';
 
@@ -140,6 +164,23 @@ class OfflineBridgeService {
   String? linkedEndpointName;
   final List<DiscoveredHost> discovered = [];
 
+  /// Niat sesi: true sejak peran dimulai sampai pengguna secara
+  /// eksplisit mengakhiri sesi (stop). Selama niat hidup, tautan
+  /// yang putus disambung ulang otomatis dan niat disimpan supaya
+  /// sesi bisa dilanjutkan setelah aplikasi dimulai ulang.
+  bool sessionActive = false;
+  String? _localName;
+  String? _peerNodeId;
+  String? _rememberedHostName;
+  Timer? _resumeTimer;
+  int _resumeAttempt = 0;
+
+  static const _kActive = 'offline_bridge_session_active';
+  static const _kRole = 'offline_bridge_role';
+  static const _kLocalName = 'offline_bridge_local_name';
+  static const _kPeerNodeId = 'offline_bridge_peer_node_id';
+  static const _kHostName = 'offline_bridge_host_name';
+
   Socket? _nodeSocket;
   StreamSubscription<Uint8List>? _nodeSocketSub;
   ServerSocket? _guestServer;
@@ -151,18 +192,102 @@ class OfflineBridgeService {
 
   void _notify() => onChanged?.call();
 
-  void _log(String message) => onLog?.call(message);
+  void _log(String message) {
+    logHistory.add(message);
+    if (logHistory.length > 200) {
+      logHistory.removeRange(0, logHistory.length - 200);
+    }
+    onLog?.call(message);
+  }
+
+  /// Simpan niat sesi saat ini (kebal mulai-ulang aplikasi).
+  Future<void> _persistIntent() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kActive, sessionActive);
+    await prefs.setString(_kRole, role.name);
+    if (_localName != null) await prefs.setString(_kLocalName, _localName!);
+    if (_peerNodeId != null) {
+      await prefs.setString(_kPeerNodeId, _peerNodeId!);
+    }
+    if (_rememberedHostName != null) {
+      await prefs.setString(_kHostName, _rememberedHostName!);
+    }
+  }
+
+  Future<void> _clearPersistedIntent() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_kActive);
+    await prefs.remove(_kRole);
+    await prefs.remove(_kLocalName);
+    await prefs.remove(_kPeerNodeId);
+    await prefs.remove(_kHostName);
+  }
+
+  /// Lanjutkan niat sesi dari penyimpanan setelah aplikasi dimulai
+  /// ulang: peran host kembali mengiklankan diri, peran tamu
+  /// kembali mencari (dan menyambung otomatis ke host yang
+  /// diingat). Mengembalikan false bila tidak ada sesi tersimpan.
+  /// Upaya terbaik: kegagalan (mis. izin belum diberikan) tercatat
+  /// di log dan fase, bukan melempar.
+  Future<bool> restoreSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_kActive) != true) return false;
+    final savedRole = prefs.getString(_kRole);
+    final savedName = prefs.getString(_kLocalName);
+    if (savedRole == null || savedName == null) return false;
+    _peerNodeId = prefs.getString(_kPeerNodeId);
+    _rememberedHostName = prefs.getString(_kHostName);
+    _log('Melanjutkan sesi offline tersimpan…');
+    if (savedRole == OfflineBridgeRole.host.name) {
+      await startHost(savedName);
+    } else if (savedRole == OfflineBridgeRole.guest.name) {
+      await startDiscovery(savedName);
+    } else {
+      return false;
+    }
+    return true;
+  }
+
+  /// Ingat ID node peer (tamu: ID node host) untuk sambung-ulang
+  /// peer otomatis setiap kali tautan terbentuk kembali.
+  void rememberPeerNodeId(String nodeIdHex) {
+    _peerNodeId = nodeIdHex;
+    _persistIntent();
+  }
+
+  /// Sambungkan node tamu ke peer yang diingat lewat
+  /// [peerConnector]; dipakai tombol manual di layar dan jalur
+  /// otomatis saat tautan pulih. Kesalahan diteruskan ke pemanggil
+  /// manual; jalur otomatis menangkap dan mencatatnya sendiri.
+  Future<void> connectGuestNode(String nodeIdHex) async {
+    rememberPeerNodeId(nodeIdHex);
+    final connector = peerConnector;
+    if (connector == null) {
+      throw StateError('Penyambung peer belum terpasang');
+    }
+    await connector(nodeIdHex);
+  }
 
   /// Mulai peran host: iklankan diri dan terima satu tamu.
+  /// Menghidupkan niat sesi: tautan yang putus disambung ulang
+  /// otomatis dan sesi bisa dilanjutkan setelah mulai ulang.
   Future<void> startHost(String localName) async {
-    await stop();
+    await _teardown();
+    sessionActive = true;
+    _localName = localName;
+    _resumeAttempt = 0;
     role = OfflineBridgeRole.host;
+    await _persistIntent();
+    await _advertise();
+  }
+
+  Future<void> _advertise() async {
     phase = OfflineBridgePhase.advertising;
     lastError = null;
     _notify();
-    _log('Mengiklankan sebagai host ($localName)…');
+    _log('Mengiklankan sebagai host ($_localName)…');
     final ok = await _nearby.startAdvertising(
-      localName,
+      _localName ?? '',
       Strategy.P2P_POINT_TO_POINT,
       serviceId: serviceId,
       onConnectionInitiated: (endpointId, info) {
@@ -190,27 +315,49 @@ class OfflineBridgeService {
       lastError = 'startAdvertising gagal';
       _log(lastError!);
       _notify();
+      _scheduleResume();
     }
   }
 
   /// Mulai peran tamu: cari host yang sedang mengiklankan diri.
+  /// Menghidupkan niat sesi, sama seperti [startHost].
   Future<void> startDiscovery(String localName) async {
-    await stop();
+    await _teardown();
+    sessionActive = true;
+    _localName = localName;
+    _resumeAttempt = 0;
     role = OfflineBridgeRole.guest;
+    await _persistIntent();
+    await _discover();
+  }
+
+  Future<void> _discover() async {
     phase = OfflineBridgePhase.discovering;
     lastError = null;
     discovered.clear();
     _notify();
     _log('Mencari host di sekitar…');
     final ok = await _nearby.startDiscovery(
-      localName,
+      _localName ?? '',
       Strategy.P2P_POINT_TO_POINT,
       serviceId: serviceId,
       onEndpointFound: (endpointId, endpointName, _) {
         discovered.removeWhere((h) => h.endpointId == endpointId);
-        discovered.add(DiscoveredHost(endpointId, endpointName));
+        final host = DiscoveredHost(endpointId, endpointName);
+        discovered.add(host);
         _log('Host ditemukan: $endpointName');
         _notify();
+        // Sambung otomatis ke host yang diingat dari sesi ini:
+        // inilah jalur pulih utama peran tamu setelah putus.
+        if (sessionActive &&
+            phase == OfflineBridgePhase.discovering &&
+            _rememberedHostName != null &&
+            endpointName == _rememberedHostName) {
+          _log('Host sesi ini; menyambung otomatis…');
+          connectToHost(host, _localName ?? '').catchError((Object e) {
+            _log('Sambung otomatis gagal: $e');
+          });
+        }
       },
       onEndpointLost: (endpointId) {
         discovered.removeWhere((h) => h.endpointId == endpointId);
@@ -222,6 +369,7 @@ class OfflineBridgeService {
       lastError = 'startDiscovery gagal';
       _log(lastError!);
       _notify();
+      _scheduleResume();
     }
   }
 
@@ -230,6 +378,10 @@ class OfflineBridgeService {
   /// begitu tautan Nearby terbentuk.
   Future<void> connectToHost(DiscoveredHost host, String localName) async {
     if (role != OfflineBridgeRole.guest) return;
+    // Ingat host ini: penemuan ulang nama yang sama di sesi ini
+    // disambung otomatis (lihat onEndpointFound).
+    _rememberedHostName = host.name;
+    _persistIntent();
     await _closeGuestServer();
     _guestServer = await ServerSocket.bind(
       InternetAddress.loopbackIPv4,
@@ -272,8 +424,23 @@ class OfflineBridgeService {
     }
   }
 
-  /// Hentikan semua peran dan tutup semua socket.
+  /// Akhiri sesi secara eksplisit: niat sesi dimatikan, ingatan
+  /// peer/host dilupakan, simpanan niat dihapus, lalu semua peran
+  /// dan socket dihentikan. Inilah satu-satunya jalan mematikan
+  /// jembatan — menutup layar tidak lagi memanggil ini.
   Future<void> stop() async {
+    sessionActive = false;
+    _resumeTimer?.cancel();
+    _resumeTimer = null;
+    _peerNodeId = null;
+    _rememberedHostName = null;
+    await _clearPersistedIntent();
+    await _teardown();
+  }
+
+  /// Hentikan semua peran dan tutup semua socket, tanpa menyentuh
+  /// niat sesi (dipakai saat berganti peran dan mulai peran baru).
+  Future<void> _teardown() async {
     await _detachNodeSocket();
     await _closeGuestServer();
     if (role == OfflineBridgeRole.host) {
@@ -291,11 +458,69 @@ class OfflineBridgeService {
     _notify();
   }
 
+  /// Jadwalkan satu percobaan sambung-ulang dengan jeda mundur.
+  /// Hanya dipanggil dari jalur kegagalan/putus; selama tautan
+  /// sehat atau peran berjalan normal, tidak ada timer yang hidup
+  /// (hemat baterai — radio Nearby sendiri biaya utamanya, dan
+  /// itu hanya menyala selama sesi aktif).
+  void _scheduleResume() {
+    if (!sessionActive) return;
+    _resumeTimer?.cancel();
+    final delay = offlineResumeBackoff(_resumeAttempt);
+    _resumeAttempt++;
+    _log('Sambung ulang otomatis dalam ${delay.inSeconds} detik…');
+    _resumeTimer = Timer(delay, _resume);
+  }
+
+  Future<void> _resume() async {
+    if (!sessionActive || isLinked) return;
+    if (role == OfflineBridgeRole.host) {
+      if (phase == OfflineBridgePhase.idle ||
+          phase == OfflineBridgePhase.error) {
+        _log('Memasang ulang iklan host…');
+        await _advertise();
+      }
+    } else if (role == OfflineBridgeRole.guest) {
+      final remembered = _rememberedHostName;
+      if (remembered != null) {
+        for (final host in discovered) {
+          if (host.name == remembered) {
+            _log('Host ditemukan lagi; menyambung otomatis…');
+            await connectToHost(host, _localName ?? '');
+            return;
+          }
+        }
+      }
+      if (phase == OfflineBridgePhase.idle ||
+          phase == OfflineBridgePhase.error) {
+        _log('Memulai ulang pencarian host…');
+        await _discover();
+      } else if (phase == OfflineBridgePhase.discovering) {
+        // Pencarian masih berjalan; penemuan host yang diingat
+        // menyambung sendiri lewat onEndpointFound. Tetap
+        // jadwalkan pemeriksaan berikutnya selama belum tertaut.
+        _scheduleResume();
+      }
+    }
+  }
+
   void _onLinked(String endpointId) {
     linkedEndpointId = endpointId;
     phase = OfflineBridgePhase.linked;
+    _resumeAttempt = 0;
+    _resumeTimer?.cancel();
+    _resumeTimer = null;
     _log('Jembatan terhubung ke $linkedEndpointName');
     _notify();
+    if (role == OfflineBridgeRole.guest && _peerNodeId != null) {
+      // Tautan terbentuk kembali: sambungkan ulang peer Lightning
+      // secara otomatis (dulu harus menekan tombol sambung lagi).
+      _log('Menyambung ulang peer Lightning otomatis…');
+      connectGuestNode(_peerNodeId!).catchError((Object e) {
+        _log('Sambung ulang peer gagal: $e');
+        _scheduleResume();
+      });
+    }
     if (role == OfflineBridgeRole.host) {
       // Node host mendengarkan di localhost; jembatan yang
       // menyambung masuk ke sana.
@@ -327,6 +552,10 @@ class OfflineBridgeService {
         ? OfflineBridgePhase.advertising
         : OfflineBridgePhase.discovering;
     _notify();
+    // Selama niat sesi hidup, putus bukan akhir: jadwalkan
+    // penyembuhan (host memastikan iklannya hidup, tamu mencari
+    // dan menyambung ulang ke host yang diingat).
+    _scheduleResume();
   }
 
   void _onGuestTcpAccepted(Socket socket) {

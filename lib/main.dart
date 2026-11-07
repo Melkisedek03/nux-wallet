@@ -28,6 +28,7 @@ import 'services/lsp_profile.dart';
 import 'services/payment_notes.dart';
 import 'services/saved_invoices.dart';
 import 'services/lsp_service.dart';
+import 'services/offline_bridge.dart';
 import 'services/csv_export.dart';
 import 'services/history_filter.dart';
 import 'services/update_service.dart';
@@ -57,6 +58,13 @@ void main() async {
 
 // Global LspService instance (untuk MVP; pakai DI yang proper di produksi)
 final lspService = LspService();
+
+/// Jembatan offline milik aplikasi (tahap produksi A): hidupnya
+/// tidak lagi mengikuti layar uji — berpindah layar tidak
+/// memutuskannya, dan niat sesinya tersimpan untuk dilanjutkan
+/// setelah aplikasi dimulai ulang. Hanya tombol akhiri sesi
+/// eksplisit yang menghentikannya.
+final offlineBridge = OfflineBridgeService();
 
 class NuxWalletApp extends StatelessWidget {
   const NuxWalletApp({super.key});
@@ -487,6 +495,16 @@ class _HomeScreenState extends State<HomeScreen>
       await _refreshDashboard();
       if (mounted) setState(() => _booting = false);
       _aturHeartbeatOffline(offlineMode);
+      // Jembatan offline: pasang penyambung peer tamu (hanya
+      // pemilik LspService yang bisa menyambungkan node) lalu
+      // lanjutkan niat sesi tersimpan bila ada. Upaya terbaik —
+      // kegagalan di sini tidak menggagalkan boot dompet.
+      offlineBridge.peerConnector = (nodeIdHex) => lspService.connectToPeer(
+            nodeIdHex,
+            '127.0.0.1',
+            OfflineBridgeService.guestBridgePort,
+          );
+      offlineBridge.restoreSession().catchError((_) => false);
       // Segarkan berkala selama aplikasi terbuka: saldo + riwayat
       // selalu mutakhir, dan koin masuk terdeteksi untuk peringatan
       // bunyi + getar (lihat _refreshPayments).
@@ -1942,7 +1960,10 @@ class _ProfilePage extends StatelessWidget {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => OfflineSpikeScreen(lspService: lspService),
+                builder: (_) => OfflineSpikeScreen(
+                  lspService: lspService,
+                  bridge: offlineBridge,
+                ),
               ),
             ),
             child: Container(
