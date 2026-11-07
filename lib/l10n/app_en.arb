@@ -36,6 +36,8 @@
   "cancel": "Cancel",
   "exitConfirm": "Exit",
   "totalBalance": "Total Balance",
+  "balanceViaLsp": "Via LSP",
+  "balanceDirectChannel": "Direct channels",
   "networkTestnet": "Lightning Network • Testnet",
   "networkMainnet": "Lightning Network • Mainnet",
   "lightningActive": "Lightning active — ready for instant receive",

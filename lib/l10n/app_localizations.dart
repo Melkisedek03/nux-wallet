@@ -254,6 +254,18 @@ abstract class AppLocalizations {
   /// **'Total Saldo'**
   String get totalBalance;
 
+  /// No description provided for @balanceViaLsp.
+  ///
+  /// In id, this message translates to:
+  /// **'Via LSP'**
+  String get balanceViaLsp;
+
+  /// No description provided for @balanceDirectChannel.
+  ///
+  /// In id, this message translates to:
+  /// **'Channel langsung'**
+  String get balanceDirectChannel;
+
   /// No description provided for @networkTestnet.
   ///
   /// In id, this message translates to:

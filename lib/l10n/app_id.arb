@@ -36,6 +36,8 @@
   "cancel": "Batal",
   "exitConfirm": "Keluar",
   "totalBalance": "Total Saldo",
+  "balanceViaLsp": "Via LSP",
+  "balanceDirectChannel": "Channel langsung",
   "networkTestnet": "Lightning Network • Testnet",
   "networkMainnet": "Lightning Network • Mainnet",
   "lightningActive": "Lightning aktif — siap terima instan",

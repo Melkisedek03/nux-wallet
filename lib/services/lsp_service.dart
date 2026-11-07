@@ -15,6 +15,7 @@ class LspService {
   bool _running = false;
   bool _offlineMode = false;
   String? _lspHost;
+  String? _lspNodeId;
 
   bool get isRunning => _running;
 
@@ -51,6 +52,7 @@ class LspService {
     final lspHost = lspAddress.substring(0, sep);
     final lspPort = int.parse(lspAddress.substring(sep + 1));
     _lspHost = lspHost;
+    _lspNodeId = lspNodeId;
     // Mode offline (kondisi ekstrem tanpa internet): resolusi DNS host
     // LSP pasti gagal dan LSPS2 memang tidak terjangkau, jadi resolusi
     // dan konfigurasi likuiditas dilewati — node dibangun TANPA sumber
@@ -393,6 +395,19 @@ class LspService {
     return total;
   }
 
+  /// Rincian saldo Lightning per sumber channel: subtotal channel
+  /// yang pihak seberangnya node LSP dan subtotal channel langsung
+  /// (antar-HP). Jumlah keduanya selalu sama dengan
+  /// [getLightningBalance]. Rincian ini penting karena kemampuan
+  /// belanja tidak melebur seperti angkanya: saat offline, hanya
+  /// porsi channel langsung yang bisa bergerak, jadi kartu saldo
+  /// yang hanya menampilkan total gabungan menyesatkan.
+  Future<({BigInt lspMsat, BigInt directMsat})>
+  getLightningBalanceBreakdown() async {
+    _ensureRunning();
+    return splitBalanceBySource(await listChannels(), _lspNodeId ?? '');
+  }
+
   /// Ambil seluruh riwayat pembayaran dari node, terbaru di depan.
   ///
   /// Binding tidak menjamin urutan, jadi hasil diurutkan menurun
@@ -473,6 +488,30 @@ BigInt countedChannelBalanceMsat(ChannelDetails channel) {
       (channel.unspendablePunishmentReserve ?? BigInt.zero) * BigInt.from(1000);
   if (reserveMsat > outboundMsat) reserveMsat = outboundMsat;
   return outboundMsat + reserveMsat;
+}
+
+/// Pisahkan total saldo channel menjadi subtotal per sumber:
+/// channel yang pihak seberangnya node LSP [lspNodeIdHex] masuk
+/// lspMsat, sisanya (channel langsung antar-HP) masuk directMsat.
+/// Per channel memakai [countedChannelBalanceMsat], jadi subtotal
+/// mewarisi batas cadangan yang sama dan jumlah kedua subtotal
+/// selalu sama dengan total kartu saldo.
+({BigInt lspMsat, BigInt directMsat}) splitBalanceBySource(
+  List<ChannelDetails> channels,
+  String lspNodeIdHex,
+) {
+  final lsp = lspNodeIdHex.toLowerCase();
+  var lspMsat = BigInt.zero;
+  var directMsat = BigInt.zero;
+  for (final channel in channels) {
+    final amount = countedChannelBalanceMsat(channel);
+    if (channel.counterpartyNodeId.hex.toLowerCase() == lsp) {
+      lspMsat += amount;
+    } else {
+      directMsat += amount;
+    }
+  }
+  return (lspMsat: lspMsat, directMsat: directMsat);
 }
 
 /// Bentuk hex ID pembayaran. Pencocokan pembayaran antar-panggilan

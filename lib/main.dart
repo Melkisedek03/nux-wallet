@@ -124,6 +124,12 @@ class _HomeScreenState extends State<HomeScreen>
   /// Saldo Lightning terakhir dari node (msat); null = belum terbaca.
   BigInt? _balanceMsat;
 
+  /// Rincian saldo per sumber (LSP vs channel langsung); null =
+  /// belum terbaca. Ditampilkan di kartu hanya bila porsi channel
+  /// langsung tidak nol — satu-satunya keadaan yang membuat total
+  /// gabungan bisa salah dibaca sebagai kemampuan belanja offline.
+  ({BigInt lspMsat, BigInt directMsat})? _balanceBreakdown;
+
   /// Riwayat pembayaran terakhir dari node (terbaru di depan).
   List<PaymentDetails> _payments = const [];
 
@@ -190,8 +196,16 @@ class _HomeScreenState extends State<HomeScreen>
   Future<void> _refreshBalance() async {
     if (!lspService.isRunning) return;
     try {
-      final balance = await lspService.getLightningBalance();
-      if (mounted) setState(() => _balanceMsat = balance);
+      // Satu bacaan untuk total + rincian: total adalah jumlah kedua
+      // subtotal rincian, jadi angka kartu dan rinciannya tidak bisa
+      // berbeda bacaan.
+      final breakdown = await lspService.getLightningBalanceBreakdown();
+      if (mounted) {
+        setState(() {
+          _balanceMsat = breakdown.lspMsat + breakdown.directMsat;
+          _balanceBreakdown = breakdown;
+        });
+      }
     } catch (_) {
       // Abaikan — saldo lama tetap ditampilkan.
     }
@@ -688,6 +702,7 @@ class _HomeScreenState extends State<HomeScreen>
       _mnemonicWords = null;
       _legacyWallet = false;
       _balanceMsat = null;
+      _balanceBreakdown = null;
       _payments = const [];
       _tabIndex = 0;
       _booting = true;
@@ -731,6 +746,7 @@ class _HomeScreenState extends State<HomeScreen>
       _mnemonicWords = null;
       _legacyWallet = false;
       _balanceMsat = null;
+      _balanceBreakdown = null;
       _payments = const [];
       // Primer ulang: riwayat dompet hasil restore tidak boleh memicu
       // bunyi koin masuk saat muat pertama.
@@ -1021,6 +1037,19 @@ class _HomeScreenState extends State<HomeScreen>
                             : context.l10n.networkMainnet,
                         style: const TextStyle(
                             fontSize: 13, color: Colors.white70)),
+                    // Rincian per sumber, hanya bila ada channel
+                    // langsung bersaldo: total gabungan saja bisa
+                    // salah dibaca sebagai yang bisa dibelanjakan
+                    // saat offline, padahal yang bergerak offline
+                    // hanya porsi channel langsung.
+                    if (_balanceBreakdown != null &&
+                        _balanceBreakdown!.directMsat > BigInt.zero) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                          '${context.l10n.balanceViaLsp} ${context.formatWalletAmountNumber(_balanceBreakdown!.lspMsat)} • ${context.l10n.balanceDirectChannel} ${context.formatWalletAmountNumber(_balanceBreakdown!.directMsat)} ${context.displayUnit.label}',
+                          style: const TextStyle(
+                              fontSize: 12.5, color: Colors.white70)),
+                    ],
                     const SizedBox(height: 14),
                     // Pil status: widget khusus yang isinya
                     // menyusut mengikuti lebar kartu (lihat
