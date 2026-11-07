@@ -14,12 +14,12 @@ const _otherId =
 
 ChannelDetails _channel(String counterpartyHex) {
   return ChannelDetails(
-    channelId:
-        ChannelId(data: U8Array32(Uint8List.fromList(List.filled(32, 1)))),
+    channelId: ChannelId(
+      data: U8Array32(Uint8List.fromList(List.filled(32, 1))),
+    ),
     counterpartyNodeId: PublicKey(hex: counterpartyHex),
     channelValueSats: BigInt.from(25000),
-    userChannelId:
-        UserChannelId(data: Uint8List.fromList(List.filled(16, 0))),
+    userChannelId: UserChannelId(data: Uint8List.fromList(List.filled(16, 0))),
     feerateSatPer1000Weight: 1000,
     outboundCapacityMsat: BigInt.from(24000000),
     inboundCapacityMsat: BigInt.from(1000000),
@@ -34,8 +34,9 @@ ChannelDetails _channel(String counterpartyHex) {
       forwardingFeeProportionalMillionths: 0,
       forwardingFeeBaseMsat: 0,
       cltvExpiryDelta: 72,
-      maxDustHtlcExposure:
-          MaxDustHTLCExposure_FeeRateMultiplier(BigInt.from(1000)),
+      maxDustHtlcExposure: MaxDustHTLCExposure_FeeRateMultiplier(
+        BigInt.from(1000),
+      ),
       forceCloseAvoidanceMaxFeeSatoshis: BigInt.from(1000),
       acceptUnderpayingHtlcs: false,
     ),
@@ -83,10 +84,10 @@ void main() {
 
   group('directChannels', () {
     test('channel LSP disaring keluar, channel langsung dipertahankan', () {
-      final result = directChannels(
-        [_channel(_lspId), _channel(_peerId)],
-        _lspId,
-      );
+      final result = directChannels([
+        _channel(_lspId),
+        _channel(_peerId),
+      ], _lspId);
       expect(result.length, 1);
       expect(result.single.counterpartyNodeId.hex, _peerId);
     });
@@ -119,6 +120,97 @@ void main() {
         _peer(_otherId, connected: true),
       ];
       expect(bridgeCounterpartId(peers, _lspId), isNull);
+    });
+  });
+
+  group('parseChannelAmountToMsat', () {
+    test('angka polos dan ribuan Indonesia terbaca sama', () {
+      expect(parseChannelAmountToMsat('25000'), BigInt.from(25000000));
+      expect(parseChannelAmountToMsat('25.000'), BigInt.from(25000000));
+      expect(parseChannelAmountToMsat('1.000.000'), BigInt.from(1000000000));
+    });
+
+    test('pecahan ditolak: channel hanya menerima nusan bulat', () {
+      expect(parseChannelAmountToMsat('25,5'), isNull);
+      expect(parseChannelAmountToMsat('25.5'), isNull);
+      expect(parseChannelAmountToMsat('0,001'), isNull);
+    });
+
+    test('nol dan teks tidak valid ditolak', () {
+      expect(parseChannelAmountToMsat('0'), isNull);
+      expect(parseChannelAmountToMsat(''), isNull);
+      expect(parseChannelAmountToMsat('abc'), isNull);
+      expect(parseChannelAmountToMsat('-5'), isNull);
+      expect(parseChannelAmountToMsat('25.00'), isNull);
+    });
+  });
+
+  group('perayaan pendanaan terlihat di rantai', () {
+    ChannelDetails funded({
+      String? txid,
+      int? confirmations,
+      bool ready = false,
+    }) {
+      return ChannelDetails(
+        channelId: ChannelId(
+          data: U8Array32(Uint8List.fromList(List.filled(32, 1))),
+        ),
+        counterpartyNodeId: PublicKey(hex: _peerId),
+        fundingTxo: txid == null
+            ? null
+            : OutPoint(txid: Txid(hash: txid), vout: 0),
+        channelValueSats: BigInt.from(25000),
+        userChannelId: UserChannelId(
+          data: Uint8List.fromList(List.filled(16, 0)),
+        ),
+        feerateSatPer1000Weight: 1000,
+        outboundCapacityMsat: BigInt.from(24000000),
+        inboundCapacityMsat: BigInt.from(1000000),
+        confirmations: confirmations,
+        isOutbound: true,
+        isChannelReady: ready,
+        isUsable: true,
+        counterpartyUnspendablePunishmentReserve: BigInt.from(1000),
+        nextOutboundHtlcLimitMsat: BigInt.zero,
+        nextOutboundHtlcMinimumMsat: BigInt.zero,
+        inboundHtlcMinimumMsat: BigInt.from(1000),
+        config: ChannelConfig(
+          forwardingFeeProportionalMillionths: 0,
+          forwardingFeeBaseMsat: 0,
+          cltvExpiryDelta: 72,
+          maxDustHtlcExposure: MaxDustHTLCExposure_FeeRateMultiplier(
+            BigInt.from(1000),
+          ),
+          forceCloseAvoidanceMaxFeeSatoshis: BigInt.from(1000),
+          acceptUnderpayingHtlcs: false,
+        ),
+      );
+    }
+
+    test('belum terlihat: tanpa keluaran pendanaan atau 0 konfirmasi', () {
+      expect(fundingVisibleOnChain(funded()), isFalse);
+      expect(
+        fundingVisibleOnChain(funded(txid: 'aa', confirmations: 0)),
+        isFalse,
+      );
+    });
+
+    test('terlihat: konfirmasi pertama tercatat, atau channel siap', () {
+      expect(
+        fundingVisibleOnChain(funded(txid: 'aa', confirmations: 1)),
+        isTrue,
+      );
+      expect(fundingVisibleOnChain(funded(txid: 'bb', ready: true)), isTrue);
+    });
+
+    test('yang belum dirayakan: menyaring txid yang sudah dirayakan', () {
+      final channels = [
+        funded(txid: 'aa', confirmations: 3),
+        funded(txid: 'bb', confirmations: 1),
+        funded(txid: 'cc', confirmations: 0),
+      ];
+      expect(uncelebratedVisibleFundingTxids(channels, {'aa'}), ['bb']);
+      expect(uncelebratedVisibleFundingTxids(channels, {'aa', 'bb'}), isEmpty);
     });
   });
 

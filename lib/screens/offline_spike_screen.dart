@@ -15,6 +15,8 @@ import '../services/offline_bridge.dart';
 import '../services/offline_spike_utils.dart';
 import '../theme.dart';
 import 'scan_screen.dart';
+import 'send_screen.dart';
+import '../utils/coin_alert.dart';
 import '../utils/format.dart';
 
 /// Layar Uji Offline Lightning (spike tahap 1) — membuktikan dua
@@ -52,6 +54,8 @@ class OfflineSpikeScreen extends StatefulWidget {
 
 class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
   static const String _rememberedPeerKey = 'offline_spike_peer_id';
+  static const String _celebratedFundingKey =
+      'offline_spike_celebrated_funding_txids';
 
   late final OfflineBridgeService _bridge;
   final _hostNodeIdController = TextEditingController();
@@ -67,6 +71,8 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
   BigInt? _onchainSats;
   String? _createdInvoice;
   Timer? _peerTimer;
+  final Set<String> _celebratedFundingTxids = {};
+  bool _celebratedFundingLoaded = false;
   bool _connectingNode = false;
   bool _openingChannel = false;
   bool _creatingInvoice = false;
@@ -83,6 +89,7 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
     );
     _loadOwnNodeId();
     _loadRememberedPeer();
+    _loadCelebratedFunding();
     _loadOnchain();
     _refreshPeers();
     _peerTimer = Timer.periodic(const Duration(seconds: 3), (_) {
@@ -151,6 +158,37 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
     }
   }
 
+  Future<void> _loadCelebratedFunding() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getStringList(_celebratedFundingKey);
+    if (saved != null) _celebratedFundingTxids.addAll(saved);
+    _celebratedFundingLoaded = true;
+  }
+
+  /// Perayaan sekali per transaksi pendanaan channel langsung yang
+  /// baru terlihat di rantai. Pemicunya visibilitas di rantai
+  /// (konfirmasi pertama tercatat), BUKAN event siaran internal node —
+  /// event itu pernah terpicu untuk siaran yang hilang (channel
+  /// zombie), jadi perayaan berdasar event akan merayakan kebohongan.
+  /// TXID yang sudah dirayakan disimpan permanen supaya membuka ulang
+  /// layar tidak merayakan lagi.
+  Future<void> _celebrateNewlyVisibleFunding() async {
+    if (!_celebratedFundingLoaded) return;
+    final fresh = uncelebratedVisibleFundingTxids(
+      _channels,
+      _celebratedFundingTxids,
+    );
+    if (fresh.isEmpty) return;
+    _celebratedFundingTxids.addAll(fresh);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+      _celebratedFundingKey,
+      _celebratedFundingTxids.toList(),
+    );
+    _addLog('Siaran pendanaan channel terkonfirmasi terlihat di rantai.');
+    await CoinAlert.play();
+  }
+
   Future<void> _rememberPeer(String nodeIdHex) async {
     if (mounted) setState(() => _rememberedPeerId = nodeIdHex);
     final prefs = await SharedPreferences.getInstance();
@@ -187,6 +225,7 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
           _channels = directChannels(all, AppConfig.lspNodeId);
           _onchainSats = sats;
         });
+        await _celebrateNewlyVisibleFunding();
       }
     } catch (_) {
       // Sama seperti daftar peer: diamkan nilai terakhir.
@@ -266,6 +305,19 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
     _addLog('ID node host terisi dari pindaian QR.');
   }
 
+  /// Pindai QR invoice dari HP seberang dan isi kolom bayar, sama
+  /// seperti layar Kirim produksi: hasil pindai dinormalisasi dengan
+  /// [normalizeInvoice] (buang awalan "lightning:", samakan huruf).
+  Future<void> _scanInvoiceToPay() async {
+    final result = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const ScanScreen()),
+    );
+    if (result == null || !mounted) return;
+    setState(() => _payInvoiceController.text = normalizeInvoice(result));
+    _addLog('Invoice terisi dari pindaian QR.');
+  }
+
   /// Sambungkan node ke peer host dengan coba-ulang: kegagalan
   /// tahap 1 yang paling sering adalah connect ditekan sebelum
   /// tautan jembatan benar-benar siap, jadi percobaan diulang
@@ -318,8 +370,8 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
       _addLog('Peer seberang belum tersambung; buka channel ditunda.');
       return;
     }
-    final msat = parseNusanToMsat(_channelAmountController.text);
-    if (msat == null || msat <= BigInt.zero || msat % BigInt.from(1000) != BigInt.zero) {
+    final msat = parseChannelAmountToMsat(_channelAmountController.text);
+    if (msat == null || msat <= BigInt.zero) {
       _addLog('Jumlah channel tidak valid (nusan bulat, tanpa pecahan).');
       return;
     }
@@ -867,6 +919,26 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
                 ),
                 if (_createdInvoice != null) ...[
                   const SizedBox(height: 10),
+                  // QR invoice: HP seberang memindainya untuk mengisi
+                  // kolom bayar tanpa salin-tempel, sama seperti layar
+                  // Terima produksi. Teks mentah tetap ditampilkan di
+                  // bawahnya sebagai cadangan.
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: QrImageView(
+                        data: _createdInvoice!,
+                        version: QrVersions.auto,
+                        size: 220,
+                        backgroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
                   SelectableText(
                     _createdInvoice!,
                     style: const TextStyle(
@@ -897,6 +969,11 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
                   decoration: InputDecoration(
                     labelText: l10n.offlineInvoiceToPay,
                     border: const OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.qr_code_scanner_rounded),
+                      tooltip: l10n.offlineScan,
+                      onPressed: _scanInvoiceToPay,
+                    ),
                   ),
                   style: const TextStyle(
                     fontSize: 11.5,
