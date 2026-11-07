@@ -281,6 +281,10 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
       Permission.bluetoothConnect,
       Permission.locationWhenInUse,
       Permission.nearbyWifiDevices,
+      // Notifikasi menetap layanan latar depan jembatan (tahap
+      // produksi B) perlu izin ini di Android 13+; tanpa izin pun
+      // layanan tetap berjalan, hanya notifikasinya tidak tampil.
+      Permission.notification,
     ].request();
     results.forEach((permission, status) {
       _addLog('Izin $permission: $status');

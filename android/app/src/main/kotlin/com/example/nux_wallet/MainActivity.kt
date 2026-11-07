@@ -26,9 +26,37 @@ import java.io.FileInputStream
 //   menampilkan penyebabnya — jadi kegagalan tidak hilang diam-diam.
 class MainActivity : FlutterActivity() {
     private val saluranOta = "nux_wallet/ota"
+    private val saluranJembatan = "nux_wallet/jembatan"
+
+    // Mesin Flutter TIDAK dihancurkan bersama activity: jembatan
+    // offline dan node berjalan di mesin ini, dan keduanya harus
+    // tetap hidup saat tampilan aplikasi ditutup (layanan latar
+    // depan JembatanLatarService menjaga prosesnya). Menutup
+    // tampilan kini hanya menutup tampilan; proses — dan di
+    // dalamnya node — hidup sampai sistem merebutnya kembali atau
+    // sesi diakhiri. Ini sejalan dengan sikap aplikasi yang memang
+    // menjaga layar menyala agar dompet siap menerima pembayaran.
+    override fun shouldDestroyEngineWithHost(): Boolean = false
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        // Saluran layanan latar jembatan offline (tahap produksi B):
+        // sisi Dart memulai/menghentikan JembatanLatarService
+        // mengikuti niat sesi (lihat lib/services/offline_bridge.dart).
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, saluranJembatan)
+            .setMethodCallHandler { panggilan, hasil ->
+                when (panggilan.method) {
+                    "mulaiLayanan" -> {
+                        JembatanLatarService.mulai(this)
+                        hasil.success(true)
+                    }
+                    "berhentiLayanan" -> {
+                        JembatanLatarService.berhenti(this)
+                        hasil.success(true)
+                    }
+                    else -> hasil.notImplemented()
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, saluranOta)
             .setMethodCallHandler { panggilan, hasil ->
                 when (panggilan.method) {

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:flutter/services.dart';
 import 'package:nearby_connections/nearby_connections.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -279,6 +280,7 @@ class OfflineBridgeService {
     role = OfflineBridgeRole.host;
     await _persistIntent();
     await _advertise();
+    await _sinkronLayananLatar();
   }
 
   Future<void> _advertise() async {
@@ -329,6 +331,7 @@ class OfflineBridgeService {
     role = OfflineBridgeRole.guest;
     await _persistIntent();
     await _discover();
+    await _sinkronLayananLatar();
   }
 
   Future<void> _discover() async {
@@ -436,6 +439,27 @@ class OfflineBridgeService {
     _rememberedHostName = null;
     await _clearPersistedIntent();
     await _teardown();
+    await _sinkronLayananLatar();
+  }
+
+  /// Saluran ke JembatanLatarService (layanan latar depan Android,
+  /// tahap produksi B) lewat MainActivity.
+  static const _saluranLayanan = MethodChannel('nux_wallet/jembatan');
+
+  /// Samakan keadaan layanan latar depan dengan niat sesi: sesi
+  /// aktif → layanan berjalan (proses dijaga hidup, notifikasi
+  /// menetap tampil); sesi berakhir → layanan berhenti. Upaya
+  /// terbaik: bukan Android atau saluran gagal tidak menggagalkan
+  /// jembatan, hanya tercatat di log.
+  Future<void> _sinkronLayananLatar() async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _saluranLayanan.invokeMethod(
+        sessionActive ? 'mulaiLayanan' : 'berhentiLayanan',
+      );
+    } catch (e) {
+      _log('Layanan latar tidak tersedia: $e');
+    }
   }
 
   /// Hentikan semua peran dan tutup semua socket, tanpa menyentuh
