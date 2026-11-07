@@ -24,6 +24,16 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
     <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" android:usesPermissionFlags="neverForLocation"/>
+    <!-- Layanan latar depan jembatan offline (tahap produksi B):
+         menjaga proses tetap hidup selama sesi offline aktif.
+         Tipe connectedDevice (Android 14+) sesuai sifat jembatan;
+         POST_NOTIFICATIONS supaya notifikasi menetapnya terlihat
+         di Android 13+; WAKE_LOCK untuk kunci bangun parsial
+         selama sesi berjalan. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-feature android:name="android.hardware.camera.any" android:required="false"/>
     <application
         android:label="ELNUX"
@@ -64,6 +74,14 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+        <!-- Layanan latar depan jembatan offline: tidak diekspor,
+             hanya dimulai aplikasi sendiri lewat MainActivity;
+             tipe connectedDevice wajib cocok dengan izin
+             FOREGROUND_SERVICE_CONNECTED_DEVICE di atas. -->
+        <service
+            android:name=".JembatanLatarService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
         <!-- Menerima hasil instalasi sesi PackageInstaller OTA:
              tanpa intent-filter karena pengiriman lewat
              PendingIntent eksplisit dari MainActivity;
