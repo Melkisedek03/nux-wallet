@@ -8,22 +8,28 @@ Future<void> _pumpRow(
   required double width,
   String? status,
   bool statusBad = false,
+  bool isIn = true,
+  ThemeData? theme,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
-      theme: AppTheme.darkTheme,
+      theme: theme ?? AppTheme.darkTheme,
       home: Scaffold(
         body: Align(
           alignment: Alignment.topLeft,
           child: SizedBox(
             width: width,
             child: TransactionRow(
-              icon: const Icon(Icons.arrow_downward_rounded, size: 22),
-              title: 'Diterima',
+              icon: Icon(
+                  isIn
+                      ? Icons.arrow_downward_rounded
+                      : Icons.arrow_upward_rounded,
+                  size: 22),
+              title: isIn ? 'Diterima' : 'Terkirim',
               addr: '31ea7…d8b1',
               tag: '⚡ JIT',
-              isIn: true,
-              amount: '+1.000',
+              isIn: isIn,
+              amount: isIn ? '+1.000' : '-1.000',
               time: '20.48',
               status: status,
               statusBad: statusBad,
@@ -80,5 +86,27 @@ void main() {
     final statusRect = tester.getRect(find.text('Menunggu'));
     final timeRect = tester.getRect(find.text('20.48'));
     expect(statusRect.overlaps(timeRect), isFalse);
+  });
+
+  // Keputusan NUX 7 Nov 2026: nominal Terkirim harus merah nyala.
+  // Sebelumnya hardcode Colors.white — di mode terang putih di atas
+  // kartu putih = tidak terlihat. Merah berlaku di KEDUA tema.
+  testWidgets('nominal Terkirim merah nyala di mode terang & gelap',
+      (tester) async {
+    for (final theme in [AppTheme.lightTheme, AppTheme.darkTheme]) {
+      await _pumpRow(tester, width: 320, isIn: false, theme: theme);
+      expect(tester.takeException(), isNull);
+      final amount = tester.widget<Text>(find.text('-1.000'));
+      expect(amount.style?.color, const Color(0xFFEF4444));
+    }
+  });
+
+  testWidgets('nominal Diterima tetap hijau di mode terang',
+      (tester) async {
+    await _pumpRow(tester,
+        width: 320, isIn: true, theme: AppTheme.lightTheme);
+    expect(tester.takeException(), isNull);
+    final amount = tester.widget<Text>(find.text('+1.000'));
+    expect(amount.style?.color, const Color(0xFF34D399));
   });
 }

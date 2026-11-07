@@ -169,13 +169,20 @@ class TransactionRow extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
+                // Nominal: masuk hijau, keluar MERAH NYALA — di
+                // kedua tema (aksen pekat, di luar palet, sama
+                // seperti chip status di widget ini). Sebelumnya
+                // nominal keluar hardcode Colors.white: di mode
+                // terang ia putih di atas kartu putih sehingga
+                // tidak terlihat (temuan NUX 7 Nov 2026, keputusan
+                // NUX: terkirim memang harus merah nyala).
                 Text(amount,
                     style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
                         color: isIn
                             ? const Color(0xFF34D399)
-                            : Colors.white)),
+                            : const Color(0xFFEF4444))),
                 const SizedBox(height: 3),
                 Text(time,
                     style: TextStyle(
