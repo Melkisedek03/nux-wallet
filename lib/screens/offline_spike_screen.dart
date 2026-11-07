@@ -46,7 +46,15 @@ import '../utils/format.dart';
 class OfflineSpikeScreen extends StatefulWidget {
   final LspService lspService;
 
-  const OfflineSpikeScreen({super.key, required this.lspService});
+  /// Jembatan offline milik aplikasi (singleton global dari
+  /// main.dart): layar ini hanya menumpang memakai dan melihatnya.
+  final OfflineBridgeService bridge;
+
+  const OfflineSpikeScreen({
+    super.key,
+    required this.lspService,
+    required this.bridge,
+  });
 
   @override
   State<OfflineSpikeScreen> createState() => _OfflineSpikeScreenState();
@@ -57,7 +65,7 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
   static const String _celebratedFundingKey =
       'offline_spike_celebrated_funding_txids';
 
-  late final OfflineBridgeService _bridge;
+  OfflineBridgeService get _bridge => widget.bridge;
   final _hostNodeIdController = TextEditingController();
   final _channelAmountController = TextEditingController();
   final _invoiceAmountController = TextEditingController();
@@ -81,12 +89,13 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
   @override
   void initState() {
     super.initState();
-    _bridge = OfflineBridgeService(
-      onChanged: () {
-        if (mounted) setState(() {});
-      },
-      onLog: _addLog,
-    );
+    // Jembatan milik aplikasi: pasang callback selama layar tampil
+    // dan tampilkan riwayat kejadian selama layar tidak tampil.
+    _bridge.onChanged = () {
+      if (mounted) setState(() {});
+    };
+    _bridge.onLog = _addLog;
+    _log.addAll(_bridge.logHistory);
     _loadOwnNodeId();
     _loadRememberedPeer();
     _loadCelebratedFunding();
@@ -101,7 +110,11 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
   @override
   void dispose() {
     _peerTimer?.cancel();
-    _bridge.stop();
+    // Jembatan TIDAK dihentikan: ia milik aplikasi dan sesinya
+    // berjalan terus lintas layar. Hanya callback layar ini yang
+    // dilepas. Menghentikan sesi adalah tombol berhenti eksplisit.
+    _bridge.onChanged = null;
+    _bridge.onLog = null;
     _hostNodeIdController.dispose();
     _channelAmountController.dispose();
     _invoiceAmountController.dispose();
@@ -152,6 +165,9 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getString(_rememberedPeerKey);
     if (saved == null || !mounted) return;
+    // Serahkan juga ke jembatan: sambung-ulang peer otomatis saat
+    // tautan pulih memakai ingatan ini.
+    _bridge.rememberPeerNodeId(saved);
     setState(() => _rememberedPeerId = saved);
     if (_hostNodeIdController.text.trim().isEmpty) {
       _hostNodeIdController.text = saved;
@@ -328,6 +344,9 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
       _addLog('ID node host tidak valid (harus 66 karakter hex).');
       return;
     }
+    // Daftarkan ke jembatan agar tautan yang pulih menyambungkan
+    // ulang peer ini otomatis, tanpa menekan tombol lagi.
+    _bridge.rememberPeerNodeId(hex);
     setState(() => _connectingNode = true);
     try {
       for (var attempt = 1; attempt <= 10; attempt++) {
