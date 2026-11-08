@@ -17,6 +17,29 @@ class AppConfig {
   /// URL server Electrum (electrs) untuk chain data.
   static const String electrumUrl = 'tcp://lsp.taobot.org:60009';
 
+  /// URL berkas registri direktori toko untuk tab Jelajah — satu berkas
+  /// JSON statis terkurasi tim (pola yang sama dengan berkas fallback
+  /// OTA PUNDI: tanpa server khusus, tanpa akun, tanpa pelacakan).
+  /// Nilai ini adalah pola aset rilis repo ini; lokasi hosting final
+  /// adalah keputusan tim — menggantinya cukup mengubah konstanta ini.
+  static const String jelajahRegistryUrl =
+      'https://github.com/Nusanian/nux-wallet/releases/download/Data/jelajah-registry.json';
+
+  /// Basis API datafeed publik qutrade.io (TradingView UDF) — sumber
+  /// harga NUX baca-saja untuk seksi Info Pasar tab Jelajah. Endpoint
+  /// candle hariannya memakai token resolusi "1D" (bukan "D").
+  static const String qutradeDatafeedBase =
+      'https://qutrade.io/api/spot/tradingview';
+
+  /// Ticker publik USDT/IDR (Indodax) — hanya dipakai sebagai kurs
+  /// konversi agar harga NUX dari qutrade dapat ditampilkan dalam IDR.
+  static const String usdtIdrTickerUrl =
+      'https://indodax.com/api/usdt_idr/ticker';
+
+  /// Basis REST electrs publik milik tim — statistik jaringan ringan
+  /// (tinggi blok terkini) untuk tab Jelajah.
+  static const String electrsRestBase = 'https://apinux.taobot.org';
+
   /// true = testnet Nusacoin, false = mainnet (Network.nusacoin).
   static const bool isTestnet = true;
 

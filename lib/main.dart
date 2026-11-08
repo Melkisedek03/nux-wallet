@@ -16,6 +16,7 @@ import 'locale_controller.dart';
 import 'l10n/app_localizations.dart';
 import 'theme.dart';
 import 'screens/backup_screen.dart';
+import 'screens/jelajah_screen.dart';
 import 'screens/receive_screen.dart';
 import 'screens/restore_screen.dart';
 import 'screens/splash_screen.dart';
@@ -1147,10 +1148,6 @@ class _HomeScreenState extends State<HomeScreen>
                         ),
                       ).then((_) => _refreshDashboard());
                     }),
-                    const SizedBox(width: 10),
-_quickAction(const Icon(Icons.add_rounded, size: 25), context.l10n.buy, false, () {}),
-                    const SizedBox(width: 10),
-                    _quickAction(const Icon(Icons.swap_horiz_rounded, size: 25), context.l10n.swap, false, () {})
                   ],
                 ),
               ),
@@ -1193,11 +1190,7 @@ _quickAction(const Icon(Icons.add_rounded, size: 25), context.l10n.buy, false, (
             ],
           ),
             ),
-            _ComingSoonPage(
-              icon: '\u25CD',
-              title: context.l10n.market,
-              message: context.l10n.marketSoon,
-            ),
+            const JelajahScreen(),
             _HistoryPage(
                 payments: _historyPayments,
                 rowBuilder: _paymentRow,
@@ -2478,45 +2471,6 @@ class _HistoryPage extends StatelessWidget {
                 ),
         ),
       ],
-    );
-  }
-}
-
-/// Halaman placeholder untuk tab yang belum punya konten sendiri.
-class _ComingSoonPage extends StatelessWidget {
-  final String icon;
-  final String title;
-  final String message;
-
-  const _ComingSoonPage({
-    required this.icon,
-    required this.title,
-    required this.message,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(icon,
-                style: const TextStyle(
-                    fontSize: 44, color: Color(0xFF34D399))),
-            const SizedBox(height: 14),
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 20, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 6),
-            Text(message,
-                style: TextStyle(
-                    fontSize: 13, color: context.palette.secondary),
-                textAlign: TextAlign.center),
-          ],
-        ),
-      ),
     );
   }
 }

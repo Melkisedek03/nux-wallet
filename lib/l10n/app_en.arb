@@ -45,13 +45,38 @@
   "legacyStrip": "This wallet has no backup phrase yet. Open the Profile tab to create a new wallet with a phrase before receiving funds.",
   "send": "Send",
   "receive": "Receive",
-  "buy": "Buy",
-  "swap": "Swap",
   "activity": "Activity",
   "seeAll": "See all",
   "noActivity": "No activity yet",
-  "market": "Market",
-  "marketSoon": "NUX market info — coming soon.",
+  "market": "Explore",
+  "jelajahSource": "Market price — qutrade.io",
+  "jelajahUpdated": "Updated {time}",
+  "@jelajahUpdated": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "jelajahChange24h": "24h change",
+  "jelajahBlockHeight": "Block height",
+  "jelajahDirectory": "Merchant Directory",
+  "jelajahSearchHint": "Search merchants or goods…",
+  "jelajahAllCities": "All cities",
+  "jelajahPointsProgram": "Store Mode Points Program",
+  "jelajahCopyOffer": "Copy Offer",
+  "jelajahOfferCopied": "Offer copied",
+  "jelajahEmpty": "No merchants are listed yet. Merchant owners can register their shop through the Nusacoin community channels.",
+  "jelajahNoResults": "No merchants match your search.",
+  "jelajahDisclaimer": "Market information from public sources. Not financial advice.",
+  "jelajahDirectoryUpdated": "Directory updated {time}",
+  "@jelajahDirectoryUpdated": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "home": "Home",
   "history": "History",
   "profile": "Profile",
