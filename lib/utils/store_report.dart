@@ -702,6 +702,102 @@ List<ProductSalesEntry> aggregateProductSales(
   return entries;
 }
 
+/// Satu shift di Laporan Pembayaran: jumlah nota lunas dan
+/// total penerimaannya.
+class ShiftPaymentEntry {
+  final StoreShift shift;
+  final int invoiceCount;
+
+  /// Σ total tagihan (grandTotalRp) nota lunas shift ini —
+  /// angka yang sama dengan Total ORDER laporan shiftnya.
+  final int totalRp;
+
+  const ShiftPaymentEntry({
+    required this.shift,
+    required this.invoiceCount,
+    required this.totalRp,
+  });
+}
+
+/// Satu tanggal di Laporan Pembayaran: rincian shift-shift
+/// yang DIBUKA pada tanggal itu + subtotal harinya.
+class DayPaymentEntry {
+  /// Tanggal kalender (jam 00:00 lokal) menurut jam buka shift.
+  final DateTime day;
+  final List<ShiftPaymentEntry> shifts;
+
+  const DayPaymentEntry({required this.day, required this.shifts});
+
+  int get totalRp => shifts.fold(0, (sum, e) => sum + e.totalRp);
+  int get invoiceCount => shifts.fold(0, (sum, e) => sum + e.invoiceCount);
+}
+
+/// Agregasi murni Laporan Pembayaran: penerimaan per tanggal,
+/// dirinci per shift. Tanggal & keanggotaan ditentukan jam
+/// BUKA shift (keputusan NUX 8 Nov 2026 — bukan jam tutupnya):
+/// shift yang dibuka 22:00 dan ditutup lewat tengah malam
+/// tetap tercatat di tanggal bukanya, beserta seluruh
+/// penjualannya; jendela [from, to) pun menyaring menurut jam
+/// buka shift.
+///
+/// Penjualan yang dihitung: pesanan lunas era rupiah, bukan
+/// VOID, yang cap `shiftOpenedMs`-nya cocok dengan shift ybs.
+/// Shift tanpa penjualan lunas tidak tampil (ini laporan
+/// pembayaran, bukan daftar kehadiran shift), dan pesanan yang
+/// shiftnya sudah tidak tercatat ikut tidak terinci — laporan
+/// ini memang hanya bisa merinci shift yang catatannya ada.
+/// Urutan: tanggal terbaru dulu; dalam satu tanggal, shift
+/// urut jam buka menaik.
+List<DayPaymentEntry> aggregatePaymentsByDay(
+  List<CompletedOrder> orders,
+  List<StoreShift> shifts, {
+  required DateTime from,
+  required DateTime to,
+}) {
+  final totals = <int, ({int count, int total})>{};
+  for (final order in orders) {
+    if (!order.isRupiahEra || order.isVoid) continue;
+    final ms = order.shiftOpenedMs;
+    if (ms == null) continue;
+    final current = totals[ms] ?? (count: 0, total: 0);
+    totals[ms] = (
+      count: current.count + 1,
+      total: current.total + order.grandTotalRp,
+    );
+  }
+  final byDay = <DateTime, List<ShiftPaymentEntry>>{};
+  for (final shift in shifts) {
+    if (shift.openedAt.isBefore(from) || !shift.openedAt.isBefore(to)) {
+      continue;
+    }
+    final t = totals[shift.openedAt.millisecondsSinceEpoch];
+    if (t == null) continue;
+    final day = DateTime(
+      shift.openedAt.year,
+      shift.openedAt.month,
+      shift.openedAt.day,
+    );
+    byDay
+        .putIfAbsent(day, () => [])
+        .add(
+          ShiftPaymentEntry(
+            shift: shift,
+            invoiceCount: t.count,
+            totalRp: t.total,
+          ),
+        );
+  }
+  final days = byDay.keys.toList()..sort((a, b) => b.compareTo(a));
+  return [
+    for (final day in days)
+      DayPaymentEntry(
+        day: day,
+        shifts: byDay[day]!
+          ..sort((a, b) => a.shift.openedAt.compareTo(b.shift.openedAt)),
+      ),
+  ];
+}
+
 /// Jumlah shift yang jendelanya bersinggungan dengan [from, to)
 /// — untuk catatan jujur mode laporan per tanggal ("Meliputi N
 /// shift") tanpa mengarang nomor shift.

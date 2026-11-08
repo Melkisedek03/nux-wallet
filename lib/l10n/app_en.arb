@@ -480,6 +480,28 @@
   "storeViewReport": "View Report",
   "storeSalesReport": "Sales Report",
   "storeReportsTitle": "Reports",
+  "storeReportPaymentsTitle": "Payment Report",
+  "storeReportPaymentsSubtitle": "Receipts by date, broken down by shift.",
+  "storePaymentReportBreakdown": "Per-Shift Breakdown",
+  "storePaymentReportInvoices": "{count} invoices",
+  "@storePaymentReportInvoices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "storePaymentReportTotalLine": "Total {count} invoices • Rp{amount}",
+  "@storePaymentReportTotalLine": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "storeReportProductSalesTitle": "Product Sales Report",
   "storeReportProductSalesSubtitle": "All sales per product in the selected period.",
   "storeProductSalesGross": "Gross",

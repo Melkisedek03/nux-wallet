@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../locale_controller.dart';
 import '../theme.dart';
 import 'store_bestsellers_screen.dart';
+import 'store_payment_report_screen.dart';
 import 'store_product_sales_screen.dart';
 
 /// Daftar Laporan Mode Toko — halaman indeks laporan-laporan
@@ -32,6 +33,12 @@ class StoreReportsScreen extends StatelessWidget {
         title: l10n.storeReportProductSalesTitle,
         subtitle: l10n.storeReportProductSalesSubtitle,
         builder: (_) => const StoreProductSalesScreen(),
+      ),
+      _ReportEntry(
+        icon: Icons.payments_rounded,
+        title: l10n.storeReportPaymentsTitle,
+        subtitle: l10n.storeReportPaymentsSubtitle,
+        builder: (_) => const StorePaymentReportScreen(),
       ),
     ];
     return Scaffold(

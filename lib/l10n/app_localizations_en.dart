@@ -1021,6 +1021,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeReportsTitle => 'Reports';
 
   @override
+  String get storeReportPaymentsTitle => 'Payment Report';
+
+  @override
+  String get storeReportPaymentsSubtitle =>
+      'Receipts by date, broken down by shift.';
+
+  @override
+  String get storePaymentReportBreakdown => 'Per-Shift Breakdown';
+
+  @override
+  String storePaymentReportInvoices(int count) {
+    return '$count invoices';
+  }
+
+  @override
+  String storePaymentReportTotalLine(int count, String amount) {
+    return 'Total $count invoices • Rp$amount';
+  }
+
+  @override
   String get storeReportProductSalesTitle => 'Product Sales Report';
 
   @override

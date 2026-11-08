@@ -480,6 +480,28 @@
   "storeViewReport": "Lihat Laporan",
   "storeSalesReport": "Laporan Penjualan",
   "storeReportsTitle": "Daftar Laporan",
+  "storeReportPaymentsTitle": "Laporan Pembayaran",
+  "storeReportPaymentsSubtitle": "Penerimaan per tanggal, dirinci per shift.",
+  "storePaymentReportBreakdown": "Rincian per Shift",
+  "storePaymentReportInvoices": "{count} nota",
+  "@storePaymentReportInvoices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "storePaymentReportTotalLine": "Total {count} nota • Rp{amount}",
+  "@storePaymentReportTotalLine": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "storeReportProductSalesTitle": "Laporan Penjualan Produk",
   "storeReportProductSalesSubtitle": "Semua penjualan per produk pada periode terpilih.",
   "storeProductSalesGross": "Bruto",

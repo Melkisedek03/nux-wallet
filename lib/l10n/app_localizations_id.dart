@@ -1021,6 +1021,26 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeReportsTitle => 'Daftar Laporan';
 
   @override
+  String get storeReportPaymentsTitle => 'Laporan Pembayaran';
+
+  @override
+  String get storeReportPaymentsSubtitle =>
+      'Penerimaan per tanggal, dirinci per shift.';
+
+  @override
+  String get storePaymentReportBreakdown => 'Rincian per Shift';
+
+  @override
+  String storePaymentReportInvoices(int count) {
+    return '$count nota';
+  }
+
+  @override
+  String storePaymentReportTotalLine(int count, String amount) {
+    return 'Total $count nota • Rp$amount';
+  }
+
+  @override
   String get storeReportProductSalesTitle => 'Laporan Penjualan Produk';
 
   @override

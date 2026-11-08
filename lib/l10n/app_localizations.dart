@@ -1910,6 +1910,36 @@ abstract class AppLocalizations {
   /// **'Daftar Laporan'**
   String get storeReportsTitle;
 
+  /// No description provided for @storeReportPaymentsTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Laporan Pembayaran'**
+  String get storeReportPaymentsTitle;
+
+  /// No description provided for @storeReportPaymentsSubtitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Penerimaan per tanggal, dirinci per shift.'**
+  String get storeReportPaymentsSubtitle;
+
+  /// No description provided for @storePaymentReportBreakdown.
+  ///
+  /// In id, this message translates to:
+  /// **'Rincian per Shift'**
+  String get storePaymentReportBreakdown;
+
+  /// No description provided for @storePaymentReportInvoices.
+  ///
+  /// In id, this message translates to:
+  /// **'{count} nota'**
+  String storePaymentReportInvoices(int count);
+
+  /// No description provided for @storePaymentReportTotalLine.
+  ///
+  /// In id, this message translates to:
+  /// **'Total {count} nota • Rp{amount}'**
+  String storePaymentReportTotalLine(int count, String amount);
+
   /// No description provided for @storeReportProductSalesTitle.
   ///
   /// In id, this message translates to:

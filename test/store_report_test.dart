@@ -657,4 +657,102 @@ void main() {
       expect(ranked.map((e) => e.label), ['ceri', 'Beta', 'alfa']);
     });
   });
+
+  group('laporan pembayaran (aggregatePaymentsByDay)', () {
+    CompletedOrder sale({
+      required DateTime time,
+      required int totalRp,
+      required int? shiftOpenedMs,
+      bool isVoid = false,
+    }) => CompletedOrder(
+      time: time,
+      lines: const [
+        OrderLine(label: 'X', unitPriceRp: 1000, qty: 1),
+      ],
+      orderDiscount: null,
+      era: storeEraRupiah,
+      subtotalRp: totalRp,
+      totalDiscountRp: 0,
+      grandTotalRp: totalRp,
+      paymentHashHex: 'xx',
+      isVoid: isVoid,
+      shiftOpenedMs: shiftOpenedMs,
+    );
+
+    StoreShift shift(DateTime openedAt, {DateTime? closedAt}) =>
+        StoreShift(openedAt: openedAt, closedAt: closedAt, era: 'rp');
+
+    final from = DateTime(2026, 11, 1);
+    final to = DateTime(2026, 12, 1);
+
+    test('shift lewat tengah malam tercatat di tanggal BUKA-nya', () {
+      final night = shift(
+        DateTime(2026, 11, 7, 22),
+        closedAt: DateTime(2026, 11, 8, 2),
+      );
+      final ms = night.openedAt.millisecondsSinceEpoch;
+      final days = aggregatePaymentsByDay(
+        [
+          sale(time: DateTime(2026, 11, 7, 23), totalRp: 50000, shiftOpenedMs: ms),
+          sale(time: DateTime(2026, 11, 8, 1), totalRp: 30000, shiftOpenedMs: ms),
+        ],
+        [night],
+        from: from,
+        to: to,
+      );
+      expect(days, hasLength(1));
+      expect(days.single.day, DateTime(2026, 11, 7));
+      expect(days.single.totalRp, 80000);
+      expect(days.single.invoiceCount, 2);
+    });
+
+    test('subtotal hari = gabungan shift hari itu; tanggal terbaru dulu',
+        () {
+      final s1 = shift(DateTime(2026, 11, 8, 8));
+      final s2 = shift(DateTime(2026, 11, 8, 16));
+      final s0 = shift(DateTime(2026, 11, 6, 9));
+      int msOf(StoreShift s) => s.openedAt.millisecondsSinceEpoch;
+      final days = aggregatePaymentsByDay(
+        [
+          sale(time: DateTime(2026, 11, 8, 9), totalRp: 10000, shiftOpenedMs: msOf(s1)),
+          sale(time: DateTime(2026, 11, 8, 17), totalRp: 20000, shiftOpenedMs: msOf(s2)),
+          sale(time: DateTime(2026, 11, 6, 10), totalRp: 7000, shiftOpenedMs: msOf(s0)),
+        ],
+        [s2, s0, s1], // urutan masukan acak
+        from: from,
+        to: to,
+      );
+      expect(days.map((d) => d.day), [DateTime(2026, 11, 8), DateTime(2026, 11, 6)]);
+      expect(days.first.totalRp, 30000);
+      // Dalam satu tanggal: shift urut jam buka menaik.
+      expect(
+        days.first.shifts.map((e) => e.shift.openedAt),
+        [s1.openedAt, s2.openedAt],
+      );
+    });
+
+    test('jendela menyaring menurut jam buka; VOID & tanpa shift diabaikan; shift kosong tak tampil',
+        () {
+      final before = shift(DateTime(2026, 10, 31, 23));
+      final inside = shift(DateTime(2026, 11, 10, 8));
+      final empty = shift(DateTime(2026, 11, 11, 8));
+      int msOf(StoreShift s) => s.openedAt.millisecondsSinceEpoch;
+      final days = aggregatePaymentsByDay(
+        [
+          sale(time: DateTime(2026, 11, 1, 1), totalRp: 99000, shiftOpenedMs: msOf(before)),
+          sale(time: DateTime(2026, 11, 10, 9), totalRp: 15000, shiftOpenedMs: msOf(inside)),
+          sale(time: DateTime(2026, 11, 10, 10), totalRp: 99000, shiftOpenedMs: msOf(inside), isVoid: true),
+          sale(time: DateTime(2026, 11, 10, 11), totalRp: 99000, shiftOpenedMs: null),
+        ],
+        [before, inside, empty],
+        from: from,
+        to: to,
+      );
+      expect(days, hasLength(1));
+      expect(days.single.day, DateTime(2026, 11, 10));
+      expect(days.single.shifts, hasLength(1));
+      expect(days.single.totalRp, 15000);
+      expect(days.single.invoiceCount, 1);
+    });
+  });
 }
