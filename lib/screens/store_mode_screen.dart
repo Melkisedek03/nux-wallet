@@ -2924,28 +2924,18 @@ class _StoreModeScreenState extends State<StoreModeScreen>
             style: TextStyle(fontSize: 12, color: context.palette.muted),
           )
         else
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final item in visibleCatalog)
-                ActionChip(
-                  label: Text(
-                    item.defaultDiscount == null
-                        ? '${item.name} • Rp${_fmtRp(item.priceRp)}'
-                        : '${item.name} • Rp${_fmtRp(item.priceRp)} • ${l10n.storeDiscount} ${_discountBadge(item.defaultDiscount!)}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 8,
-                  ),
-                  onPressed: () => _addProduct(item),
-                ),
-            ],
+          // Portrait: pager kartu item ukuran tetap (2 kolom ×
+          // maks 5 baris per halaman, geser untuk halaman
+          // berikutnya) dalam kartu segmen — lihat _CatalogPager.
+          _CatalogPager(
+            items: visibleCatalog,
+            resetKey: '$_searchQuery|$_catalogCategory|${_catalog.length}',
+            priceText: (item) => 'Rp${_fmtRp(item.priceRp)}',
+            badgeText: (item) => item.defaultDiscount == null
+                ? null
+                : '${l10n.storeDiscount} '
+                      '${_discountBadge(item.defaultDiscount!)}',
+            onTap: _addProduct,
           ),
         const SizedBox(height: 18),
         _buildKeypadSection(context),
@@ -5115,6 +5105,189 @@ class _CatalogManagerSheetState extends State<_CatalogManagerSheet> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Pager kartu katalog khusus PORTRAIT (arah NUX 9 Nov 2026):
+/// kartu item berukuran TETAP — baris 1 nama (1 baris, elipsis
+/// bila kepanjangan), baris 2 harga, lencana diskon bawaan
+/// bila ada — tersusun 2 kolom × maksimal 5 baris = 10 kartu
+/// per halaman; katalog lebih dari 10 berlanjut ke halaman
+/// berikutnya yang dicapai dengan geser (PageView). Seluruh
+/// pager dibungkus kartu segmen seperti segmen pesanan,
+/// supaya segmen katalog tegas terpisah. Set item yang tampil
+/// berubah (cari/kategori/katalog berubah) → kembali ke
+/// halaman pertama.
+class _CatalogPager extends StatefulWidget {
+  const _CatalogPager({
+    required this.items,
+    required this.resetKey,
+    required this.priceText,
+    required this.badgeText,
+    required this.onTap,
+  });
+
+  final List<CatalogItem> items;
+
+  /// Tanda set item yang sedang tampil; berubah → pager
+  /// kembali ke halaman pertama.
+  final String resetKey;
+  final String Function(CatalogItem item) priceText;
+  final String? Function(CatalogItem item) badgeText;
+  final void Function(CatalogItem item) onTap;
+
+  @override
+  State<_CatalogPager> createState() => _CatalogPagerState();
+}
+
+class _CatalogPagerState extends State<_CatalogPager> {
+  static const _cardHeight = 84.0;
+  static const _spacing = 10.0;
+  static const _perPage = 10;
+
+  final _controller = PageController();
+  int _page = 0;
+
+  @override
+  void didUpdateWidget(_CatalogPager oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.resetKey != widget.resetKey) {
+      _page = 0;
+      if (_controller.hasClients) _controller.jumpToPage(0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final items = widget.items;
+    final pageCount = (items.length + _perPage - 1) ~/ _perPage;
+    final fullest = items.length < _perPage ? items.length : _perPage;
+    final rows = (fullest + 1) ~/ 2;
+    final gridHeight = rows * _cardHeight + (rows - 1) * _spacing;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.palette.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: context.palette.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            height: gridHeight,
+            child: PageView.builder(
+              controller: _controller,
+              onPageChanged: (p) => setState(() => _page = p),
+              itemCount: pageCount,
+              itemBuilder: (context, page) {
+                final start = page * _perPage;
+                final end = start + _perPage < items.length
+                    ? start + _perPage
+                    : items.length;
+                final slice = items.sublist(start, end);
+                return GridView.builder(
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        mainAxisExtent: _cardHeight,
+                        crossAxisSpacing: _spacing,
+                        mainAxisSpacing: _spacing,
+                      ),
+                  itemCount: slice.length,
+                  itemBuilder: (context, i) {
+                    final item = slice[i];
+                    final badge = widget.badgeText(item);
+                    return Material(
+                      color: context.palette.cardAlt,
+                      borderRadius: BorderRadius.circular(14),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () => widget.onTap(item),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: context.palette.border,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                item.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                widget.priceText(item),
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  color: context.palette.muted,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              if (badge != null)
+                                Text(
+                                  badge,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFF10B981),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          if (pageCount > 1) ...[
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (var p = 0; p < pageCount; p++)
+                  Container(
+                    width: 6,
+                    height: 6,
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: p == _page
+                          ? const Color(0xFF10B981)
+                          : context.palette.border,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }
