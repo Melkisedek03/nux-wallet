@@ -439,6 +439,7 @@
   "storeCatalogTitle": "Product Catalog",
   "storeManageCatalog": "Manage",
   "storeCatalogEmpty": "The catalog is still empty — add the first product via Manage.",
+  "storeCategoryAll": "All",
   "storeCodeNotRegistered": "This code isn't registered in the catalog yet.",
   "storeRegisterNow": "Register It Now",
   "storeProductCode": "Product Code",

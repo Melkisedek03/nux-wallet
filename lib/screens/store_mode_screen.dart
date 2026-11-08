@@ -127,6 +127,12 @@ class _StoreModeScreenState extends State<StoreModeScreen>
   /// pesanan sesudah penjualan lunas (lihat _resetOrderPanel).
   final _searchController = TextEditingController();
   String _searchQuery = '';
+
+  /// Kategori katalog terpilih pada saringan kasir (null =
+  /// semua kategori). Mengikuti pola tab kategori desain
+  /// landscape referensi NUX (8 Nov 2026): kasir menyaring grid
+  /// produk per kategori, di kedua mode layar.
+  String? _catalogCategory;
   final _freeTitleController = TextEditingController();
 
   // --- Shift kasir ---
@@ -2342,27 +2348,10 @@ class _StoreModeScreenState extends State<StoreModeScreen>
             : LayoutBuilder(
         builder: (context, constraints) {
           if (storeModeUsesTwoPanels(constraints.maxWidth)) {
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  flex: 5,
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(18, 4, 9, 18),
-                    child: _buildCashier(context),
-                  ),
-                ),
-                VerticalDivider(width: 1, color: context.palette.border),
-                Expanded(
-                  flex: 4,
-                  child: SingleChildScrollView(
-                    controller: _statusScrollController,
-                    padding: const EdgeInsets.fromLTRB(9, 4, 18, 18),
-                    child: _buildStatusPanel(context),
-                  ),
-                ),
-              ],
-            );
+            // Dua panel = mode LANDSCAPE tablet (desain
+            // referensi NUX 8 Nov 2026): pesanan di kiri,
+            // katalog grid di kanan — lihat _buildLandscapeCashier.
+            return _buildLandscapeCashier(context);
           }
           return SingleChildScrollView(
             controller: _pageScrollController,
@@ -2449,79 +2438,468 @@ class _StoreModeScreenState extends State<StoreModeScreen>
     );
   }
 
-  Widget _buildCashier(BuildContext context) {
-    if (_openShift == null) return _buildShiftGate(context);
+  /// Katalog yang tampil di kasir: saringan cari lalu saringan
+  /// kategori. Kategori tersimpan yang sudah tidak ada di
+  /// katalog (produk terakhirnya terhapus) diperlakukan sebagai
+  /// "semua" supaya grid tidak kosong tanpa sebab.
+  List<CatalogItem> _visibleCatalog() {
+    final searched = filterCatalogItems(_catalog, _searchQuery);
+    final selected = _catalogCategory;
+    final valid = selected != null &&
+        catalogCategories(_catalog).contains(selected);
+    return filterCatalogByCategory(searched, valid ? selected : null);
+  }
+
+  /// Baris chip saringan kategori (Semua + kategori katalog,
+  /// urutan catalogCategories): pola tab kategori desain
+  /// landscape referensi, dipakai di kedua mode layar.
+  Widget _buildCategoryChips(BuildContext context) {
     final l10n = context.l10n;
-    final visibleCatalog = filterCatalogItems(_catalog, _searchQuery);
+    final categories = catalogCategories(_catalog);
+    final selected = _catalogCategory != null &&
+            categories.contains(_catalogCategory)
+        ? _catalogCategory
+        : null;
+    Widget chip(String? value, String label) => Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ChoiceChip(
+        label: Text(label),
+        selected: selected == value,
+        onSelected: (_) => setState(() => _catalogCategory = value),
+      ),
+    );
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          chip(null, l10n.storeCategoryAll),
+          for (final category in categories) chip(category, category),
+        ],
+      ),
+    );
+  }
+
+  /// Baris judul katalog + tombol Kelola — dipakai layout portrait & landscape.
+  Widget _buildCatalogHeaderRow(BuildContext context) {
+    final l10n = context.l10n;
+    // --- Katalog / item cepat + cari + scan ---
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            l10n.storeCatalogTitle,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        TextButton(
+          onPressed: () => _openCatalogManager(),
+          child: Text(l10n.storeManageCatalog),
+        ),
+      ],
+    );
+  }
+
+  /// Baris cari produk + tombol pindai kode — dipakai layout portrait & landscape.
+  Widget _buildSearchRow(BuildContext context) {
+    final l10n = context.l10n;
+    // Cari produk (nama/kode) menyaring chip secara langsung;
+    // tombol scan di sampingnya tetap jalur _scanProductCode:
+    // kode terdaftar langsung masuk pesanan (qty +1 bila
+    // barisnya sudah ada, dari orderAddProduct).
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: TextField(
+            controller: _searchController,
+            onChanged: (v) => setState(() => _searchQuery = v),
+            decoration: InputDecoration(
+              hintText: l10n.storeSearchHint,
+              prefixIcon: const Icon(Icons.search_rounded, size: 20),
+              suffixIcon: _searchQuery.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: const Icon(Icons.clear_rounded, size: 19),
+                      onPressed: _clearCatalogSearch,
+                    ),
+              filled: true,
+              fillColor: context.palette.cardAlt,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        OutlinedButton(
+          onPressed: _scanProductCode,
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 14,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: const Icon(Icons.qr_code_scanner_rounded, size: 22),
+        ),
+      ],
+    );
+  }
+
+  /// Bagian keypad mode ganda (Qty | Nominal) — dipakai layout portrait & landscape.
+  Widget _buildKeypadSection(BuildContext context) {
+    final l10n = context.l10n;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // --- Katalog / item cepat + cari + scan ---
+      // --- Keypad mode ganda: Qty (bawaan) | Nominal ---
+      SegmentedButton<bool>(
+        segments: [
+          ButtonSegment(
+            value: true,
+            icon: const Icon(Icons.numbers_rounded, size: 18),
+            label: Text(l10n.storeKeypadModeQty),
+          ),
+          ButtonSegment(
+            value: false,
+            icon: const Icon(Icons.payments_outlined, size: 18),
+            label: Text(l10n.storeKeypadModeAmount),
+          ),
+        ],
+        selected: {_qtyKeypadMode},
+        onSelectionChanged: (s) => setState(() => _qtyKeypadMode = s.first),
+      ),
+      const SizedBox(height: 12),
+      if (_qtyKeypadMode) ...[
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: context.palette.cardAlt,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          // Angka pengali saja, rata tengah — tanpa awalan "×"
+          // dan tanpa kata "Multiplier" (temuan lapangan NUX
+          // 3 Nov 2026: tampilannya cukup angka).
+          child: Text(
+            '$_effectiveQty',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 30,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        _buildKeypad(context),
+        const SizedBox(height: 6),
+        Text(
+          l10n.storeQtyModeHint,
+          style: TextStyle(fontSize: 12, color: context.palette.muted),
+        ),
+      ] else ...[
+        // --- Nominal bebas (keypad, rupiah) ---
+        Text(
+          l10n.storeFreeAmountLabel,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 8),
+        // Judul kustom opsional untuk baris bebas ini — jalan
+        // untuk barang/jasa yang belum terinput di katalog.
+        // Kosong berarti label baku "Item Bebas".
+        TextField(
+          controller: _freeTitleController,
+          decoration: InputDecoration(
+            labelText: l10n.storeFreeTitleLabel,
+            filled: true,
+            fillColor: context.palette.cardAlt,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: context.palette.cardAlt,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Rp${_fmtRp(_keypadRp)}',
+                  style: const TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              Text(
+                'Rp',
+                style: TextStyle(
+                  fontSize: 15,
+                  color: context.palette.muted,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        // Jumlah cepat pecahan rupiah umum.
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final quick in const [
+              1000,
+              2000,
+              5000,
+              10000,
+              20000,
+              50000,
+              100000,
+            ])
+              OutlinedButton(
+                onPressed: () => setState(
+                  () => _keypadRp = keypadQuickAdd(_keypadRp, quick),
+                ),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  '+${_fmtRp(quick)}',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        _buildKeypad(context),
+        const SizedBox(height: 10),
+        // Pengali tertunda ikut berlaku untuk item bebas —
+        // tampilkan penanda kecilnya di sini bila > 1 supaya
+        // kasir melihat jumlah yang akan ditambahkan, bukan
+        // diam-diam mengejutkan di daftar pesanan.
+        if (_effectiveQty > 1) ...[
+          Center(
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: context.palette.cardAlt,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                l10n.storeQtyBadge(_effectiveQty),
+                style: const TextStyle(
+                    fontSize: 12, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        OutlinedButton.icon(
+          onPressed: _keypadRp > 0 ? _addFreeAmount : null,
+          icon: const Icon(Icons.add_rounded, size: 20),
+          label: Text(
+            l10n.storeAddFreeItem,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          ),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 13),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+        ),
+      ],
+      ],
+    );
+  }
+
+  /// Blok pesanan: judul + tahan, baris-baris, subtotal, diskon, total — dipakai layout portrait & landscape.
+  Widget _buildOrderLinesBlock(BuildContext context) {
+    final l10n = context.l10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+      // --- Pesanan ---
+      Row(
+        children: [
+          Expanded(
+            child: Text(
+              l10n.storeOrderTitle,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          if (_heldOrders.isNotEmpty)
+            TextButton.icon(
+              onPressed: _openHeldOrders,
+              icon: const Icon(Icons.pause_circle_outline_rounded, size: 19),
+              label: Text(l10n.storeHeldBadge(_heldOrders.length)),
+            ),
+        ],
+      ),
+      const SizedBox(height: 8),
+      if (_lines.isEmpty)
+        Text(
+          l10n.storeOrderEmpty,
+          style: TextStyle(fontSize: 12, color: context.palette.muted),
+        )
+      else ...[
+        for (var i = 0; i < _lines.length; i++) _buildOrderLine(context, i),
+        const Divider(height: 20),
+        _summaryRow(
+          context,
+          l10n.storeSubtotal,
+          'Rp${_fmtRp(orderSubtotalRp(_lines))}',
+        ),
+        InkWell(
+          onTap: _editOrderDiscount,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _orderDiscount == null
+                        ? l10n.storeOrderDiscount
+                        : '${l10n.storeOrderDiscount} (${_discountBadge(_orderDiscount!)})',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: context.palette.label,
+                    ),
+                  ),
+                ),
+                Text(
+                  orderDiscountAmountRp(_lines, _orderDiscount) > 0
+                      ? '−Rp${_fmtRp(orderDiscountAmountRp(_lines, _orderDiscount))}'
+                      : l10n.storeSetDiscount,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (orderTotalDiscountRp(_lines, _orderDiscount) > 0)
+          _summaryRow(
+            context,
+            l10n.storeTotalDiscount,
+            '−Rp${_fmtRp(orderTotalDiscountRp(_lines, _orderDiscount))}',
+          ),
+        const SizedBox(height: 6),
         Row(
           children: [
             Expanded(
               child: Text(
-                l10n.storeCatalogTitle,
+                l10n.storeGrandTotal,
                 style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ),
-            TextButton(
-              onPressed: () => _openCatalogManager(),
-              child: Text(l10n.storeManageCatalog),
+            Text(
+              'Rp${_fmtRp(_grandTotal)}',
+              style: const TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ],
         ),
+      ],
+      ],
+    );
+  }
+
+  /// Blok aksi pesanan: pesan galat + tombol Selesaikan Pembayaran + Tahan Pesanan — dipakai layout portrait & landscape.
+  Widget _buildOrderActions(BuildContext context) {
+    final l10n = context.l10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+      if (_error != null) ...[
+        const SizedBox(height: 12),
+        Text(
+          _error!,
+          style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+        ),
+      ],
+      const SizedBox(height: 14),
+      ElevatedButton(
+        onPressed: _lines.isNotEmpty ? _openPayment : null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF10B981),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 17),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        child: Text(
+          l10n.storeCheckout,
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+        ),
+      ),
+      const SizedBox(height: 10),
+      // Tahan pesanan (tamu bayar belakangan): parkir pesanan
+      // berjalan ke daftar tahan persisten.
+      OutlinedButton.icon(
+        onPressed: _lines.isNotEmpty ? _holdCurrentOrder : null,
+        icon: const Icon(Icons.pause_circle_outline_rounded, size: 20),
+        label: Text(
+          l10n.storeHoldOrder,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+        ),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 13),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
+      ],
+    );
+  }
+
+  Widget _buildCashier(BuildContext context) {
+    if (_openShift == null) return _buildShiftGate(context);
+    final l10n = context.l10n;
+    final visibleCatalog = _visibleCatalog();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildCatalogHeaderRow(context),
         const SizedBox(height: 6),
-        // Cari produk (nama/kode) menyaring chip secara langsung;
-        // tombol scan di sampingnya tetap jalur _scanProductCode:
-        // kode terdaftar langsung masuk pesanan (qty +1 bila
-        // barisnya sudah ada, dari orderAddProduct).
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _searchController,
-                onChanged: (v) => setState(() => _searchQuery = v),
-                decoration: InputDecoration(
-                  hintText: l10n.storeSearchHint,
-                  prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                  suffixIcon: _searchQuery.isEmpty
-                      ? null
-                      : IconButton(
-                          icon: const Icon(Icons.clear_rounded, size: 19),
-                          onPressed: _clearCatalogSearch,
-                        ),
-                  filled: true,
-                  fillColor: context.palette.cardAlt,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            OutlinedButton(
-              onPressed: _scanProductCode,
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 14,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Icon(Icons.qr_code_scanner_rounded, size: 22),
-            ),
-          ],
-        ),
+        _buildSearchRow(context),
         const SizedBox(height: 10),
+        if (catalogCategories(_catalog).isNotEmpty) ...[
+          _buildCategoryChips(context),
+          const SizedBox(height: 10),
+        ],
         if (_catalog.isEmpty)
           Text(
             l10n.storeCatalogEmpty,
@@ -2557,306 +2935,163 @@ class _StoreModeScreenState extends State<StoreModeScreen>
             ],
           ),
         const SizedBox(height: 18),
-        // --- Keypad mode ganda: Qty (bawaan) | Nominal ---
-        SegmentedButton<bool>(
-          segments: [
-            ButtonSegment(
-              value: true,
-              icon: const Icon(Icons.numbers_rounded, size: 18),
-              label: Text(l10n.storeKeypadModeQty),
-            ),
-            ButtonSegment(
-              value: false,
-              icon: const Icon(Icons.payments_outlined, size: 18),
-              label: Text(l10n.storeKeypadModeAmount),
-            ),
-          ],
-          selected: {_qtyKeypadMode},
-          onSelectionChanged: (s) => setState(() => _qtyKeypadMode = s.first),
-        ),
-        const SizedBox(height: 12),
-        if (_qtyKeypadMode) ...[
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              color: context.palette.cardAlt,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            // Angka pengali saja, rata tengah — tanpa awalan "×"
-            // dan tanpa kata "Multiplier" (temuan lapangan NUX
-            // 3 Nov 2026: tampilannya cukup angka).
-            child: Text(
-              '$_effectiveQty',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 30,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          _buildKeypad(context),
-          const SizedBox(height: 6),
-          Text(
-            l10n.storeQtyModeHint,
-            style: TextStyle(fontSize: 12, color: context.palette.muted),
-          ),
-        ] else ...[
-          // --- Nominal bebas (keypad, rupiah) ---
-          Text(
-            l10n.storeFreeAmountLabel,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          // Judul kustom opsional untuk baris bebas ini — jalan
-          // untuk barang/jasa yang belum terinput di katalog.
-          // Kosong berarti label baku "Item Bebas".
-          TextField(
-            controller: _freeTitleController,
-            decoration: InputDecoration(
-              labelText: l10n.storeFreeTitleLabel,
-              filled: true,
-              fillColor: context.palette.cardAlt,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              color: context.palette.cardAlt,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Rp${_fmtRp(_keypadRp)}',
-                    style: const TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                Text(
-                  'Rp',
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: context.palette.muted,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          // Jumlah cepat pecahan rupiah umum.
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final quick in const [
-                1000,
-                2000,
-                5000,
-                10000,
-                20000,
-                50000,
-                100000,
-              ])
-                OutlinedButton(
-                  onPressed: () => setState(
-                    () => _keypadRp = keypadQuickAdd(_keypadRp, quick),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    '+${_fmtRp(quick)}',
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _buildKeypad(context),
-          const SizedBox(height: 10),
-          // Pengali tertunda ikut berlaku untuk item bebas —
-          // tampilkan penanda kecilnya di sini bila > 1 supaya
-          // kasir melihat jumlah yang akan ditambahkan, bukan
-          // diam-diam mengejutkan di daftar pesanan.
-          if (_effectiveQty > 1) ...[
-            Center(
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: context.palette.cardAlt,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  l10n.storeQtyBadge(_effectiveQty),
-                  style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w700),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
-          OutlinedButton.icon(
-            onPressed: _keypadRp > 0 ? _addFreeAmount : null,
-            icon: const Icon(Icons.add_rounded, size: 20),
-            label: Text(
-              l10n.storeAddFreeItem,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-            ),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 13),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-          ),
-        ],
+        _buildKeypadSection(context),
         const SizedBox(height: 20),
-        // --- Pesanan ---
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                l10n.storeOrderTitle,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                ),
+        _buildOrderLinesBlock(context),
+        _buildOrderActions(context),
+      ],
+    );
+  }
+
+  /// Grid tombol produk besar untuk panel katalog landscape
+  /// (pola desain referensi NUX 8 Nov 2026): nama produk tebal
+  /// di tengah + harga di bawahnya, target sentuh besar untuk
+  /// tablet. Ketuk = tambah ke pesanan, sama seperti chip
+  /// katalog portrait.
+  Widget _buildProductGrid(BuildContext context, List<CatalogItem> visible) {
+    final l10n = context.l10n;
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 180,
+        mainAxisExtent: 96,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+      ),
+      itemCount: visible.length,
+      itemBuilder: (context, i) {
+        final item = visible[i];
+        return Material(
+          color: context.palette.card,
+          borderRadius: BorderRadius.circular(14),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => _addProduct(item),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: context.palette.border),
               ),
-            ),
-            if (_heldOrders.isNotEmpty)
-              TextButton.icon(
-                onPressed: _openHeldOrders,
-                icon: const Icon(Icons.pause_circle_outline_rounded, size: 19),
-                label: Text(l10n.storeHeldBadge(_heldOrders.length)),
-              ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        if (_lines.isEmpty)
-          Text(
-            l10n.storeOrderEmpty,
-            style: TextStyle(fontSize: 12, color: context.palette.muted),
-          )
-        else ...[
-          for (var i = 0; i < _lines.length; i++) _buildOrderLine(context, i),
-          const Divider(height: 20),
-          _summaryRow(
-            context,
-            l10n.storeSubtotal,
-            'Rp${_fmtRp(orderSubtotalRp(_lines))}',
-          ),
-          InkWell(
-            onTap: _editOrderDiscount,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Row(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Expanded(
-                    child: Text(
-                      _orderDiscount == null
-                          ? l10n.storeOrderDiscount
-                          : '${l10n.storeOrderDiscount} (${_discountBadge(_orderDiscount!)})',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: context.palette.label,
-                      ),
-                    ),
-                  ),
                   Text(
-                    orderDiscountAmountRp(_lines, _orderDiscount) > 0
-                        ? '−Rp${_fmtRp(orderDiscountAmountRp(_lines, _orderDiscount))}'
-                        : l10n.storeSetDiscount,
+                    item.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Rp${_fmtRp(item.priceRp)}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: context.palette.muted,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
+                  if (item.defaultDiscount != null)
+                    Text(
+                      '${l10n.storeDiscount} '
+                      '${_discountBadge(item.defaultDiscount!)}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF10B981),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                 ],
               ),
             ),
           ),
-          if (orderTotalDiscountRp(_lines, _orderDiscount) > 0)
-            _summaryRow(
-              context,
-              l10n.storeTotalDiscount,
-              '−Rp${_fmtRp(orderTotalDiscountRp(_lines, _orderDiscount))}',
-            ),
-          const SizedBox(height: 6),
-          Row(
+        );
+      },
+    );
+  }
+
+  /// Layout kasir LANDSCAPE dua panel (desain referensi NUX
+  /// 8 Nov 2026, searah pola tablet yang disetujui 2 Nov):
+  /// kiri = pesanan (baris-baris + total, panel status di
+  /// bawahnya) dengan tombol bayar/tahan menempel di dasar;
+  /// kanan = katalog (cari + tab kategori + grid tombol besar)
+  /// dengan keypad di bawahnya. Semua bloknya berbagi
+  /// implementasi yang sama dengan layout portrait — yang
+  /// berbeda hanya susunannya.
+  Widget _buildLandscapeCashier(BuildContext context) {
+    if (_openShift == null) return _buildShiftGate(context);
+    final l10n = context.l10n;
+    final visibleCatalog = _visibleCatalog();
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          flex: 4,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
-                child: Text(
-                  l10n.storeGrandTotal,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(18, 4, 9, 18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildOrderLinesBlock(context),
+                      const SizedBox(height: 20),
+                      _buildStatusPanel(context),
+                    ],
                   ),
                 ),
               ),
-              Text(
-                'Rp${_fmtRp(_grandTotal)}',
-                style: const TextStyle(
-                  fontSize: 19,
-                  fontWeight: FontWeight.w800,
-                ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 0, 9, 14),
+                child: _buildOrderActions(context),
               ),
             ],
           ),
-        ],
-        if (_error != null) ...[
-          const SizedBox(height: 12),
-          Text(
-            _error!,
-            style: const TextStyle(color: Colors.redAccent, fontSize: 13),
-          ),
-        ],
-        const SizedBox(height: 14),
-        ElevatedButton(
-          onPressed: _lines.isNotEmpty ? _openPayment : null,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF10B981),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 17),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
-          child: Text(
-            l10n.storeCheckout,
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-          ),
         ),
-        const SizedBox(height: 10),
-        // Tahan pesanan (tamu bayar belakangan): parkir pesanan
-        // berjalan ke daftar tahan persisten.
-        OutlinedButton.icon(
-          onPressed: _lines.isNotEmpty ? _holdCurrentOrder : null,
-          icon: const Icon(Icons.pause_circle_outline_rounded, size: 20),
-          label: Text(
-            l10n.storeHoldOrder,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-          ),
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 13),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+        VerticalDivider(width: 1, color: context.palette.border),
+        Expanded(
+          flex: 6,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(9, 4, 18, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildCatalogHeaderRow(context),
+                const SizedBox(height: 6),
+                _buildSearchRow(context),
+                const SizedBox(height: 10),
+                if (catalogCategories(_catalog).isNotEmpty) ...[
+                  _buildCategoryChips(context),
+                  const SizedBox(height: 10),
+                ],
+                if (_catalog.isEmpty)
+                  Text(
+                    l10n.storeCatalogEmpty,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: context.palette.muted,
+                    ),
+                  )
+                else if (visibleCatalog.isEmpty)
+                  Text(
+                    l10n.storeSearchNoResults,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: context.palette.muted,
+                    ),
+                  )
+                else
+                  _buildProductGrid(context, visibleCatalog),
+                const SizedBox(height: 18),
+                _buildKeypadSection(context),
+              ],
             ),
           ),
         ),

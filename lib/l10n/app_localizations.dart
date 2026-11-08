@@ -1766,6 +1766,12 @@ abstract class AppLocalizations {
   /// **'Katalog masih kosong — tambahkan produk pertama lewat tombol Kelola.'**
   String get storeCatalogEmpty;
 
+  /// No description provided for @storeCategoryAll.
+  ///
+  /// In id, this message translates to:
+  /// **'Semua'**
+  String get storeCategoryAll;
+
   /// No description provided for @storeCodeNotRegistered.
   ///
   /// In id, this message translates to:

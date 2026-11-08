@@ -439,6 +439,7 @@
   "storeCatalogTitle": "Katalog Produk",
   "storeManageCatalog": "Kelola",
   "storeCatalogEmpty": "Katalog masih kosong — tambahkan produk pertama lewat tombol Kelola.",
+  "storeCategoryAll": "Semua",
   "storeCodeNotRegistered": "Kode ini belum terdaftar di katalog.",
   "storeRegisterNow": "Daftarkan Sekarang",
   "storeProductCode": "Kode Produk",

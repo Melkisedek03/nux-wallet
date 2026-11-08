@@ -226,4 +226,25 @@ void main() {
       expect(catalogCodeError(items, suggestCatalogCode(items)), isNull);
     });
   });
+
+  group('filterCatalogByCategory (saringan kategori kasir)', () {
+    const items = [
+      CatalogItem(code: 'A', name: 'Kopi', priceRp: 5000, category: 'DRINK'),
+      CatalogItem(code: 'B', name: 'Roti', priceRp: 8000, category: 'FOOD'),
+      CatalogItem(code: 'C', name: 'Teh', priceRp: 4000, category: 'drink'),
+      CatalogItem(code: 'D', name: 'Bebas', priceRp: 1000),
+    ];
+
+    test('null/kosong → semua item', () {
+      expect(filterCatalogByCategory(items, null), items);
+      expect(filterCatalogByCategory(items, '  '), items);
+    });
+
+    test('kategori sama (tak peka huruf) saja yang lolos', () {
+      final drink = filterCatalogByCategory(items, 'DRINK');
+      expect(drink.map((i) => i.code), ['A', 'C']);
+      expect(filterCatalogByCategory(items, 'food').single.code, 'B');
+      expect(filterCatalogByCategory(items, 'LAINNYA'), isEmpty);
+    });
+  });
 }

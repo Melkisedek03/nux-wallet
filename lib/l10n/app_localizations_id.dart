@@ -939,6 +939,9 @@ class AppLocalizationsId extends AppLocalizations {
       'Katalog masih kosong — tambahkan produk pertama lewat tombol Kelola.';
 
   @override
+  String get storeCategoryAll => 'Semua';
+
+  @override
   String get storeCodeNotRegistered => 'Kode ini belum terdaftar di katalog.';
 
   @override

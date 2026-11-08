@@ -938,6 +938,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'The catalog is still empty — add the first product via Manage.';
 
   @override
+  String get storeCategoryAll => 'All';
+
+  @override
   String get storeCodeNotRegistered =>
       'This code isn\'t registered in the catalog yet.';
 

@@ -213,6 +213,21 @@ List<String> catalogCategories(List<CatalogItem> items) {
   return categories;
 }
 
+/// Saring katalog menurut kategori untuk saringan kasir:
+/// [category] null/kosong → semua item; selain itu hanya item
+/// yang kategorinya sama (trim, tak peka huruf — konsisten
+/// dengan [catalogCategories]).
+List<CatalogItem> filterCatalogByCategory(
+  List<CatalogItem> items,
+  String? category,
+) {
+  final wanted = category?.trim().toLowerCase() ?? '';
+  if (wanted.isEmpty) return items;
+  return items
+      .where((item) => item.category.trim().toLowerCase() == wanted)
+      .toList();
+}
+
 /// Saring katalog untuk kolom cari kasir: item lolos bila NAMA
 /// atau KODE-nya mengandung [query] (sesudah trim, tak peka huruf
 /// besar/kecil, cocok sebagian — bukan harus persis seperti
