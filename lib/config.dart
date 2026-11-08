@@ -33,8 +33,11 @@ class AppConfig {
 
   /// Ticker publik USDT/IDR (Indodax) — hanya dipakai sebagai kurs
   /// konversi agar harga NUX dari qutrade dapat ditampilkan dalam IDR.
+  /// Bentuk endpoint mengikuti dokumentasi resmi Indodax di GitHub
+  /// (indodax-official-api-docs, Public-RestAPI): /api/ticker/<pair>,
+  /// tanpa kunci API.
   static const String usdtIdrTickerUrl =
-      'https://indodax.com/api/usdt_idr/ticker';
+      'https://indodax.com/api/ticker/usdtidr';
 
   /// Basis REST electrs publik milik tim — statistik jaringan ringan
   /// (tinggi blok terkini) untuk tab Jelajah.
