@@ -3551,87 +3551,114 @@ class _StoreModeScreenState extends State<StoreModeScreen>
     );
   }
 
+  /// Satu baris pesanan. Susunan memilih menurut lebar yang
+  /// tersedia: baris tunggal klasik (lebar cukup) atau susunan
+  /// bertumpuk untuk panel sempit — panel pesanan landscape
+  /// hanya ±40% lebar layar, dan tombol-tombol + total baris
+  /// klasik memakan ±300dp tetap, sehingga kolom nama terjepit
+  /// sampai ±1 karakter (laporan uji NUX 9 Nov 2026).
   Widget _buildOrderLine(BuildContext context, int i) {
+    return LayoutBuilder(
+      builder: (context, constraints) => constraints.maxWidth >= 340
+          ? _buildOrderLineWide(context, i)
+          : _buildOrderLineNarrow(context, i),
+    );
+  }
+
+  /// Kolom keterangan satu baris pesanan: nama, harga × qty,
+  /// lencana diskon, catatan — dipakai kedua susunan.
+  Widget _orderLineInfoColumn(BuildContext context, OrderLine line) {
     final l10n = context.l10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          line.label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        Text(
+          'Rp${_fmtRp(line.unitPriceRp)} × ${line.qty}',
+          style: TextStyle(
+            fontSize: 12,
+            color: context.palette.muted,
+          ),
+        ),
+        if (line.discount != null)
+          Text(
+            '${l10n.storeDiscount} ${_discountBadge(line.discount!)}',
+            style: const TextStyle(
+              fontSize: 12,
+              color: Color(0xFF34D399),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        if (line.note.isNotEmpty)
+          Text(
+            '${l10n.storeNoteWord}: ${line.note}',
+            style: TextStyle(
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+              color: context.palette.muted,
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// Tombol-tombol aksi satu baris pesanan (catatan, diskon,
+  /// kurang, qty, tambah, hapus) — dipakai kedua susunan.
+  List<Widget> _orderLineActions(BuildContext context, int i) {
+    final line = _lines[i];
+    return [
+      IconButton(
+        icon: Icon(
+          line.note.isEmpty
+              ? Icons.note_add_outlined
+              : Icons.note_alt_rounded,
+          size: 19,
+          color: line.note.isEmpty ? null : const Color(0xFF34D399),
+        ),
+        onPressed: () => _editLineNote(i),
+        visualDensity: VisualDensity.compact,
+      ),
+      IconButton(
+        icon: const Icon(Icons.percent_rounded, size: 19),
+        onPressed: () => _editLineDiscount(i),
+        visualDensity: VisualDensity.compact,
+      ),
+      IconButton(
+        icon: const Icon(Icons.remove_circle_outline, size: 20),
+        onPressed: () => _decrementLine(i),
+        visualDensity: VisualDensity.compact,
+      ),
+      Padding(
+        padding: const EdgeInsets.only(top: 10),
+        child: Text(
+          '${line.qty}',
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ),
+      IconButton(
+        icon: const Icon(Icons.add_circle_outline, size: 20),
+        onPressed: () =>
+            setState(() => _lines = orderChangeQty(_lines, i, 1)),
+        visualDensity: VisualDensity.compact,
+      ),
+    ];
+  }
+
+  Widget _buildOrderLineWide(BuildContext context, int i) {
     final line = _lines[i];
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  line.label,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  'Rp${_fmtRp(line.unitPriceRp)} × ${line.qty}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: context.palette.muted,
-                  ),
-                ),
-                if (line.discount != null)
-                  Text(
-                    '${l10n.storeDiscount} ${_discountBadge(line.discount!)}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF34D399),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                if (line.note.isNotEmpty)
-                  Text(
-                    '${l10n.storeNoteWord}: ${line.note}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontStyle: FontStyle.italic,
-                      color: context.palette.muted,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: Icon(
-              line.note.isEmpty
-                  ? Icons.note_add_outlined
-                  : Icons.note_alt_rounded,
-              size: 19,
-              color: line.note.isEmpty ? null : const Color(0xFF34D399),
-            ),
-            onPressed: () => _editLineNote(i),
-            visualDensity: VisualDensity.compact,
-          ),
-          IconButton(
-            icon: const Icon(Icons.percent_rounded, size: 19),
-            onPressed: () => _editLineDiscount(i),
-            visualDensity: VisualDensity.compact,
-          ),
-          IconButton(
-            icon: const Icon(Icons.remove_circle_outline, size: 20),
-            onPressed: () => _decrementLine(i),
-            visualDensity: VisualDensity.compact,
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 10),
-            child: Text(
-              '${line.qty}',
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline, size: 20),
-            onPressed: () =>
-                setState(() => _lines = orderChangeQty(_lines, i, 1)),
-            visualDensity: VisualDensity.compact,
-          ),
+          Expanded(child: _orderLineInfoColumn(context, line)),
+          ..._orderLineActions(context, i),
           SizedBox(
             width: 86,
             child: Padding(
@@ -3647,6 +3674,49 @@ class _StoreModeScreenState extends State<StoreModeScreen>
             icon: const Icon(Icons.delete_outline_rounded, size: 19),
             onPressed: () => _confirmRemoveLine(i),
             visualDensity: VisualDensity.compact,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Susunan bertumpuk baris pesanan untuk panel sempit
+  /// (panel pesanan landscape): kontrol per item (catatan,
+  /// diskon, qty −/+) di baris ATAS tiap item (arah NUX
+  /// 9 Nov 2026), di bawahnya nama + keterangan selebar panel
+  /// dengan total baris rata kanan. Nama mendapat hampir
+  /// seluruh lebar panel, tidak lagi terjepit elemen tetap.
+  Widget _buildOrderLineNarrow(BuildContext context, int i) {
+    final line = _lines[i];
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              ..._orderLineActions(context, i),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.delete_outline_rounded, size: 19),
+                onPressed: () => _confirmRemoveLine(i),
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _orderLineInfoColumn(context, line)),
+              const SizedBox(width: 8),
+              Padding(
+                padding: const EdgeInsets.only(top: 1),
+                child: Text(
+                  'Rp${_fmtRp(line.lineTotalRp)}',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
           ),
         ],
       ),
