@@ -2736,9 +2736,21 @@ class _StoreModeScreenState extends State<StoreModeScreen>
   /// Blok pesanan: judul + tahan, baris-baris, subtotal, diskon, total — dipakai layout portrait & landscape.
   Widget _buildOrderLinesBlock(BuildContext context) {
     final l10n = context.l10n;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
+    // Segmen pesanan dibungkus KARTU (permintaan NUX 9 Nov
+    // 2026): dari baris judul Pesanan + tombol Ditahan sampai
+    // baris Total — menandai segmen pesanan lebih tegas,
+    // terpisah dari katalog/keypad di atas dan panel status
+    // di bawahnya. Tombol bayar/tahan tetap di luar kartu.
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: context.palette.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: context.palette.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
       // --- Pesanan ---
       Row(
         children: [
@@ -2832,6 +2844,7 @@ class _StoreModeScreenState extends State<StoreModeScreen>
         ),
       ],
       ],
+      ),
     );
   }
 
