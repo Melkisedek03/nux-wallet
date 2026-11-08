@@ -1060,6 +1060,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeReportsTitle => 'Reports';
 
   @override
+  String get storeExportPdf => 'Export PDF';
+
+  @override
   String get storeReportPaymentsTitle => 'Payment Report';
 
   @override

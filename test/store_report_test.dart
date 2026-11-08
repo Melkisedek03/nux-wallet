@@ -815,4 +815,124 @@ void main() {
       expect(day.methodTotals.fold(0, (s, m) => s + m.totalRp), day.totalRp);
     });
   });
+
+  group('teks ekspor PDF laporan', () {
+    test('produk terlaris: peringkat, kode, total; kosong berlabel', () {
+      final text = buildBestsellersText(
+        title: 'Produk Terlaris',
+        periodLabel: '30 Hari Terakhir',
+        generatedStamp: 'STAMP',
+        entries: const [
+          ProductSalesEntry(
+            code: 'PRD-001',
+            label: 'Kopi Sachet',
+            qty: 25,
+            grossRp: 125000,
+            discountRp: 0,
+          ),
+        ],
+        soldQtyLabel: (q) => 'Terjual $q',
+        totalLine: 'Total terjual 25 • Rp125.000',
+        emptyLabel: 'KOSONG',
+      );
+      expect(text, contains('Produk Terlaris'));
+      expect(text, contains('1. Kopi Sachet'));
+      expect(text, contains('Rp125.000'));
+      expect(text, contains('PRD-001 • Terjual 25'));
+      expect(text, contains('Total terjual 25 • Rp125.000'));
+      for (final line in text.split('\n')) {
+        expect(line.length, lessThanOrEqualTo(reportTextWidth),
+            reason: line);
+      }
+      final empty = buildBestsellersText(
+        title: 'T',
+        periodLabel: 'P',
+        generatedStamp: 'S',
+        entries: const [],
+        soldQtyLabel: (q) => 'Terjual $q',
+        totalLine: 'TOT',
+        emptyLabel: 'KOSONG',
+      );
+      expect(empty, contains('KOSONG'));
+    });
+
+    test('penjualan produk: bruto tampil, diskon hanya bila ada', () {
+      final text = buildProductSalesText(
+        title: 'Laporan Penjualan Produk',
+        periodLabel: 'P',
+        generatedStamp: 'S',
+        entries: const [
+          ProductSalesEntry(
+            code: '',
+            label: 'Teh',
+            qty: 2,
+            grossRp: 20000,
+            discountRp: 2000,
+          ),
+          ProductSalesEntry(
+            code: '',
+            label: 'Kopi',
+            qty: 1,
+            grossRp: 5000,
+            discountRp: 0,
+          ),
+        ],
+        soldQtyLabel: (q) => 'Terjual $q',
+        grossLabel: 'Bruto',
+        discountLabel: 'Diskon',
+        totalLine: 'TOT',
+        emptyLabel: 'KOSONG',
+      );
+      expect(text, contains('Bruto Rp20.000'));
+      expect(text, contains('Diskon Rp2.000'));
+      final kopiLine = text
+          .split('\n')
+          .firstWhere((l) => l.contains('Bruto Rp5.000'));
+      expect(kopiLine, isNot(contains('Diskon')));
+    });
+
+    test('pembayaran: saklar rincian mengendalikan baris shift', () {
+      final shift = StoreShift(
+        openedAt: DateTime(2026, 11, 8, 8),
+        closedAt: DateTime(2026, 11, 8, 12),
+        era: 'rp',
+        operatorName: 'Ani',
+      );
+      final days = [
+        DayPaymentEntry(
+          day: DateTime(2026, 11, 8),
+          shifts: [
+            ShiftPaymentEntry(
+              shift: shift,
+              invoiceCount: 3,
+              totalRp: 100000,
+              methodTotals: const [
+                PaymentMethodTotal(method: 'Tunai', totalRp: 100000),
+              ],
+            ),
+          ],
+        ),
+      ];
+      String build(bool breakdown) => buildPaymentReportText(
+        title: 'Laporan Pembayaran',
+        periodLabel: 'P',
+        generatedStamp: 'S',
+        days: days,
+        includeBreakdown: breakdown,
+        invoicesLabel: (c) => '$c nota',
+        stillOpenLabel: 'Masih Berjalan',
+        totalLine: 'Total 3 nota • Rp100.000',
+        emptyLabel: 'KOSONG',
+        locale: 'id',
+      );
+      final withShifts = build(true);
+      expect(withShifts, contains('08:00 - 12:00'));
+      expect(withShifts, contains('Ani • 3 nota'));
+      expect(withShifts, contains('Tunai Rp100.000'));
+      final withoutShifts = build(false);
+      expect(withoutShifts, isNot(contains('08:00 - 12:00')));
+      // Metode gabungan hari tetap tampil walau rincian mati.
+      expect(withoutShifts, contains('Tunai Rp100.000'));
+    });
+  });
 }

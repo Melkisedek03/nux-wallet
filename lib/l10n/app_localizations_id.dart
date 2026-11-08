@@ -1060,6 +1060,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeReportsTitle => 'Daftar Laporan';
 
   @override
+  String get storeExportPdf => 'Ekspor PDF';
+
+  @override
   String get storeReportPaymentsTitle => 'Laporan Pembayaran';
 
   @override

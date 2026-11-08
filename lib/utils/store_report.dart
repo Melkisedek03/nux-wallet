@@ -859,6 +859,163 @@ List<DayPaymentEntry> aggregatePaymentsByDay(
   ];
 }
 
+/// Lebar teks ekspor laporan-laporan layar (PDF A4 fon
+/// Courier) — lebih lega dari lebar struk 58mm ([reportWidth]).
+const reportTextWidth = 56;
+
+String _textRule() => '-' * reportTextWidth;
+
+/// Satu baris "label .... nilai" selebar [reportTextWidth];
+/// bila tidak muat satu baris, nilai turun ke baris berikut
+/// rata kanan (nama produk panjang tidak pernah terpotong).
+String _textAmountRow(String left, String right) {
+  if (left.length + 1 + right.length <= reportTextWidth) {
+    return left.padRight(reportTextWidth - right.length) + right;
+  }
+  return '$left\n${right.padLeft(reportTextWidth)}';
+}
+
+String _hhmm(DateTime t) =>
+    '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+List<String> _textHeader({
+  required String title,
+  required String periodLabel,
+  required String generatedStamp,
+}) => [title, periodLabel, generatedStamp, _textRule()];
+
+/// Teks ekspor PDF Laporan Produk Terlaris: peringkat persis
+/// seperti di layar (urut & angka dari [aggregateProductSales]).
+String buildBestsellersText({
+  required String title,
+  required String periodLabel,
+  required String generatedStamp,
+  required List<ProductSalesEntry> entries,
+  required String Function(int qty) soldQtyLabel,
+  required String totalLine,
+  required String emptyLabel,
+}) {
+  final lines = _textHeader(
+    title: title,
+    periodLabel: periodLabel,
+    generatedStamp: generatedStamp,
+  );
+  if (entries.isEmpty) {
+    lines.add(emptyLabel);
+    return lines.join('\n');
+  }
+  for (var i = 0; i < entries.length; i++) {
+    final e = entries[i];
+    lines.add(_textAmountRow('${i + 1}. ${e.label}', 'Rp${_fmt(e.netRp)}'));
+    lines.add(
+      '   ${[if (e.code.isNotEmpty) e.code, soldQtyLabel(e.qty)].join(' • ')}',
+    );
+  }
+  lines.add(_textRule());
+  lines.add(totalLine);
+  return lines.join('\n');
+}
+
+/// Teks ekspor PDF Laporan Penjualan Produk: daftar lengkap
+/// persis seperti di layar (urut abjad dari pemanggil).
+String buildProductSalesText({
+  required String title,
+  required String periodLabel,
+  required String generatedStamp,
+  required List<ProductSalesEntry> entries,
+  required String Function(int qty) soldQtyLabel,
+  required String grossLabel,
+  required String discountLabel,
+  required String totalLine,
+  required String emptyLabel,
+}) {
+  final lines = _textHeader(
+    title: title,
+    periodLabel: periodLabel,
+    generatedStamp: generatedStamp,
+  );
+  if (entries.isEmpty) {
+    lines.add(emptyLabel);
+    return lines.join('\n');
+  }
+  for (final e in entries) {
+    lines.add(_textAmountRow(e.label, 'Rp${_fmt(e.netRp)}'));
+    lines.add(
+      '   ${[
+        if (e.code.isNotEmpty) e.code,
+        soldQtyLabel(e.qty),
+        '$grossLabel Rp${_fmt(e.grossRp)}',
+        if (e.discountRp > 0) '$discountLabel Rp${_fmt(e.discountRp)}',
+      ].join(' • ')}',
+    );
+  }
+  lines.add(_textRule());
+  lines.add(totalLine);
+  return lines.join('\n');
+}
+
+/// Teks ekspor PDF Laporan Pembayaran: per tanggal + rincian
+/// metodenya; baris shift hanya bila [includeBreakdown] —
+/// ekspor mengikuti saklar yang sedang aktif di layar, jadi
+/// yang diterima pembaca sama dengan yang dilihat owner.
+String buildPaymentReportText({
+  required String title,
+  required String periodLabel,
+  required String generatedStamp,
+  required List<DayPaymentEntry> days,
+  required bool includeBreakdown,
+  required String Function(int count) invoicesLabel,
+  required String stillOpenLabel,
+  required String totalLine,
+  required String emptyLabel,
+  required String locale,
+}) {
+  final lines = _textHeader(
+    title: title,
+    periodLabel: periodLabel,
+    generatedStamp: generatedStamp,
+  );
+  if (days.isEmpty) {
+    lines.add(emptyLabel);
+    return lines.join('\n');
+  }
+  for (final day in days) {
+    lines.add(
+      _textAmountRow(
+        formatDayPeriod(day: day.day, locale: locale),
+        'Rp${_fmt(day.totalRp)}',
+      ),
+    );
+    if (day.methodTotals.isNotEmpty) {
+      lines.add(
+        '  ${day.methodTotals.map((m) => '${m.method} Rp${_fmt(m.totalRp)}').join(' • ')}',
+      );
+    }
+    if (includeBreakdown) {
+      for (final entry in day.shifts) {
+        final shift = entry.shift;
+        final hours = shift.closedAt != null
+            ? '${_hhmm(shift.openedAt)} - ${_hhmm(shift.closedAt!)}'
+            : '${_hhmm(shift.openedAt)} - $stillOpenLabel';
+        lines.add(_textAmountRow('  $hours', 'Rp${_fmt(entry.totalRp)}'));
+        lines.add(
+          '    ${[
+            if (shift.operatorName.isNotEmpty) shift.operatorName,
+            invoicesLabel(entry.invoiceCount),
+          ].join(' • ')}',
+        );
+        for (final m in entry.methodTotals) {
+          lines.add(_textAmountRow('    ${m.method}', 'Rp${_fmt(m.totalRp)}'));
+        }
+      }
+    }
+    lines.add('');
+  }
+  lines.add(_textRule());
+  lines.add(totalLine);
+  return lines.join('\n');
+}
+
 /// Jumlah shift yang jendelanya bersinggungan dengan [from, to)
 /// — untuk catatan jujur mode laporan per tanggal ("Meliputi N
 /// shift") tanpa mengarang nomor shift.

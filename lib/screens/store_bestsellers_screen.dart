@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../locale_controller.dart';
 import '../theme.dart';
 import '../services/store_order_history.dart';
+import '../services/store_report_export.dart';
 import '../services/store_report_filter.dart';
 import '../utils/format.dart';
 import '../utils/store_report.dart';
@@ -30,6 +31,7 @@ class _StoreBestsellersScreenState extends State<StoreBestsellersScreen> {
   final _historyStore = StoreOrderHistoryStore();
   List<CompletedOrder> _orders = const [];
   bool _loading = true;
+  bool _sharing = false;
 
   /// Bawaan 30 hari: jendela yang cukup berarti untuk peringkat
   /// (hari ini saja sering hampir kosong di toko kecil).
@@ -51,6 +53,44 @@ class _StoreBestsellersScreenState extends State<StoreBestsellersScreen> {
     });
   }
 
+  /// Ekspor PDF laporan ini pada filter yang sedang aktif
+  /// (pondasi ekspor bersama laporan Mode Toko): teksnya
+  /// disusun pembangun murni, dibagikan lewat share sheet.
+  Future<void> _sharePdf() async {
+    if (_sharing) return;
+    setState(() => _sharing = true);
+    try {
+      final l10n = context.l10n;
+      final window = storeReportWindowFor(_filter, now: DateTime.now());
+      final entries = aggregateProductSales(
+        _orders,
+        from: window.from,
+        to: window.to,
+      );
+      final totalQty = entries.fold(0, (sum, e) => sum + e.qty);
+      final totalNet = entries.fold(0, (sum, e) => sum + e.netRp);
+      await shareReportPdf(
+        text: buildBestsellersText(
+          title: l10n.storeReportBestsellersTitle,
+          periodLabel: storeReportFilterLabel(_filter, l10n),
+          generatedStamp: formatGeneratedStamp(DateTime.now(), l10n.localeName),
+          entries: entries,
+          soldQtyLabel: l10n.storeBestsellersSoldQty,
+          totalLine: l10n.storeBestsellersTotalLine(
+            totalQty,
+            formatRupiah(totalNet),
+          ),
+          emptyLabel: l10n.storeBestsellersEmpty,
+        ),
+        fileStem: 'laporan-produk-terlaris',
+      );
+    } catch (_) {
+      // Gagal menyusun/membagikan PDF — diamkan; layar tetap tampil.
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -61,7 +101,16 @@ class _StoreBestsellersScreenState extends State<StoreBestsellersScreen> {
     final totalQty = entries.fold(0, (sum, e) => sum + e.qty);
     final totalNet = entries.fold(0, (sum, e) => sum + e.netRp);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.storeReportBestsellersTitle)),
+      appBar: AppBar(
+        title: Text(l10n.storeReportBestsellersTitle),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf_rounded, size: 21),
+            tooltip: l10n.storeExportPdf,
+            onPressed: _loading || _sharing ? null : _sharePdf,
+          ),
+        ],
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : Column(

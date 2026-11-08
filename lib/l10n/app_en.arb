@@ -505,6 +505,7 @@
   "storeViewReport": "View Report",
   "storeSalesReport": "Sales Report",
   "storeReportsTitle": "Reports",
+  "storeExportPdf": "Export PDF",
   "storeReportPaymentsTitle": "Payment Report",
   "storeReportPaymentsSubtitle": "Receipts by date, broken down by shift.",
   "storePaymentReportBreakdown": "Per-Shift Breakdown",

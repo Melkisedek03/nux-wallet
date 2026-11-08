@@ -1,8 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../l10n/app_localizations.dart';
 import '../locale_controller.dart';
 import '../services/store_report_filter.dart';
+
+/// Label periode satu baris untuk kepala dokumen ekspor
+/// laporan (PDF): nama presetnya, atau rentang tanggalnya
+/// untuk periode pilihan sendiri.
+String storeReportFilterLabel(StoreReportFilter filter, AppLocalizations l10n) {
+  switch (filter.period) {
+    case StoreReportPeriod.today:
+      return l10n.storeFilterToday;
+    case StoreReportPeriod.last7Days:
+      return l10n.storePeriod7Days;
+    case StoreReportPeriod.last30Days:
+      return l10n.storePeriod30Days;
+    case StoreReportPeriod.all:
+      return l10n.storePeriodAll;
+    case StoreReportPeriod.custom:
+      final start = filter.customStart;
+      final end = filter.customEnd;
+      if (start == null || end == null) return l10n.storePeriodCustom;
+      final fmt = DateFormat.yMMMd(l10n.localeName);
+      return '${fmt.format(start)} – ${fmt.format(end)}';
+  }
+}
 
 /// Baris chip pemilih periode laporan Mode Toko — pasangan
 /// tampilan dari filter bersama di

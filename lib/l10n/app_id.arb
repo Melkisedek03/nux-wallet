@@ -505,6 +505,7 @@
   "storeViewReport": "Lihat Laporan",
   "storeSalesReport": "Laporan Penjualan",
   "storeReportsTitle": "Daftar Laporan",
+  "storeExportPdf": "Ekspor PDF",
   "storeReportPaymentsTitle": "Laporan Pembayaran",
   "storeReportPaymentsSubtitle": "Penerimaan per tanggal, dirinci per shift.",
   "storePaymentReportBreakdown": "Rincian per Shift",

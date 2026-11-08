@@ -1976,6 +1976,12 @@ abstract class AppLocalizations {
   /// **'Daftar Laporan'**
   String get storeReportsTitle;
 
+  /// No description provided for @storeExportPdf.
+  ///
+  /// In id, this message translates to:
+  /// **'Ekspor PDF'**
+  String get storeExportPdf;
+
   /// No description provided for @storeReportPaymentsTitle.
   ///
   /// In id, this message translates to:
