@@ -38,6 +38,15 @@ class MainActivity : FlutterActivity() {
     // menjaga layar menyala agar dompet siap menerima pembayaran.
     override fun shouldDestroyEngineWithHost(): Boolean = false
 
+    // Babak KEDUA pola mesin-cache: activity selalu menempel ke
+    // mesin yang dibuat ElnuxApplication saat proses lahir dan
+    // disimpan di FlutterEngineCache dengan ID yang sama (lihat
+    // ElnuxApplication). Baris ini TIDAK boleh ada tanpa babak
+    // pertamanya: ID yang tidak ditemukan di cache membuat
+    // kerangka melempar IllegalStateException di onCreate —
+    // aplikasi gugur sebelum Dart hidup (kejadian build 101).
+    override fun getCachedEngineId(): String = ElnuxApplication.ID_MESIN
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         // Saluran layanan latar jembatan offline (tahap produksi B):

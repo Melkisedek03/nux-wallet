@@ -37,7 +37,7 @@
     <uses-feature android:name="android.hardware.camera.any" android:required="false"/>
     <application
         android:label="ELNUX"
-        android:name="${applicationName}"
+        android:name=".ElnuxApplication"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round">
         <activity
