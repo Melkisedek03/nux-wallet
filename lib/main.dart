@@ -103,6 +103,22 @@ class _HomeScreenState extends State<HomeScreen>
     with WidgetsBindingObserver {
   int _tabIndex = 0;
   bool _booting = true;
+
+  /// Pengendali geser wilayah aktivitas tab Beranda. Kepala
+  /// layar + kartu saldo TIDAK ikut bergeser (permintaan NUX
+  /// 8 Nov 2026): yang bergeser hanya baris Kirim/Terima +
+  /// daftar aktivitas di bawah kartu.
+  final _homeScrollController = ScrollController();
+
+  /// Arah geser terakhir daftar Beranda, untuk tab bar
+  /// sembunyi/tampil otomatis.
+  double _lastHomeScrollOffset = 0;
+
+  /// Tab bar bawah tampil? Disembunyikan saat user menggeser
+  /// daftar Beranda makin ke bawah (melihat aktivitas lama)
+  /// dan ditampilkan lagi saat menggeser balik ke atas
+  /// (permintaan NUX 8 Nov 2026).
+  bool _tabBarVisible = true;
   String? _bootError;
 
   /// Kata frasa backup dompet ini (null bila dompet lama tanpa frasa).
@@ -176,6 +192,7 @@ class _HomeScreenState extends State<HomeScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _homeScrollController.addListener(_onHomeScroll);
     _boot();
   }
 
@@ -183,8 +200,27 @@ class _HomeScreenState extends State<HomeScreen>
   void dispose() {
     _pollTimer?.cancel();
     _offlineWatchTimer?.cancel();
+    _homeScrollController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  /// Tab bar mengikuti arah geser daftar Beranda: geser ke
+  /// bawah (offset membesar, melewati ambang) → sembunyi;
+  /// geser balik ke atas atau sudah dekat puncak → tampil.
+  /// Delta kecil diabaikan supaya bar tidak berkedip saat
+  /// daftar berhenti di tepi.
+  void _onHomeScroll() {
+    final offset = _homeScrollController.offset;
+    final delta = offset - _lastHomeScrollOffset;
+    _lastHomeScrollOffset = offset;
+    if (offset <= 40) {
+      if (!_tabBarVisible) setState(() => _tabBarVisible = true);
+    } else if (delta > 4 && _tabBarVisible) {
+      setState(() => _tabBarVisible = false);
+    } else if (delta < -4 && !_tabBarVisible) {
+      setState(() => _tabBarVisible = true);
+    }
   }
 
   @override
@@ -917,8 +953,10 @@ class _HomeScreenState extends State<HomeScreen>
         child: IndexedStack(
           index: _tabIndex,
           children: [
-            SingleChildScrollView(
-              child: Column(
+            // Beranda: kepala + kartu saldo DIAM (tidak ikut
+            // bergeser); hanya wilayah di bawah kartu — baris
+            // Kirim/Terima + aktivitas — yang bergeser.
+            Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header
@@ -1115,6 +1153,15 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                 ),
+              // Wilayah bergeser Beranda: baris Kirim/Terima +
+              // aktivitas. Pengendalinya juga menggerakkan tab
+              // bar sembunyi/tampil otomatis (_onHomeScroll).
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: _homeScrollController,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
               // Quick actions
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -1187,8 +1234,11 @@ class _HomeScreenState extends State<HomeScreen>
               else
                 ..._displayPayments.take(5).map(_paymentRow),
               const SizedBox(height: 80),
+                    ],
+                  ),
+                ),
+              ),
             ],
-          ),
             ),
             const JelajahScreen(),
             _HistoryPage(
@@ -1230,8 +1280,18 @@ class _HomeScreenState extends State<HomeScreen>
           ],
         ),
       ),
-      // Floating tab bar
-      bottomNavigationBar: Container(
+      // Floating tab bar — sembunyi/tampil otomatis mengikuti
+      // arah geser daftar Beranda (_tabBarVisible): tingginya
+      // dianimasikan menyusut sampai nol lewat AnimatedAlign.
+      bottomNavigationBar: ClipRect(
+        child: AnimatedAlign(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeInOut,
+          alignment: Alignment.topCenter,
+          // Sembunyi hanya berlaku di Beranda — tab lain selalu
+          // menampilkan bar, dari jalur pindah tab mana pun.
+          heightFactor: _tabIndex != 0 || _tabBarVisible ? 1 : 0,
+          child: Container(
         margin: const EdgeInsets.fromLTRB(18, 0, 18, 20),
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
@@ -1246,6 +1306,8 @@ class _HomeScreenState extends State<HomeScreen>
             _tab(2, '\u21BA', context.l10n.history),
             _tab(3, '\u25CB', context.l10n.profile),
           ],
+        ),
+          ),
         ),
       ),
     );
@@ -1408,7 +1470,13 @@ class _HomeScreenState extends State<HomeScreen>
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          setState(() => _tabIndex = index);
+          // Pindah tab selalu menampilkan tab bar lagi — bar
+          // yang sedang sembunyi tidak boleh menghilang di tab
+          // lain yang daftarnya tidak menggerakkannya.
+          setState(() {
+            _tabIndex = index;
+            _tabBarVisible = true;
+          });
           if (index == 0 || index == 2) _refreshDashboard();
         },
         child: Container(
