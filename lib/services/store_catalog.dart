@@ -132,6 +132,68 @@ CatalogItem? findCatalogItemByCode(List<CatalogItem> items, String code) {
   return null;
 }
 
+/// Awalan kode bawaan produk (keputusan NUX 8 Nov 2026): produk
+/// yang dibuat tanpa barcode sendiri tetap WAJIB punya kode,
+/// karena kode adalah kunci input pesanan lewat pindai — produk
+/// tanpa kode tidak akan pernah bisa dipindai masuk pesanan.
+const String catalogDefaultCodePrefix = 'PRD-';
+
+/// Usulan kode bawaan berikutnya untuk produk baru: `PRD-001`,
+/// `PRD-002`, ... — satu lebih besar dari nomor PRD terbesar
+/// yang sudah ada (pola tak peka huruf besar/kecil; kode di luar
+/// pola, mis. barcode asli, tidak ikut dihitung), dan melompat
+/// bila kandidatnya ternyata sudah dipakai. Deterministik dari
+/// isi katalog, jadi dialog tambah cukup memanggil ini sekali.
+String suggestCatalogCode(List<CatalogItem> items) {
+  final pattern = RegExp(
+    '^${catalogDefaultCodePrefix}(\\d+)\$',
+    caseSensitive: false,
+  );
+  var maxNumber = 0;
+  for (final item in items) {
+    final match = pattern.firstMatch(item.code.trim());
+    if (match == null) continue;
+    final number = int.tryParse(match.group(1)!) ?? 0;
+    if (number > maxNumber) maxNumber = number;
+  }
+  var next = maxNumber + 1;
+  while (true) {
+    final candidate =
+        '$catalogDefaultCodePrefix${next.toString().padLeft(3, '0')}';
+    if (findCatalogItemByCode(items, candidate) == null) return candidate;
+    next++;
+  }
+}
+
+/// Alasan kode produk ditolak saat simpan (lihat
+/// [catalogCodeError]).
+enum CatalogCodeError {
+  /// Kode kosong — kode wajib terisi (kunci input pesanan).
+  empty,
+
+  /// Kode sudah dipakai produk lain — pindai akan selalu
+  /// menemukan produk pertama, jadi duplikat membuat produk
+  /// kedua tidak terjangkau lewat pindai.
+  duplicate,
+}
+
+/// Periksa kode yang akan disimpan: null bila sah. [ownIndex]
+/// adalah posisi item yang sedang diubah di daftar (kodenya
+/// sendiri tidak dihitung duplikat); null saat tambah baru.
+CatalogCodeError? catalogCodeError(
+  List<CatalogItem> items,
+  String code, {
+  int? ownIndex,
+}) {
+  final trimmed = code.trim();
+  if (trimmed.isEmpty) return CatalogCodeError.empty;
+  for (var i = 0; i < items.length; i++) {
+    if (i == ownIndex) continue;
+    if (items[i].code == trimmed) return CatalogCodeError.duplicate;
+  }
+  return null;
+}
+
 /// Daftar kategori yang sudah ada di katalog — bahan saran
 /// isian field Kategori di lembar Kelola, supaya kasir tidak
 /// mengetik ulang dan ejaan kategori seragam antar produk

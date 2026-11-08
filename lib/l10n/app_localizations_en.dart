@@ -909,6 +909,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeProductCode => 'Product Code';
 
   @override
+  String get storeProductCodeHint =>
+      'Filled in automatically — you may replace it with the product\'s barcode.';
+
+  @override
+  String get storeProductCodeLocked =>
+      'The code can\'t be changed once the product exists.';
+
+  @override
+  String get storeProductCodeDuplicate =>
+      'This product code is already used by another product.';
+
+  @override
   String get storeProductName => 'Product Name';
 
   @override

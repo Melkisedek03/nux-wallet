@@ -162,4 +162,68 @@ void main() {
       expect(await StoreCatalogStore(database: newTestStoreDatabase()).load(), isEmpty);
     });
   });
+
+  group('kode bawaan & kewajiban kode (keputusan NUX 8 Nov 2026)', () {
+    CatalogItem item(String code) =>
+        CatalogItem(code: code, name: 'Produk $code', priceRp: 1000);
+
+    test('katalog kosong → PRD-001', () {
+      expect(suggestCatalogCode(const []), 'PRD-001');
+    });
+
+    test('nomor berikutnya dari PRD terbesar, bukan dari jumlah item', () {
+      expect(
+        suggestCatalogCode([item('PRD-001'), item('PRD-007')]),
+        'PRD-008',
+      );
+    });
+
+    test('kode di luar pola (barcode asli) tidak ikut dihitung', () {
+      expect(
+        suggestCatalogCode([item('8991001'), item('QR-MANUAL-1')]),
+        'PRD-001',
+      );
+    });
+
+    test('pola tak peka huruf besar/kecil', () {
+      expect(suggestCatalogCode([item('prd-003')]), 'PRD-004');
+    });
+
+    test('kandidat yang sudah dipakai dilompati', () {
+      // PRD-010 terbaca sebagai nomor 10; kandidat dari hitungan
+      // lain tidak boleh menabrak kode yang sudah ada.
+      expect(
+        suggestCatalogCode([item('PRD-001'), item('PRD-002')]),
+        'PRD-003',
+      );
+    });
+
+    test('kode kosong/spasi ditolak sebagai empty', () {
+      expect(catalogCodeError(const [], ''), CatalogCodeError.empty);
+      expect(catalogCodeError(const [], '   '), CatalogCodeError.empty);
+    });
+
+    test('kode ganda ditolak sebagai duplicate', () {
+      final items = [item('PRD-001'), item('8991001')];
+      expect(
+        catalogCodeError(items, '8991001'),
+        CatalogCodeError.duplicate,
+      );
+    });
+
+    test('kode sendiri saat ubah bukan duplikat (ownIndex)', () {
+      final items = [item('PRD-001'), item('8991001')];
+      expect(catalogCodeError(items, '8991001', ownIndex: 1), isNull);
+      expect(
+        catalogCodeError(items, 'PRD-001', ownIndex: 1),
+        CatalogCodeError.duplicate,
+      );
+    });
+
+    test('kode baru yang sah lolos', () {
+      final items = [item('PRD-001')];
+      expect(catalogCodeError(items, '8991001'), isNull);
+      expect(catalogCodeError(items, suggestCatalogCode(items)), isNull);
+    });
+  });
 }

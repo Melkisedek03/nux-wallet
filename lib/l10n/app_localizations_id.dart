@@ -909,6 +909,18 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeProductCode => 'Kode Produk';
 
   @override
+  String get storeProductCodeHint =>
+      'Terisi otomatis — boleh diganti dengan barcode produk.';
+
+  @override
+  String get storeProductCodeLocked =>
+      'Kode tidak bisa diubah setelah produk dibuat.';
+
+  @override
+  String get storeProductCodeDuplicate =>
+      'Kode produk ini sudah dipakai produk lain.';
+
+  @override
   String get storeProductName => 'Nama Produk';
 
   @override

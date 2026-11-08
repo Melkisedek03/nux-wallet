@@ -1718,6 +1718,24 @@ abstract class AppLocalizations {
   /// **'Kode Produk'**
   String get storeProductCode;
 
+  /// No description provided for @storeProductCodeHint.
+  ///
+  /// In id, this message translates to:
+  /// **'Terisi otomatis — boleh diganti dengan barcode produk.'**
+  String get storeProductCodeHint;
+
+  /// No description provided for @storeProductCodeLocked.
+  ///
+  /// In id, this message translates to:
+  /// **'Kode tidak bisa diubah setelah produk dibuat.'**
+  String get storeProductCodeLocked;
+
+  /// No description provided for @storeProductCodeDuplicate.
+  ///
+  /// In id, this message translates to:
+  /// **'Kode produk ini sudah dipakai produk lain.'**
+  String get storeProductCodeDuplicate;
+
   /// No description provided for @storeProductName.
   ///
   /// In id, this message translates to:

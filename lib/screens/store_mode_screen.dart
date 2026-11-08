@@ -3670,6 +3670,14 @@ class _StorePaymentPageState extends State<_StorePaymentPage> {
     setState(() {
       _redeemOffer = offer;
       _redeemCustomerName = customerName;
+      // Pelanggan tersimpan yang dipilih untuk penukaran juga
+      // mengisi kolom Nama Pelanggan halaman ini (permintaan NUX
+      // 8 Nov 2026): nama yang tercatat pada pesanan lunas tidak
+      // boleh mengandalkan kasir mengetik ulang nama yang sama.
+      // Pindai langsung (tanpa nama) tidak menyentuh kolom.
+      if (customerName != null) {
+        _customerController.text = customerName;
+      }
       _journalBalance = pointsJournalBalanceFor(widget.history, offer);
       _redeemApplied = false;
       _redeemPoints = 0;
@@ -4433,8 +4441,21 @@ class _CatalogManagerSheetState extends State<_CatalogManagerSheet> {
   }) async {
     final l10n = context.l10n;
     final existingDiscount = existing?.defaultDiscount;
+    // Kode produk (keputusan NUX 8 Nov 2026): kode adalah kunci
+    // input pesanan lewat pindai, jadi WAJIB selalu ada. Saat
+    // TAMBAH, kolom terisi kode bawaan otomatis (atau kode hasil
+    // pindai yang belum terdaftar) dan boleh diganti di dialog
+    // ini saja. Saat UBAH produk yang sudah berkode, kolom
+    // terkunci supaya identitas pindainya tidak bergeser
+    // diam-diam. Produk warisan tanpa kode (dari era kode belum
+    // ditegakkan) mendapat kode bawaan saat diubah dan kali itu
+    // boleh diedit, supaya sesudah disimpan tidak ada lagi
+    // produk tanpa kode.
+    final codeLocked = existing != null && existing.code.isNotEmpty;
     final codeCtl = TextEditingController(
-      text: existing?.code ?? initialCode ?? '',
+      text: codeLocked
+          ? existing.code
+          : (initialCode ?? suggestCatalogCode(_items)),
     );
     final nameCtl = TextEditingController(text: existing?.name ?? '');
     final priceCtl = TextEditingController(
@@ -4462,8 +4483,12 @@ class _CatalogManagerSheetState extends State<_CatalogManagerSheet> {
                 children: [
                   TextField(
                     controller: codeCtl,
+                    enabled: !codeLocked,
                     decoration: InputDecoration(
                       labelText: l10n.storeProductCode,
+                      helperText: codeLocked
+                          ? l10n.storeProductCodeLocked
+                          : l10n.storeProductCodeHint,
                       filled: true,
                       fillColor: ctx.palette.cardAlt,
                       border: OutlineInputBorder(
@@ -4577,6 +4602,23 @@ class _CatalogManagerSheetState extends State<_CatalogManagerSheet> {
       ),
     );
     if (saved != true || !mounted) return;
+    // Kode wajib & tidak boleh ganda (lihat catalogCodeError):
+    // pesan formulir yang lama sudah menjanjikan kode wajib,
+    // kini pemeriksaannya sungguh ada.
+    final code = codeCtl.text.trim();
+    final codeError = catalogCodeError(_items, code, ownIndex: index);
+    if (codeError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            codeError == CatalogCodeError.empty
+                ? l10n.storeProductFormError
+                : l10n.storeProductCodeDuplicate,
+          ),
+        ),
+      );
+      return;
+    }
     final name = nameCtl.text.trim();
     final price = int.tryParse(priceCtl.text.trim()) ?? 0;
     if (name.isEmpty || price <= 0) {
@@ -4597,7 +4639,7 @@ class _CatalogManagerSheetState extends State<_CatalogManagerSheet> {
     }
     final category = categoryCtl.text.trim();
     final item = CatalogItem(
-      code: codeCtl.text.trim(),
+      code: code,
       name: name,
       priceRp: price,
       defaultDiscount: discount,
