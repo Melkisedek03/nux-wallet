@@ -38,22 +38,6 @@ class MainActivity : FlutterActivity() {
     // menjaga layar menyala agar dompet siap menerima pembayaran.
     override fun shouldDestroyEngineWithHost(): Boolean = false
 
-    // Pasangan wajib dari shouldDestroyEngineWithHost di atas:
-    // mesin disimpan di cache FlutterEngineCache dengan ID tetap,
-    // supaya activity yang dibuka kembali MENEMPEL ke mesin yang
-    // sama (keadaan Dart lanjut persis dari terakhir), bukan
-    // mem-boot mesin kedua. Temuan lapangan build 100 (tahap B
-    // tanpa baris ini): keluar lewat tombol back lalu membuka lagi
-    // menampilkan gerbang awal dan menggantung, karena mesin kedua
-    // bertabrakan dengan node yang masih berjalan di mesin
-    // pertama; membersihkan recents (membunuh semua mesin) adalah
-    // satu-satunya jalan pulih saat itu.
-    override fun getCachedEngineId(): String = ID_MESIN
-
-    companion object {
-        private const val ID_MESIN = "elnux_mesin_utama"
-    }
-
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         // Saluran layanan latar jembatan offline (tahap produksi B):
