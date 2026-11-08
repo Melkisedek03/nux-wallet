@@ -1021,6 +1021,16 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeReportsTitle => 'Daftar Laporan';
 
   @override
+  String get storeReportProductSalesTitle => 'Laporan Penjualan Produk';
+
+  @override
+  String get storeReportProductSalesSubtitle =>
+      'Semua penjualan per produk pada periode terpilih.';
+
+  @override
+  String get storeProductSalesGross => 'Bruto';
+
+  @override
   String get storeReportBestsellersTitle => 'Produk Terlaris';
 
   @override

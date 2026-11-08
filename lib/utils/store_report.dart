@@ -623,17 +623,28 @@ class ProductSalesEntry {
   int get hashCode => Object.hash(code, label, qty, grossRp, discountRp);
 }
 
-/// Agregasi murni Produk Terlaris untuk jendela [from, to).
+/// Cara mengurutkan hasil [aggregateProductSales].
+enum ProductSalesSort {
+  /// Terlaris dulu: qty terbanyak, lalu omzet bersih, lalu
+  /// nama — untuk Laporan Produk Terlaris.
+  byQty,
+
+  /// Abjad nama (tak peka huruf), seri → kode — untuk Laporan
+  /// Penjualan Produk yang daftarnya lengkap.
+  byName,
+}
+
+/// Agregasi murni penjualan per produk untuk jendela [from, to).
 /// Hanya pesanan LUNAS era rupiah; pesanan VOID & era nusan
-/// dikecualikan, sama seperti rincian menu. Urutan: qty
-/// terbanyak; seri → omzet bersih terbesar; seri lagi → nama
-/// (tak peka huruf). [limit] membatasi hasil sesudah pengurutan
-/// (null = semua).
+/// dikecualikan, sama seperti rincian menu. [sort] memilih
+/// urutan hasil (bawaan [ProductSalesSort.byQty]); [limit]
+/// membatasi hasil sesudah pengurutan (null = semua).
 List<ProductSalesEntry> aggregateProductSales(
   List<CompletedOrder> orders, {
   required DateTime from,
   required DateTime to,
   int? limit,
+  ProductSalesSort sort = ProductSalesSort.byQty,
 }) {
   final qtyByKey = <String, int>{};
   final grossByKey = <String, int>{};
@@ -672,6 +683,13 @@ List<ProductSalesEntry> aggregateProductSales(
         discountRp: discountByKey[key]!,
       ),
   ]..sort((a, b) {
+      if (sort == ProductSalesSort.byName) {
+        final byLabel = a.label
+            .toLowerCase()
+            .compareTo(b.label.toLowerCase());
+        if (byLabel != 0) return byLabel;
+        return a.code.compareTo(b.code);
+      }
       final byQty = b.qty.compareTo(a.qty);
       if (byQty != 0) return byQty;
       final byNet = b.netRp.compareTo(a.netRp);

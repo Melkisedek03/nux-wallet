@@ -1910,6 +1910,24 @@ abstract class AppLocalizations {
   /// **'Daftar Laporan'**
   String get storeReportsTitle;
 
+  /// No description provided for @storeReportProductSalesTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Laporan Penjualan Produk'**
+  String get storeReportProductSalesTitle;
+
+  /// No description provided for @storeReportProductSalesSubtitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Semua penjualan per produk pada periode terpilih.'**
+  String get storeReportProductSalesSubtitle;
+
+  /// No description provided for @storeProductSalesGross.
+  ///
+  /// In id, this message translates to:
+  /// **'Bruto'**
+  String get storeProductSalesGross;
+
   /// No description provided for @storeReportBestsellersTitle.
   ///
   /// In id, this message translates to:

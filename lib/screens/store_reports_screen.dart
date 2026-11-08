@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../locale_controller.dart';
 import '../theme.dart';
 import 'store_bestsellers_screen.dart';
+import 'store_product_sales_screen.dart';
 
 /// Daftar Laporan Mode Toko — halaman indeks laporan-laporan
 /// untuk owner (permintaan NUX 8 Nov 2026). Halaman ini khusus
@@ -25,6 +26,12 @@ class StoreReportsScreen extends StatelessWidget {
         title: l10n.storeReportBestsellersTitle,
         subtitle: l10n.storeReportBestsellersSubtitle,
         builder: (_) => const StoreBestsellersScreen(),
+      ),
+      _ReportEntry(
+        icon: Icons.inventory_2_rounded,
+        title: l10n.storeReportProductSalesTitle,
+        subtitle: l10n.storeReportProductSalesSubtitle,
+        builder: (_) => const StoreProductSalesScreen(),
       ),
     ];
     return Scaffold(

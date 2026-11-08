@@ -1021,6 +1021,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeReportsTitle => 'Reports';
 
   @override
+  String get storeReportProductSalesTitle => 'Product Sales Report';
+
+  @override
+  String get storeReportProductSalesSubtitle =>
+      'All sales per product in the selected period.';
+
+  @override
+  String get storeProductSalesGross => 'Gross';
+
+  @override
   String get storeReportBestsellersTitle => 'Best-Selling Products';
 
   @override

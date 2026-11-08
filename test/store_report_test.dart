@@ -636,5 +636,25 @@ void main() {
         isEmpty,
       );
     });
+
+    test('sort byName: abjad tak peka huruf, bukan urutan qty', () {
+      final orders = [
+        order(DateTime(2026, 11, 5), const [
+          OrderLine(code: 'C', label: 'ceri', unitPriceRp: 1000, qty: 9),
+          OrderLine(code: 'B', label: 'Beta', unitPriceRp: 9000, qty: 4),
+          OrderLine(code: 'A', label: 'alfa', unitPriceRp: 5000, qty: 1),
+        ]),
+      ];
+      final entries = aggregateProductSales(
+        orders,
+        from: from,
+        to: to,
+        sort: ProductSalesSort.byName,
+      );
+      expect(entries.map((e) => e.label), ['alfa', 'Beta', 'ceri']);
+      // Bawaan tetap byQty (perilaku Produk Terlaris tidak berubah).
+      final ranked = aggregateProductSales(orders, from: from, to: to);
+      expect(ranked.map((e) => e.label), ['ceri', 'Beta', 'alfa']);
+    });
   });
 }
