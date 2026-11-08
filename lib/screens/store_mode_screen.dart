@@ -5018,10 +5018,19 @@ class _CatalogManagerSheetState extends State<_CatalogManagerSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    // Susunan lembar (arah NUX 9 Nov 2026): judul diam di
+    // atas, daftar item ListView yang bergeser sendiri di
+    // tengah, tombol Tambah Produk diam di bawah. Susunan
+    // lama — satu kolom utuh berisi semua item di dalam
+    // SingleChildScrollView — membuat bagian atas lembar
+    // terpotong keluar layar bila item banyak, karena lembar
+    // menjangkar di bawah dan isinya tumbuh melewati layar.
+    // Kini tinggi lembar dibatasi (75% layar) dan hanya
+    // daftarnya yang bergeser, jadi layout selalu aman.
     return SafeArea(
-      child: SingleChildScrollView(
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.75,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
@@ -5034,45 +5043,62 @@ class _CatalogManagerSheetState extends State<_CatalogManagerSheet> {
                 ),
               ),
             ),
-            if (_items.isEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 6, 18, 6),
-                child: Text(
-                  l10n.storeCatalogEmpty,
-                  style: TextStyle(fontSize: 13, color: context.palette.muted),
-                ),
-              )
-            else
-              for (var i = 0; i < _items.length; i++)
-                ListTile(
-                  title: Text(
-                    _items[i].name,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: Text(
-                    'Rp${formatRupiah(_items[i].priceRp)}'
-                    '${_items[i].code.isEmpty ? '' : ' • ${_items[i].code}'}'
-                    '${_items[i].category.isEmpty ? '' : ' • ${_items[i].category}'}',
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined, size: 20),
-                        onPressed: () =>
-                            _editItem(existing: _items[i], index: i),
+            Expanded(
+              child: _items.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 6, 18, 6),
+                      child: Text(
+                        l10n.storeCatalogEmpty,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: context.palette.muted,
+                        ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline_rounded, size: 20),
-                        onPressed: () {
-                          final next = List<CatalogItem>.of(_items)
-                            ..removeAt(i);
-                          _saveAll(next);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
+                    )
+                  : ListView.builder(
+                      itemCount: _items.length,
+                      itemBuilder: (context, i) {
+                        final item = _items[i];
+                        return ListTile(
+                          title: Text(
+                            item.name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          subtitle: Text(
+                            'Rp${formatRupiah(item.priceRp)}'
+                            '${item.code.isEmpty ? '' : ' • ${item.code}'}'
+                            '${item.category.isEmpty ? '' : ' • ${item.category}'}',
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.edit_outlined,
+                                  size: 20,
+                                ),
+                                onPressed: () =>
+                                    _editItem(existing: item, index: i),
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete_outline_rounded,
+                                  size: 20,
+                                ),
+                                onPressed: () {
+                                  final next = List<CatalogItem>.of(_items)
+                                    ..removeAt(i);
+                                  _saveAll(next);
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 8, 18, 16),
               child: ElevatedButton.icon(
