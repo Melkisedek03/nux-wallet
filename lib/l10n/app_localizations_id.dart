@@ -1076,6 +1076,11 @@ class AppLocalizationsId extends AppLocalizations {
   String get storePaymentReportBreakdown => 'Rincian per Shift';
 
   @override
+  String storeReportPointsUsed(int points, String amount) {
+    return 'Poin terpakai: $points poin (−$amount)';
+  }
+
+  @override
   String storePaymentReportInvoices(int count) {
     return '$count nota';
   }

@@ -666,6 +666,8 @@ void main() {
       bool isVoid = false,
       String? payMethod,
       List<OrderPayment> payments = const [],
+      int pointsRedeemed = 0,
+      int pointsDiscountRp = 0,
     }) => CompletedOrder(
       time: time,
       lines: const [
@@ -680,6 +682,8 @@ void main() {
       isVoid: isVoid,
       payMethod: payMethod,
       payments: payments,
+      pointsRedeemed: pointsRedeemed,
+      pointsDiscountRp: pointsDiscountRp,
       shiftOpenedMs: shiftOpenedMs,
     );
 
@@ -814,6 +818,62 @@ void main() {
       ]);
       expect(day.methodTotals.fold(0, (s, m) => s + m.totalRp), day.totalRp);
     });
+    test('poin terpakai teragregasi per shift & per hari; VOID dikecualikan', () {
+      final morning = shift(
+        DateTime(2026, 11, 8, 8),
+        closedAt: DateTime(2026, 11, 8, 12),
+      );
+      final evening = shift(
+        DateTime(2026, 11, 8, 13),
+        closedAt: DateTime(2026, 11, 8, 17),
+      );
+      final msM = morning.openedAt.millisecondsSinceEpoch;
+      final msE = evening.openedAt.millisecondsSinceEpoch;
+      final days = aggregatePaymentsByDay(
+        [
+          sale(
+            time: DateTime(2026, 11, 8, 9),
+            totalRp: 20000,
+            shiftOpenedMs: msM,
+            pointsRedeemed: 100,
+            pointsDiscountRp: 1000,
+          ),
+          sale(
+            time: DateTime(2026, 11, 8, 10),
+            totalRp: 30000,
+            shiftOpenedMs: msM,
+            pointsRedeemed: 150,
+            pointsDiscountRp: 1500,
+          ),
+          // VOID dengan poin — tidak terhitung.
+          sale(
+            time: DateTime(2026, 11, 8, 11),
+            totalRp: 99999,
+            shiftOpenedMs: msM,
+            isVoid: true,
+            pointsRedeemed: 500,
+            pointsDiscountRp: 5000,
+          ),
+          sale(
+            time: DateTime(2026, 11, 8, 14),
+            totalRp: 10000,
+            shiftOpenedMs: msE,
+          ),
+        ],
+        [morning, evening],
+        from: from,
+        to: to,
+      );
+      expect(days, hasLength(1));
+      final day = days.single;
+      expect(day.pointsRedeemed, 250);
+      expect(day.pointsDiscountRp, 2500);
+      final byOpen = {for (final e in day.shifts) e.shift.openedAt.hour: e};
+      expect(byOpen[8]!.pointsRedeemed, 250);
+      expect(byOpen[8]!.pointsDiscountRp, 2500);
+      expect(byOpen[13]!.pointsRedeemed, 0);
+      expect(byOpen[13]!.pointsDiscountRp, 0);
+    });
   });
 
   group('teks ekspor PDF laporan', () {
@@ -921,6 +981,7 @@ void main() {
         includeBreakdown: breakdown,
         invoicesLabel: (c) => '$c nota',
         stillOpenLabel: 'Masih Berjalan',
+        pointsUsedLabel: (p, rp) => 'Poin terpakai: $p poin (−Rp$rp)',
         totalLine: 'Total 3 nota • Rp100.000',
         emptyLabel: 'KOSONG',
         locale: 'id',
@@ -929,10 +990,55 @@ void main() {
       expect(withShifts, contains('08:00 - 12:00'));
       expect(withShifts, contains('Ani • 3 nota'));
       expect(withShifts, contains('Tunai Rp100.000'));
+      // Tanpa penukaran poin, baris poin tidak muncul.
+      expect(withShifts, isNot(contains('Poin terpakai')));
       final withoutShifts = build(false);
       expect(withoutShifts, isNot(contains('08:00 - 12:00')));
       // Metode gabungan hari tetap tampil walau rincian mati.
       expect(withoutShifts, contains('Tunai Rp100.000'));
+    });
+
+
+    test('teks pembayaran memuat baris poin di hari & shift bila ada', () {
+      final shiftWithPoints = StoreShift(
+        openedAt: DateTime(2026, 11, 8, 8),
+        closedAt: DateTime(2026, 11, 8, 12),
+        era: 'rp',
+        operatorName: 'Ani',
+      );
+      final daysWithPoints = [
+        DayPaymentEntry(
+          day: DateTime(2026, 11, 8),
+          shifts: [
+            ShiftPaymentEntry(
+              shift: shiftWithPoints,
+              invoiceCount: 2,
+              totalRp: 50000,
+              methodTotals: const [
+                PaymentMethodTotal(method: 'Tunai', totalRp: 50000),
+              ],
+              pointsRedeemed: 250,
+              pointsDiscountRp: 2500,
+            ),
+          ],
+        ),
+      ];
+      final text = buildPaymentReportText(
+        title: 'Laporan Pembayaran',
+        periodLabel: 'P',
+        generatedStamp: 'S',
+        days: daysWithPoints,
+        includeBreakdown: true,
+        invoicesLabel: (c) => '$c nota',
+        stillOpenLabel: 'Masih Berjalan',
+        pointsUsedLabel: (p, rp) => 'Poin terpakai: $p poin (−Rp$rp)',
+        totalLine: 'Total 2 nota • Rp50.000',
+        emptyLabel: 'KOSONG',
+        locale: 'id',
+      );
+      // Baris hari (indent 2) dan baris shift (indent 4).
+      expect(text, contains('  Poin terpakai: 250 poin (−Rp2500)'));
+      expect(text, contains('    Poin terpakai: 250 poin (−Rp2500)'));
     });
   });
 }

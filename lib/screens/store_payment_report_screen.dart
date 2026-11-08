@@ -91,6 +91,8 @@ class _StorePaymentReportScreenState extends State<StorePaymentReportScreen> {
           includeBreakdown: _breakdown,
           invoicesLabel: l10n.storePaymentReportInvoices,
           stillOpenLabel: l10n.storeShiftStillOpen,
+          pointsUsedLabel: (points, discountRp) => l10n
+              .storeReportPointsUsed(points, 'Rp${formatRupiah(discountRp)}'),
           totalLine: l10n.storePaymentReportTotalLine(
             totalCount,
             formatRupiah(totalRp),
@@ -238,6 +240,16 @@ class _StorePaymentReportScreenState extends State<StorePaymentReportScreen> {
               style: TextStyle(fontSize: 12, color: context.palette.muted),
             ),
           ],
+          if (entry.pointsRedeemed > 0) ...[
+            const SizedBox(height: 3),
+            Text(
+              l10n.storeReportPointsUsed(
+                entry.pointsRedeemed,
+                'Rp${formatRupiah(entry.pointsDiscountRp)}',
+              ),
+              style: TextStyle(fontSize: 12, color: context.palette.muted),
+            ),
+          ],
           if (_breakdown)
             for (final shiftEntry in entry.shifts) ...[
               const Divider(height: 18),
@@ -322,6 +334,23 @@ class _StorePaymentReportScreenState extends State<StorePaymentReportScreen> {
                   ),
                 ),
               ],
+            ),
+          ),
+        // Poin terpakai shift ini (bila ada penukaran): jumlah
+        // poin + nilai potongan rupiahnya — keterangan
+        // rekonsiliasi, bukan penerimaan.
+        if (entry.pointsRedeemed > 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 3),
+            child: Text(
+              l10n.storeReportPointsUsed(
+                entry.pointsRedeemed,
+                'Rp${formatRupiah(entry.pointsDiscountRp)}',
+              ),
+              style: TextStyle(
+                fontSize: 12,
+                color: context.palette.muted,
+              ),
             ),
           ),
       ],

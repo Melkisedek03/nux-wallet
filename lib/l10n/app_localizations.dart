@@ -2006,6 +2006,12 @@ abstract class AppLocalizations {
   /// **'Rincian per Shift'**
   String get storePaymentReportBreakdown;
 
+  /// No description provided for @storeReportPointsUsed.
+  ///
+  /// In id, this message translates to:
+  /// **'Poin terpakai: {points} poin (−{amount})'**
+  String storeReportPointsUsed(int points, String amount);
+
   /// No description provided for @storePaymentReportInvoices.
   ///
   /// In id, this message translates to:

@@ -510,6 +510,17 @@
   "storeReportPaymentsTitle": "Payment Report",
   "storeReportPaymentsSubtitle": "Receipts by date, broken down by shift.",
   "storePaymentReportBreakdown": "Per-Shift Breakdown",
+  "storeReportPointsUsed": "Points used: {points} points (−{amount})",
+  "@storeReportPointsUsed": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "storePaymentReportInvoices": "{count} invoices",
   "@storePaymentReportInvoices": {
     "placeholders": {

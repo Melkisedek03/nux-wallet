@@ -749,11 +749,21 @@ class ShiftPaymentEntry {
   /// (Σ-nya = [totalRp]).
   final List<PaymentMethodTotal> methodTotals;
 
+  /// Poin terpakai (tertukar) pada nota-nota shift ini:
+  /// jumlah poinnya dan nilai potongan rupiahnya. Poin BUKAN
+  /// penerimaan — potongannya sudah mengurangi [totalRp] —
+  /// ia tampil sebagai keterangan rekonsiliasi (permintaan
+  /// NUX 8 Nov 2026).
+  final int pointsRedeemed;
+  final int pointsDiscountRp;
+
   const ShiftPaymentEntry({
     required this.shift,
     required this.invoiceCount,
     required this.totalRp,
     required this.methodTotals,
+    this.pointsRedeemed = 0,
+    this.pointsDiscountRp = 0,
   });
 }
 
@@ -768,6 +778,12 @@ class DayPaymentEntry {
 
   int get totalRp => shifts.fold(0, (sum, e) => sum + e.totalRp);
   int get invoiceCount => shifts.fold(0, (sum, e) => sum + e.invoiceCount);
+
+  /// Poin terpakai sepanjang hari ini (gabungan semua shift).
+  int get pointsRedeemed =>
+      shifts.fold(0, (sum, e) => sum + e.pointsRedeemed);
+  int get pointsDiscountRp =>
+      shifts.fold(0, (sum, e) => sum + e.pointsDiscountRp);
 
   /// Rincian penerimaan per metode bayar sepanjang hari ini
   /// (gabungan semua shiftnya; Σ-nya = [totalRp]).
@@ -804,16 +820,18 @@ List<DayPaymentEntry> aggregatePaymentsByDay(
   required DateTime from,
   required DateTime to,
 }) {
-  final totals = <int, ({int count, int total})>{};
+  final totals = <int, ({int count, int total, int points, int pointsRp})>{};
   final methodsByShiftMs = <int, Map<String, int>>{};
   for (final order in orders) {
     if (!order.isRupiahEra || order.isVoid) continue;
     final ms = order.shiftOpenedMs;
     if (ms == null) continue;
-    final current = totals[ms] ?? (count: 0, total: 0);
+    final current = totals[ms] ?? (count: 0, total: 0, points: 0, pointsRp: 0);
     totals[ms] = (
       count: current.count + 1,
       total: current.total + order.grandTotalRp,
+      points: current.points + order.pointsRedeemed,
+      pointsRp: current.pointsRp + order.pointsDiscountRp,
     );
     // Rincian metode lewat effectivePaymentsOf — dasar yang
     // sama dengan tender laporan shift, termasuk promosi
@@ -845,6 +863,8 @@ List<DayPaymentEntry> aggregatePaymentsByDay(
             invoiceCount: t.count,
             totalRp: t.total,
             methodTotals: _sortedMethodTotals(methodsByShiftMs[ms] ?? {}),
+            pointsRedeemed: t.points,
+            pointsDiscountRp: t.pointsRp,
           ),
         );
   }
@@ -966,6 +986,7 @@ String buildPaymentReportText({
   required bool includeBreakdown,
   required String Function(int count) invoicesLabel,
   required String stillOpenLabel,
+  required String Function(int points, int discountRp) pointsUsedLabel,
   required String totalLine,
   required String emptyLabel,
   required String locale,
@@ -991,6 +1012,9 @@ String buildPaymentReportText({
         '  ${day.methodTotals.map((m) => '${m.method} Rp${_fmt(m.totalRp)}').join(' • ')}',
       );
     }
+    if (day.pointsRedeemed > 0) {
+      lines.add('  ${pointsUsedLabel(day.pointsRedeemed, day.pointsDiscountRp)}');
+    }
     if (includeBreakdown) {
       for (final entry in day.shifts) {
         final shift = entry.shift;
@@ -1006,6 +1030,11 @@ String buildPaymentReportText({
         );
         for (final m in entry.methodTotals) {
           lines.add(_textAmountRow('    ${m.method}', 'Rp${_fmt(m.totalRp)}'));
+        }
+        if (entry.pointsRedeemed > 0) {
+          lines.add(
+            '    ${pointsUsedLabel(entry.pointsRedeemed, entry.pointsDiscountRp)}',
+          );
         }
       }
     }

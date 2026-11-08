@@ -510,6 +510,17 @@
   "storeReportPaymentsTitle": "Laporan Pembayaran",
   "storeReportPaymentsSubtitle": "Penerimaan per tanggal, dirinci per shift.",
   "storePaymentReportBreakdown": "Rincian per Shift",
+  "storeReportPointsUsed": "Poin terpakai: {points} poin (−{amount})",
+  "@storeReportPointsUsed": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "storePaymentReportInvoices": "{count} nota",
   "@storePaymentReportInvoices": {
     "placeholders": {

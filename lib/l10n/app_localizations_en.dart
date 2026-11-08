@@ -1076,6 +1076,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storePaymentReportBreakdown => 'Per-Shift Breakdown';
 
   @override
+  String storeReportPointsUsed(int points, String amount) {
+    return 'Points used: $points points (−$amount)';
+  }
+
+  @override
   String storePaymentReportInvoices(int count) {
     return '$count invoices';
   }
