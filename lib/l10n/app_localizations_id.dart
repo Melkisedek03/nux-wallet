@@ -121,12 +121,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get receive => 'Terima';
 
   @override
-  String get buy => 'Beli';
-
-  @override
-  String get swap => 'Tukar';
-
-  @override
   String get activity => 'Aktivitas';
 
   @override
@@ -136,10 +130,55 @@ class AppLocalizationsId extends AppLocalizations {
   String get noActivity => 'Belum ada aktivitas';
 
   @override
-  String get market => 'Pasar';
+  String get market => 'Jelajah';
 
   @override
-  String get marketSoon => 'Info pasar NUX — segera hadir.';
+  String get jelajahSource => 'Harga pasar — qutrade.io';
+
+  @override
+  String jelajahUpdated(String time) {
+    return 'Diperbarui $time';
+  }
+
+  @override
+  String get jelajahChange24h => 'Perubahan 24 jam';
+
+  @override
+  String get jelajahBlockHeight => 'Tinggi blok';
+
+  @override
+  String get jelajahDirectory => 'Direktori Toko';
+
+  @override
+  String get jelajahSearchHint => 'Cari toko atau barang…';
+
+  @override
+  String get jelajahAllCities => 'Semua kota';
+
+  @override
+  String get jelajahPointsProgram => 'Program Poin Mode Toko';
+
+  @override
+  String get jelajahCopyOffer => 'Salin Offer';
+
+  @override
+  String get jelajahOfferCopied => 'Offer tersalin';
+
+  @override
+  String get jelajahEmpty =>
+      'Belum ada toko terdaftar. Pemilik toko dapat mendaftarkan tokonya lewat kanal komunitas Nusacoin.';
+
+  @override
+  String get jelajahNoResults => 'Tidak ada toko yang cocok dengan pencarian.';
+
+  @override
+  String get jelajahDisclaimer =>
+      'Informasi pasar dari sumber publik. Bukan nasihat keuangan.';
+
+  @override
+  String jelajahDirectoryUpdated(String time) {
+    return 'Direktori diperbarui $time';
+  }
 
   @override
   String get home => 'Beranda';

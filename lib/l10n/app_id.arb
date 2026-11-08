@@ -45,13 +45,38 @@
   "legacyStrip": "Dompet ini belum punya frasa backup. Buka tab Profil untuk membuat dompet baru dengan frasa sebelum menerima dana.",
   "send": "Kirim",
   "receive": "Terima",
-  "buy": "Beli",
-  "swap": "Tukar",
   "activity": "Aktivitas",
   "seeAll": "Lihat semua",
   "noActivity": "Belum ada aktivitas",
-  "market": "Pasar",
-  "marketSoon": "Info pasar NUX — segera hadir.",
+  "market": "Jelajah",
+  "jelajahSource": "Harga pasar — qutrade.io",
+  "jelajahUpdated": "Diperbarui {time}",
+  "@jelajahUpdated": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "jelajahChange24h": "Perubahan 24 jam",
+  "jelajahBlockHeight": "Tinggi blok",
+  "jelajahDirectory": "Direktori Toko",
+  "jelajahSearchHint": "Cari toko atau barang…",
+  "jelajahAllCities": "Semua kota",
+  "jelajahPointsProgram": "Program Poin Mode Toko",
+  "jelajahCopyOffer": "Salin Offer",
+  "jelajahOfferCopied": "Offer tersalin",
+  "jelajahEmpty": "Belum ada toko terdaftar. Pemilik toko dapat mendaftarkan tokonya lewat kanal komunitas Nusacoin.",
+  "jelajahNoResults": "Tidak ada toko yang cocok dengan pencarian.",
+  "jelajahDisclaimer": "Informasi pasar dari sumber publik. Bukan nasihat keuangan.",
+  "jelajahDirectoryUpdated": "Direktori diperbarui {time}",
+  "@jelajahDirectoryUpdated": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "home": "Beranda",
   "history": "Riwayat",
   "profile": "Profil",

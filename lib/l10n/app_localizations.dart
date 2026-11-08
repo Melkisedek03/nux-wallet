@@ -308,18 +308,6 @@ abstract class AppLocalizations {
   /// **'Terima'**
   String get receive;
 
-  /// No description provided for @buy.
-  ///
-  /// In id, this message translates to:
-  /// **'Beli'**
-  String get buy;
-
-  /// No description provided for @swap.
-  ///
-  /// In id, this message translates to:
-  /// **'Tukar'**
-  String get swap;
-
   /// No description provided for @activity.
   ///
   /// In id, this message translates to:
@@ -341,14 +329,92 @@ abstract class AppLocalizations {
   /// No description provided for @market.
   ///
   /// In id, this message translates to:
-  /// **'Pasar'**
+  /// **'Jelajah'**
   String get market;
 
-  /// No description provided for @marketSoon.
+  /// No description provided for @jelajahSource.
   ///
   /// In id, this message translates to:
-  /// **'Info pasar NUX — segera hadir.'**
-  String get marketSoon;
+  /// **'Harga pasar — qutrade.io'**
+  String get jelajahSource;
+
+  /// No description provided for @jelajahUpdated.
+  ///
+  /// In id, this message translates to:
+  /// **'Diperbarui {time}'**
+  String jelajahUpdated(String time);
+
+  /// No description provided for @jelajahChange24h.
+  ///
+  /// In id, this message translates to:
+  /// **'Perubahan 24 jam'**
+  String get jelajahChange24h;
+
+  /// No description provided for @jelajahBlockHeight.
+  ///
+  /// In id, this message translates to:
+  /// **'Tinggi blok'**
+  String get jelajahBlockHeight;
+
+  /// No description provided for @jelajahDirectory.
+  ///
+  /// In id, this message translates to:
+  /// **'Direktori Toko'**
+  String get jelajahDirectory;
+
+  /// No description provided for @jelajahSearchHint.
+  ///
+  /// In id, this message translates to:
+  /// **'Cari toko atau barang…'**
+  String get jelajahSearchHint;
+
+  /// No description provided for @jelajahAllCities.
+  ///
+  /// In id, this message translates to:
+  /// **'Semua kota'**
+  String get jelajahAllCities;
+
+  /// No description provided for @jelajahPointsProgram.
+  ///
+  /// In id, this message translates to:
+  /// **'Program Poin Mode Toko'**
+  String get jelajahPointsProgram;
+
+  /// No description provided for @jelajahCopyOffer.
+  ///
+  /// In id, this message translates to:
+  /// **'Salin Offer'**
+  String get jelajahCopyOffer;
+
+  /// No description provided for @jelajahOfferCopied.
+  ///
+  /// In id, this message translates to:
+  /// **'Offer tersalin'**
+  String get jelajahOfferCopied;
+
+  /// No description provided for @jelajahEmpty.
+  ///
+  /// In id, this message translates to:
+  /// **'Belum ada toko terdaftar. Pemilik toko dapat mendaftarkan tokonya lewat kanal komunitas Nusacoin.'**
+  String get jelajahEmpty;
+
+  /// No description provided for @jelajahNoResults.
+  ///
+  /// In id, this message translates to:
+  /// **'Tidak ada toko yang cocok dengan pencarian.'**
+  String get jelajahNoResults;
+
+  /// No description provided for @jelajahDisclaimer.
+  ///
+  /// In id, this message translates to:
+  /// **'Informasi pasar dari sumber publik. Bukan nasihat keuangan.'**
+  String get jelajahDisclaimer;
+
+  /// No description provided for @jelajahDirectoryUpdated.
+  ///
+  /// In id, this message translates to:
+  /// **'Direktori diperbarui {time}'**
+  String jelajahDirectoryUpdated(String time);
 
   /// No description provided for @home.
   ///

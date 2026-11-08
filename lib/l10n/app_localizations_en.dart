@@ -122,12 +122,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get receive => 'Receive';
 
   @override
-  String get buy => 'Buy';
-
-  @override
-  String get swap => 'Swap';
-
-  @override
   String get activity => 'Activity';
 
   @override
@@ -137,10 +131,55 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noActivity => 'No activity yet';
 
   @override
-  String get market => 'Market';
+  String get market => 'Explore';
 
   @override
-  String get marketSoon => 'NUX market info — coming soon.';
+  String get jelajahSource => 'Market price — qutrade.io';
+
+  @override
+  String jelajahUpdated(String time) {
+    return 'Updated $time';
+  }
+
+  @override
+  String get jelajahChange24h => '24h change';
+
+  @override
+  String get jelajahBlockHeight => 'Block height';
+
+  @override
+  String get jelajahDirectory => 'Merchant Directory';
+
+  @override
+  String get jelajahSearchHint => 'Search merchants or goods…';
+
+  @override
+  String get jelajahAllCities => 'All cities';
+
+  @override
+  String get jelajahPointsProgram => 'Store Mode Points Program';
+
+  @override
+  String get jelajahCopyOffer => 'Copy Offer';
+
+  @override
+  String get jelajahOfferCopied => 'Offer copied';
+
+  @override
+  String get jelajahEmpty =>
+      'No merchants are listed yet. Merchant owners can register their shop through the Nusacoin community channels.';
+
+  @override
+  String get jelajahNoResults => 'No merchants match your search.';
+
+  @override
+  String get jelajahDisclaimer =>
+      'Market information from public sources. Not financial advice.';
+
+  @override
+  String jelajahDirectoryUpdated(String time) {
+    return 'Directory updated $time';
+  }
 
   @override
   String get home => 'Home';
