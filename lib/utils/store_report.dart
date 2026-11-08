@@ -580,6 +580,110 @@ List<MenuSalesGroup> aggregateMenuDetails(
   ];
 }
 
+/// Satu entri Laporan Produk Terlaris: semua baris lunas untuk
+/// satu produk teragregasi lintas pesanan. Identitas produk =
+/// kode baris bila ada (kode adalah identitas stabil produk —
+/// nama boleh berubah di katalog, kode tidak); baris tanpa kode
+/// (baris bebas keypad) berkelompok menurut labelnya.
+class ProductSalesEntry {
+  /// Kode produk; '' untuk kelompok baris bebas tanpa kode.
+  final String code;
+
+  /// Nama tampil — label dari baris terbaru dalam kelompok.
+  final String label;
+  final int qty;
+  final int grossRp;
+
+  /// Σ diskon baris kelompok ini (angka dari record).
+  final int discountRp;
+
+  const ProductSalesEntry({
+    required this.code,
+    required this.label,
+    required this.qty,
+    required this.grossRp,
+    required this.discountRp,
+  });
+
+  /// Omzet bersih kelompok: bruto − diskon baris. (Diskon level
+  /// pesanan tidak dialokasikan ke produk — angka ini memang
+  /// "penjualan produk", bukan bagian dari total tagihan.)
+  int get netRp => grossRp - discountRp;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ProductSalesEntry &&
+      other.code == code &&
+      other.label == label &&
+      other.qty == qty &&
+      other.grossRp == grossRp &&
+      other.discountRp == discountRp;
+
+  @override
+  int get hashCode => Object.hash(code, label, qty, grossRp, discountRp);
+}
+
+/// Agregasi murni Produk Terlaris untuk jendela [from, to).
+/// Hanya pesanan LUNAS era rupiah; pesanan VOID & era nusan
+/// dikecualikan, sama seperti rincian menu. Urutan: qty
+/// terbanyak; seri → omzet bersih terbesar; seri lagi → nama
+/// (tak peka huruf). [limit] membatasi hasil sesudah pengurutan
+/// (null = semua).
+List<ProductSalesEntry> aggregateProductSales(
+  List<CompletedOrder> orders, {
+  required DateTime from,
+  required DateTime to,
+  int? limit,
+}) {
+  final qtyByKey = <String, int>{};
+  final grossByKey = <String, int>{};
+  final discountByKey = <String, int>{};
+  final codeByKey = <String, String>{};
+  final labelByKey = <String, String>{};
+  final latestByKey = <String, DateTime>{};
+
+  for (final order in orders) {
+    if (!order.isRupiahEra) continue;
+    if (order.isVoid) continue;
+    if (order.time.isBefore(from) || !order.time.isBefore(to)) continue;
+    for (final line in order.lines) {
+      final code = line.code?.trim() ?? '';
+      final key = code.isNotEmpty ? 'C$code' : 'N${line.label}';
+      codeByKey[key] = code;
+      qtyByKey[key] = (qtyByKey[key] ?? 0) + line.qty;
+      grossByKey[key] = (grossByKey[key] ?? 0) + line.lineGrossRp;
+      discountByKey[key] =
+          (discountByKey[key] ?? 0) + line.lineDiscountRp;
+      final latest = latestByKey[key];
+      if (latest == null || order.time.isAfter(latest)) {
+        latestByKey[key] = order.time;
+        labelByKey[key] = line.label;
+      }
+    }
+  }
+
+  final entries = [
+    for (final key in qtyByKey.keys)
+      ProductSalesEntry(
+        code: codeByKey[key]!,
+        label: labelByKey[key]!,
+        qty: qtyByKey[key]!,
+        grossRp: grossByKey[key]!,
+        discountRp: discountByKey[key]!,
+      ),
+  ]..sort((a, b) {
+      final byQty = b.qty.compareTo(a.qty);
+      if (byQty != 0) return byQty;
+      final byNet = b.netRp.compareTo(a.netRp);
+      if (byNet != 0) return byNet;
+      return a.label.toLowerCase().compareTo(b.label.toLowerCase());
+    });
+  if (limit != null && entries.length > limit) {
+    return entries.sublist(0, limit);
+  }
+  return entries;
+}
+
 /// Jumlah shift yang jendelanya bersinggungan dengan [from, to)
 /// — untuk catatan jujur mode laporan per tanggal ("Meliputi N
 /// shift") tanpa mengarang nomor shift.

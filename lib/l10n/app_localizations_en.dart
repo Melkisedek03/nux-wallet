@@ -1018,6 +1018,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeSalesReport => 'Sales Report';
 
   @override
+  String get storeReportsTitle => 'Reports';
+
+  @override
+  String get storeReportBestsellersTitle => 'Best-Selling Products';
+
+  @override
+  String get storeReportBestsellersSubtitle =>
+      'Products ranked by how much they sold.';
+
+  @override
+  String get storeBestsellersEmpty => 'No sales in this period yet.';
+
+  @override
+  String get storePeriod7Days => 'Last 7 Days';
+
+  @override
+  String get storePeriod30Days => 'Last 30 Days';
+
+  @override
+  String get storePeriodAll => 'All Time';
+
+  @override
+  String storeBestsellersSoldQty(int qty) {
+    return 'Sold $qty';
+  }
+
+  @override
+  String storeBestsellersTotalLine(int qty, String amount) {
+    return 'Total sold $qty • Rp$amount';
+  }
+
+  @override
   String get storeSalesHistory => 'Sales History';
 
   @override

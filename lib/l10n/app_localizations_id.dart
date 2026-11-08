@@ -1018,6 +1018,38 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeSalesReport => 'Laporan Penjualan';
 
   @override
+  String get storeReportsTitle => 'Daftar Laporan';
+
+  @override
+  String get storeReportBestsellersTitle => 'Produk Terlaris';
+
+  @override
+  String get storeReportBestsellersSubtitle =>
+      'Urutan produk dari yang paling banyak terjual.';
+
+  @override
+  String get storeBestsellersEmpty => 'Belum ada penjualan pada periode ini.';
+
+  @override
+  String get storePeriod7Days => '7 Hari Terakhir';
+
+  @override
+  String get storePeriod30Days => '30 Hari Terakhir';
+
+  @override
+  String get storePeriodAll => 'Semua';
+
+  @override
+  String storeBestsellersSoldQty(int qty) {
+    return 'Terjual $qty';
+  }
+
+  @override
+  String storeBestsellersTotalLine(int qty, String amount) {
+    return 'Total terjual $qty • Rp$amount';
+  }
+
+  @override
   String get storeSalesHistory => 'Riwayat Penjualan';
 
   @override

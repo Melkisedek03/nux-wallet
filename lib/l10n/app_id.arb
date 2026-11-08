@@ -479,6 +479,32 @@
   "storeLater": "Nanti",
   "storeViewReport": "Lihat Laporan",
   "storeSalesReport": "Laporan Penjualan",
+  "storeReportsTitle": "Daftar Laporan",
+  "storeReportBestsellersTitle": "Produk Terlaris",
+  "storeReportBestsellersSubtitle": "Urutan produk dari yang paling banyak terjual.",
+  "storeBestsellersEmpty": "Belum ada penjualan pada periode ini.",
+  "storePeriod7Days": "7 Hari Terakhir",
+  "storePeriod30Days": "30 Hari Terakhir",
+  "storePeriodAll": "Semua",
+  "storeBestsellersSoldQty": "Terjual {qty}",
+  "@storeBestsellersSoldQty": {
+    "placeholders": {
+      "qty": {
+        "type": "int"
+      }
+    }
+  },
+  "storeBestsellersTotalLine": "Total terjual {qty} • Rp{amount}",
+  "@storeBestsellersTotalLine": {
+    "placeholders": {
+      "qty": {
+        "type": "int"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "storeSalesHistory": "Riwayat Penjualan",
   "storeSalesHistoryEmpty": "Belum ada penjualan yang tercatat.",
   "storeSaleDetailTitle": "Detail Penjualan",

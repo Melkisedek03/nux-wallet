@@ -1904,6 +1904,60 @@ abstract class AppLocalizations {
   /// **'Laporan Penjualan'**
   String get storeSalesReport;
 
+  /// No description provided for @storeReportsTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Daftar Laporan'**
+  String get storeReportsTitle;
+
+  /// No description provided for @storeReportBestsellersTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Produk Terlaris'**
+  String get storeReportBestsellersTitle;
+
+  /// No description provided for @storeReportBestsellersSubtitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Urutan produk dari yang paling banyak terjual.'**
+  String get storeReportBestsellersSubtitle;
+
+  /// No description provided for @storeBestsellersEmpty.
+  ///
+  /// In id, this message translates to:
+  /// **'Belum ada penjualan pada periode ini.'**
+  String get storeBestsellersEmpty;
+
+  /// No description provided for @storePeriod7Days.
+  ///
+  /// In id, this message translates to:
+  /// **'7 Hari Terakhir'**
+  String get storePeriod7Days;
+
+  /// No description provided for @storePeriod30Days.
+  ///
+  /// In id, this message translates to:
+  /// **'30 Hari Terakhir'**
+  String get storePeriod30Days;
+
+  /// No description provided for @storePeriodAll.
+  ///
+  /// In id, this message translates to:
+  /// **'Semua'**
+  String get storePeriodAll;
+
+  /// No description provided for @storeBestsellersSoldQty.
+  ///
+  /// In id, this message translates to:
+  /// **'Terjual {qty}'**
+  String storeBestsellersSoldQty(int qty);
+
+  /// No description provided for @storeBestsellersTotalLine.
+  ///
+  /// In id, this message translates to:
+  /// **'Total terjual {qty} • Rp{amount}'**
+  String storeBestsellersTotalLine(int qty, String amount);
+
   /// No description provided for @storeSalesHistory.
   ///
   /// In id, this message translates to:

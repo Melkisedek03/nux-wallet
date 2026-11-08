@@ -517,4 +517,124 @@ void main() {
       }
     });
   });
+
+  group('produk terlaris (aggregateProductSales)', () {
+    CompletedOrder order(
+      DateTime time,
+      List<OrderLine> lines, {
+      bool isVoid = false,
+    }) => buildCompletedOrder(
+      time: time,
+      lines: lines,
+      orderDiscount: null,
+      paymentHashHex: 'xx',
+      payMethod: payMethodCash,
+      isVoid: isVoid,
+    );
+
+    final from = DateTime(2026, 11, 1);
+    final to = DateTime(2026, 12, 1);
+
+    test('kelompok menurut kode lintas pesanan, label dari yang terbaru',
+        () {
+      final entries = aggregateProductSales(
+        [
+          order(DateTime(2026, 11, 5, 9), const [
+            OrderLine(
+                code: 'PRD-001',
+                label: 'Kopi Sachet',
+                unitPriceRp: 5000,
+                qty: 2),
+          ]),
+          order(DateTime(2026, 11, 6, 9), const [
+            OrderLine(
+                code: 'PRD-001',
+                label: 'Kopi Sachet Baru',
+                unitPriceRp: 6000,
+                qty: 3),
+          ]),
+        ],
+        from: from,
+        to: to,
+      );
+      expect(entries, hasLength(1));
+      expect(entries.single.code, 'PRD-001');
+      expect(entries.single.label, 'Kopi Sachet Baru');
+      expect(entries.single.qty, 5);
+      expect(entries.single.grossRp, 2 * 5000 + 3 * 6000);
+      expect(entries.single.netRp, entries.single.grossRp);
+    });
+
+    test('baris tanpa kode berkelompok menurut label', () {
+      final entries = aggregateProductSales(
+        [
+          order(DateTime(2026, 11, 5), const [
+            OrderLine(label: 'Item Bebas', unitPriceRp: 1000, qty: 1),
+            OrderLine(label: 'Item Bebas', unitPriceRp: 2000, qty: 2),
+          ]),
+        ],
+        from: from,
+        to: to,
+      );
+      expect(entries, hasLength(1));
+      expect(entries.single.code, '');
+      expect(entries.single.qty, 3);
+    });
+
+    test('VOID dan di luar jendela tidak dihitung; diskon baris masuk net',
+        () {
+      final entries = aggregateProductSales(
+        [
+          order(DateTime(2026, 11, 5), const [
+            OrderLine(
+                code: 'A',
+                label: 'Teh',
+                unitPriceRp: 10000,
+                qty: 2,
+                discount: Discount.percent(10)),
+          ]),
+          order(
+            DateTime(2026, 11, 5),
+            const [
+              OrderLine(
+                  code: 'A', label: 'Teh', unitPriceRp: 10000, qty: 99),
+            ],
+            isVoid: true,
+          ),
+          order(DateTime(2026, 10, 1), const [
+            OrderLine(
+                code: 'A', label: 'Teh', unitPriceRp: 10000, qty: 50),
+          ]),
+        ],
+        from: from,
+        to: to,
+      );
+      expect(entries, hasLength(1));
+      expect(entries.single.qty, 2);
+      expect(entries.single.grossRp, 20000);
+      expect(entries.single.discountRp, 2000);
+      expect(entries.single.netRp, 18000);
+    });
+
+    test('urutan: qty desc, seri → net desc, seri lagi → nama; limit', () {
+      final orders = [
+        order(DateTime(2026, 11, 5), const [
+          OrderLine(code: 'B', label: 'Beta', unitPriceRp: 9000, qty: 4),
+          OrderLine(code: 'A', label: 'Alfa', unitPriceRp: 5000, qty: 4),
+          OrderLine(code: 'C', label: 'Ceri', unitPriceRp: 1000, qty: 9),
+        ]),
+      ];
+      final entries = aggregateProductSales(orders, from: from, to: to);
+      expect(entries.map((e) => e.label), ['Ceri', 'Beta', 'Alfa']);
+      final top2 = aggregateProductSales(orders, from: from, to: to, limit: 2);
+      expect(top2.map((e) => e.label), ['Ceri', 'Beta']);
+    });
+
+    test('tanpa penjualan pada jendela → daftar kosong', () {
+      expect(
+        aggregateProductSales(const [], from: from, to: to),
+        isEmpty,
+      );
+    });
+  });
 }

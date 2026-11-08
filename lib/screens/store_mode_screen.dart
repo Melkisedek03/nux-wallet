@@ -35,6 +35,7 @@ import 'store_customers_screen.dart';
 import 'store_operator_gate.dart';
 import 'store_receipt_preview.dart';
 import 'store_point_rules_screen.dart';
+import 'store_reports_screen.dart';
 import 'store_sales_history_screen.dart';
 import 'store_settings_screen.dart';
 import 'store_shift_report_screen.dart';
@@ -2133,6 +2134,19 @@ class _StoreModeScreenState extends State<StoreModeScreen>
     );
   }
 
+  /// Buka Daftar Laporan — khusus owner (permintaan NUX
+  /// 8 Nov 2026): kasir wajib persetujuan PIN admin, pola yang
+  /// sama dengan Pengaturan Toko. Isi daftarnya (Produk
+  /// Terlaris dulu) akan bertambah mengikuti kebutuhan bisnis.
+  Future<void> _openReports() async {
+    if (!await _requireAdminApproval('reports')) return;
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const StoreReportsScreen()),
+    );
+  }
+
   /// Buka Pengaturan Toko — wilayah admin (keputusan (a)):
   /// kasir wajib persetujuan PIN admin. Pengaturan dibaca
   /// ulang sesudah kembali, seperti sebelumnya.
@@ -3199,6 +3213,18 @@ class _StoreModeScreenState extends State<StoreModeScreen>
           ),
           const SizedBox(height: 10),
           OutlinedButton.icon(
+            onPressed: _openReports,
+            icon: const Icon(Icons.insights_rounded, size: 19),
+            label: Text(l10n.storeReportsTitle),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
             onPressed: _openSalesHistory,
             icon: const Icon(Icons.receipt_long_rounded, size: 19),
             label: Text(l10n.storeSalesHistory),
@@ -3255,6 +3281,18 @@ class _StoreModeScreenState extends State<StoreModeScreen>
           onPressed: () => _pickDayReport(),
           icon: const Icon(Icons.calendar_month_rounded, size: 19),
           label: Text(l10n.storeReportByDate),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 13),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: _openReports,
+          icon: const Icon(Icons.insights_rounded, size: 19),
+          label: Text(l10n.storeReportsTitle),
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 13),
             shape: RoundedRectangleBorder(

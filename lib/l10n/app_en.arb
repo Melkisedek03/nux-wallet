@@ -479,6 +479,32 @@
   "storeLater": "Later",
   "storeViewReport": "View Report",
   "storeSalesReport": "Sales Report",
+  "storeReportsTitle": "Reports",
+  "storeReportBestsellersTitle": "Best-Selling Products",
+  "storeReportBestsellersSubtitle": "Products ranked by how much they sold.",
+  "storeBestsellersEmpty": "No sales in this period yet.",
+  "storePeriod7Days": "Last 7 Days",
+  "storePeriod30Days": "Last 30 Days",
+  "storePeriodAll": "All Time",
+  "storeBestsellersSoldQty": "Sold {qty}",
+  "@storeBestsellersSoldQty": {
+    "placeholders": {
+      "qty": {
+        "type": "int"
+      }
+    }
+  },
+  "storeBestsellersTotalLine": "Total sold {qty} • Rp{amount}",
+  "@storeBestsellersTotalLine": {
+    "placeholders": {
+      "qty": {
+        "type": "int"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "storeSalesHistory": "Sales History",
   "storeSalesHistoryEmpty": "No sales recorded yet.",
   "storeSaleDetailTitle": "Sale Details",
