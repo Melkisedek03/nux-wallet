@@ -664,6 +664,8 @@ void main() {
       required int totalRp,
       required int? shiftOpenedMs,
       bool isVoid = false,
+      String? payMethod,
+      List<OrderPayment> payments = const [],
     }) => CompletedOrder(
       time: time,
       lines: const [
@@ -676,6 +678,8 @@ void main() {
       grandTotalRp: totalRp,
       paymentHashHex: 'xx',
       isVoid: isVoid,
+      payMethod: payMethod,
+      payments: payments,
       shiftOpenedMs: shiftOpenedMs,
     );
 
@@ -753,6 +757,62 @@ void main() {
       expect(days.single.shifts, hasLength(1));
       expect(days.single.totalRp, 15000);
       expect(days.single.invoiceCount, 1);
+    });
+
+    test('rincian per metode bayar: split, record lama, gabungan hari',
+        () {
+      final s1 = shift(DateTime(2026, 11, 8, 8));
+      final s2 = shift(DateTime(2026, 11, 8, 16));
+      int msOf(StoreShift s) => s.openedAt.millisecondsSinceEpoch;
+      final days = aggregatePaymentsByDay(
+        [
+          // Split payment: satu nota, dua metode.
+          sale(
+            time: DateTime(2026, 11, 8, 9),
+            totalRp: 80000,
+            shiftOpenedMs: msOf(s1),
+            payments: const [
+              OrderPayment(method: 'Tunai', amountRp: 30000),
+              OrderPayment(method: 'QRIS', amountRp: 50000),
+            ],
+          ),
+          // Record lama satu metode (payments kosong → dipromosikan
+          // effectivePaymentsOf sebesar total tagihan).
+          sale(
+            time: DateTime(2026, 11, 8, 10),
+            totalRp: 20000,
+            shiftOpenedMs: msOf(s1),
+            payMethod: 'QRIS',
+          ),
+          sale(
+            time: DateTime(2026, 11, 8, 17),
+            totalRp: 10000,
+            shiftOpenedMs: msOf(s2),
+            payMethod: 'Tunai',
+          ),
+        ],
+        [s1, s2],
+        from: from,
+        to: to,
+      );
+      final day = days.single;
+      final first = day.shifts.first;
+      // Shift 1: QRIS 70.000 (50rb split + 20rb lama), Tunai 30.000;
+      // urut terbesar dulu; Σ metode = total shift.
+      expect(first.methodTotals, [
+        const PaymentMethodTotal(method: 'QRIS', totalRp: 70000),
+        const PaymentMethodTotal(method: 'Tunai', totalRp: 30000),
+      ]);
+      expect(
+        first.methodTotals.fold(0, (s, m) => s + m.totalRp),
+        first.totalRp,
+      );
+      // Hari: gabungan kedua shift.
+      expect(day.methodTotals, [
+        const PaymentMethodTotal(method: 'QRIS', totalRp: 70000),
+        const PaymentMethodTotal(method: 'Tunai', totalRp: 40000),
+      ]);
+      expect(day.methodTotals.fold(0, (s, m) => s + m.totalRp), day.totalRp);
     });
   });
 }

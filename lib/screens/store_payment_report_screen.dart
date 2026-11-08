@@ -19,7 +19,9 @@ import '../widgets/store_report_period_chips.dart';
 /// Filter khusus laporan ini: saklar Rincian per Shift.
 /// MATI = hanya subtotal per tanggal; HIDUP = baris tiap shift
 /// (jam buka–tutup, operator, jumlah nota, penerimaannya)
-/// tampil di bawah tanggalnya. Saringan periode memakai
+/// tampil di bawah tanggalnya. Penerimaan selalu dirinci per
+/// metode bayar: gabungan di kepala tanggal, dan per shift di
+/// baris shiftnya. Saringan periode memakai
 /// filter bersama laporan Mode Toko, dan layarnya sampai
 /// lewat Daftar Laporan yang bergarbang owner.
 class StorePaymentReportScreen extends StatefulWidget {
@@ -174,6 +176,15 @@ class _StorePaymentReportScreenState extends State<StorePaymentReportScreen> {
               ),
             ],
           ),
+          if (entry.methodTotals.isNotEmpty) ...[
+            const SizedBox(height: 3),
+            Text(
+              entry.methodTotals
+                  .map((m) => '${m.method} Rp${formatRupiah(m.totalRp)}')
+                  .join(' • '),
+              style: TextStyle(fontSize: 12, color: context.palette.muted),
+            ),
+          ],
           if (_breakdown)
             for (final shiftEntry in entry.shifts) ...[
               const Divider(height: 18),
@@ -193,39 +204,73 @@ class _StorePaymentReportScreenState extends State<StorePaymentReportScreen> {
               '${timeFmt.format(shift.closedAt!)}'
         : '${timeFmt.format(shift.openedAt)} – '
               '${l10n.storeShiftStillOpen}';
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                hours,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    hours,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    [
+                      if (shift.operatorName.isNotEmpty) shift.operatorName,
+                      l10n.storePaymentReportInvoices(entry.invoiceCount),
+                    ].join(' • '),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: context.palette.muted,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 2),
-              Text(
-                [
-                  if (shift.operatorName.isNotEmpty) shift.operatorName,
-                  l10n.storePaymentReportInvoices(entry.invoiceCount),
-                ].join(' • '),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: context.palette.muted,
-                ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'Rp${formatRupiah(entry.totalRp)}',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
               ),
-            ],
+            ),
+          ],
+        ),
+        // Kolom metode bayar shift ini: nama metode rata kiri,
+        // nominalnya rata kanan sejajar total shift di atas.
+        for (final m in entry.methodTotals)
+          Padding(
+            padding: const EdgeInsets.only(top: 3),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    m.method,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: context.palette.muted,
+                    ),
+                  ),
+                ),
+                Text(
+                  'Rp${formatRupiah(m.totalRp)}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(width: 10),
-        Text(
-          'Rp${formatRupiah(entry.totalRp)}',
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-        ),
       ],
     );
   }

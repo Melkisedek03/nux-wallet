@@ -702,6 +702,39 @@ List<ProductSalesEntry> aggregateProductSales(
   return entries;
 }
 
+/// Total penerimaan satu metode bayar (nama metode dari
+/// master metode bayar toko, mis. 'Tunai', 'QRIS', 'DANA').
+/// Jumlahnya adalah yang DITERAPKAN ke tagihan — untuk tunai
+/// tanpa kembalian (kembalian tercatat terpisah di record),
+/// jadi Σ per metode selalu rekonsiliasi dengan total tagihan.
+class PaymentMethodTotal {
+  final String method;
+  final int totalRp;
+
+  const PaymentMethodTotal({required this.method, required this.totalRp});
+
+  @override
+  bool operator ==(Object other) =>
+      other is PaymentMethodTotal &&
+      other.method == method &&
+      other.totalRp == totalRp;
+
+  @override
+  int get hashCode => Object.hash(method, totalRp);
+}
+
+/// Urutkan peta total per metode menjadi daftar: terbesar
+/// dulu, seri → nama metode menaik.
+List<PaymentMethodTotal> _sortedMethodTotals(Map<String, int> byMethod) {
+  return [
+    for (final e in byMethod.entries)
+      PaymentMethodTotal(method: e.key, totalRp: e.value),
+  ]..sort((a, b) {
+      final byTotal = b.totalRp.compareTo(a.totalRp);
+      return byTotal != 0 ? byTotal : a.method.compareTo(b.method);
+    });
+}
+
 /// Satu shift di Laporan Pembayaran: jumlah nota lunas dan
 /// total penerimaannya.
 class ShiftPaymentEntry {
@@ -712,10 +745,15 @@ class ShiftPaymentEntry {
   /// angka yang sama dengan Total ORDER laporan shiftnya.
   final int totalRp;
 
+  /// Rincian penerimaan per metode bayar shift ini
+  /// (Σ-nya = [totalRp]).
+  final List<PaymentMethodTotal> methodTotals;
+
   const ShiftPaymentEntry({
     required this.shift,
     required this.invoiceCount,
     required this.totalRp,
+    required this.methodTotals,
   });
 }
 
@@ -730,6 +768,18 @@ class DayPaymentEntry {
 
   int get totalRp => shifts.fold(0, (sum, e) => sum + e.totalRp);
   int get invoiceCount => shifts.fold(0, (sum, e) => sum + e.invoiceCount);
+
+  /// Rincian penerimaan per metode bayar sepanjang hari ini
+  /// (gabungan semua shiftnya; Σ-nya = [totalRp]).
+  List<PaymentMethodTotal> get methodTotals {
+    final byMethod = <String, int>{};
+    for (final shift in shifts) {
+      for (final m in shift.methodTotals) {
+        byMethod[m.method] = (byMethod[m.method] ?? 0) + m.totalRp;
+      }
+    }
+    return _sortedMethodTotals(byMethod);
+  }
 }
 
 /// Agregasi murni Laporan Pembayaran: penerimaan per tanggal,
@@ -755,6 +805,7 @@ List<DayPaymentEntry> aggregatePaymentsByDay(
   required DateTime to,
 }) {
   final totals = <int, ({int count, int total})>{};
+  final methodsByShiftMs = <int, Map<String, int>>{};
   for (final order in orders) {
     if (!order.isRupiahEra || order.isVoid) continue;
     final ms = order.shiftOpenedMs;
@@ -764,13 +815,22 @@ List<DayPaymentEntry> aggregatePaymentsByDay(
       count: current.count + 1,
       total: current.total + order.grandTotalRp,
     );
+    // Rincian metode lewat effectivePaymentsOf — dasar yang
+    // sama dengan tender laporan shift, termasuk promosi
+    // record lama satu-metode menjadi satu baris pembayaran.
+    final byMethod = methodsByShiftMs.putIfAbsent(ms, () => {});
+    for (final payment in effectivePaymentsOf(order)) {
+      byMethod[payment.method] =
+          (byMethod[payment.method] ?? 0) + payment.amountRp;
+    }
   }
   final byDay = <DateTime, List<ShiftPaymentEntry>>{};
   for (final shift in shifts) {
     if (shift.openedAt.isBefore(from) || !shift.openedAt.isBefore(to)) {
       continue;
     }
-    final t = totals[shift.openedAt.millisecondsSinceEpoch];
+    final ms = shift.openedAt.millisecondsSinceEpoch;
+    final t = totals[ms];
     if (t == null) continue;
     final day = DateTime(
       shift.openedAt.year,
@@ -784,6 +844,7 @@ List<DayPaymentEntry> aggregatePaymentsByDay(
             shift: shift,
             invoiceCount: t.count,
             totalRp: t.total,
+            methodTotals: _sortedMethodTotals(methodsByShiftMs[ms] ?? {}),
           ),
         );
   }
