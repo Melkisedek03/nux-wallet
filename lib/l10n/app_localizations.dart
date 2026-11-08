@@ -1946,6 +1946,12 @@ abstract class AppLocalizations {
   /// **'Semua'**
   String get storePeriodAll;
 
+  /// No description provided for @storePeriodCustom.
+  ///
+  /// In id, this message translates to:
+  /// **'Pilih Tanggal'**
+  String get storePeriodCustom;
+
   /// No description provided for @storeBestsellersSoldQty.
   ///
   /// In id, this message translates to:

@@ -3,11 +3,10 @@ import 'package:flutter/material.dart';
 import '../locale_controller.dart';
 import '../theme.dart';
 import '../services/store_order_history.dart';
+import '../services/store_report_filter.dart';
 import '../utils/format.dart';
 import '../utils/store_report.dart';
-
-/// Periode Laporan Produk Terlaris.
-enum _Period { today, last7Days, last30Days, all }
+import '../widgets/store_report_period_chips.dart';
 
 /// Laporan Produk Terlaris Mode Toko: produk terurut dari yang
 /// paling banyak terjual pada periode terpilih, dari catatan
@@ -15,6 +14,10 @@ enum _Period { today, last7Days, last30Days, all }
 /// [aggregateProductSales] — pesanan VOID tidak dihitung).
 /// Sampai di sini lewat Daftar Laporan yang bergarbang owner,
 /// jadi layar ini tidak memeriksa peran lagi.
+///
+/// Saringannya memakai filter periode bersama laporan Mode
+/// Toko (StoreReportFilter + StoreReportPeriodChips) — pola
+/// yang sama akan dipakai laporan-laporan berikutnya.
 class StoreBestsellersScreen extends StatefulWidget {
   const StoreBestsellersScreen({super.key});
 
@@ -30,7 +33,8 @@ class _StoreBestsellersScreenState extends State<StoreBestsellersScreen> {
 
   /// Bawaan 30 hari: jendela yang cukup berarti untuk peringkat
   /// (hari ini saja sering hampir kosong di toko kecil).
-  _Period _period = _Period.last30Days;
+  StoreReportFilter _filter =
+      const StoreReportFilter.preset(StoreReportPeriod.last30Days);
 
   @override
   void initState() {
@@ -47,36 +51,10 @@ class _StoreBestsellersScreenState extends State<StoreBestsellersScreen> {
     });
   }
 
-  /// Jendela [from, to) untuk periode aktif. "Hari Ini" memakai
-  /// hari kalender penuh; jendela berjalan memakai 7/30 × 24 jam
-  /// ke belakang dari sekarang (ujung atas dilonggarkan ke besok
-  /// supaya pesanan yang baru saja lunas tidak tersisih hanya
-  /// karena perbedaan detik).
-  ({DateTime from, DateTime to}) get _window {
-    final now = DateTime.now();
-    final tomorrow = DateTime(now.year, now.month, now.day)
-        .add(const Duration(days: 1));
-    return switch (_period) {
-      _Period.today => (
-          from: DateTime(now.year, now.month, now.day),
-          to: tomorrow,
-        ),
-      _Period.last7Days => (
-          from: now.subtract(const Duration(days: 7)),
-          to: tomorrow,
-        ),
-      _Period.last30Days => (
-          from: now.subtract(const Duration(days: 30)),
-          to: tomorrow,
-        ),
-      _Period.all => (from: DateTime(2000), to: tomorrow),
-    };
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final window = _window;
+    final window = storeReportWindowFor(_filter, now: DateTime.now());
     final entries = _loading
         ? const <ProductSalesEntry>[]
         : aggregateProductSales(_orders, from: window.from, to: window.to);
@@ -89,22 +67,11 @@ class _StoreBestsellersScreenState extends State<StoreBestsellersScreen> {
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
+                Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                  child: Row(
-                    children: [
-                      _periodChip(
-                        _Period.today,
-                        l10n.storeFilterToday,
-                      ),
-                      _periodChip(_Period.last7Days, l10n.storePeriod7Days),
-                      _periodChip(
-                        _Period.last30Days,
-                        l10n.storePeriod30Days,
-                      ),
-                      _periodChip(_Period.all, l10n.storePeriodAll),
-                    ],
+                  child: StoreReportPeriodChips(
+                    value: _filter,
+                    onChanged: (filter) => setState(() => _filter = filter),
                   ),
                 ),
                 if (entries.isNotEmpty)
@@ -145,17 +112,6 @@ class _StoreBestsellersScreenState extends State<StoreBestsellersScreen> {
                 ),
               ],
             ),
-    );
-  }
-
-  Widget _periodChip(_Period period, String label) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(
-        label: Text(label),
-        selected: _period == period,
-        onSelected: (_) => setState(() => _period = period),
-      ),
     );
   }
 

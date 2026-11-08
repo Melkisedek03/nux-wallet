@@ -1040,6 +1040,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get storePeriodAll => 'Semua';
 
   @override
+  String get storePeriodCustom => 'Pilih Tanggal';
+
+  @override
   String storeBestsellersSoldQty(int qty) {
     return 'Terjual $qty';
   }

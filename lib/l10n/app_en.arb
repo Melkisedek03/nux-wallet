@@ -486,6 +486,7 @@
   "storePeriod7Days": "Last 7 Days",
   "storePeriod30Days": "Last 30 Days",
   "storePeriodAll": "All Time",
+  "storePeriodCustom": "Pick Dates",
   "storeBestsellersSoldQty": "Sold {qty}",
   "@storeBestsellersSoldQty": {
     "placeholders": {

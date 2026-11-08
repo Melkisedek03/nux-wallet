@@ -1040,6 +1040,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storePeriodAll => 'All Time';
 
   @override
+  String get storePeriodCustom => 'Pick Dates';
+
+  @override
   String storeBestsellersSoldQty(int qty) {
     return 'Sold $qty';
   }
