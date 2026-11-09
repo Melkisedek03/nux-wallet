@@ -2331,7 +2331,17 @@ class _StoreModeScreenState extends State<StoreModeScreen>
         unawaited(_confirmExitWithOpenOrder());
       },
       child: Scaffold(
-        appBar: AppBar(
+        // Mode landscape (dua panel, sudah login): AppBar
+        // ditiadakan atas permintaan NUX 9 Nov 2026 supaya
+        // ruang vertikal maksimal untuk daftar pesanan —
+        // fungsi pentingnya (tombol kembali + chip operator)
+        // pindah ke baris ramping di atas panel-panel
+        // (_buildLandscapeSlimBar). Portrait & gerbang login
+        // tetap memakai AppBar seperti biasa.
+        appBar: _operator != null &&
+                storeModeUsesTwoPanels(MediaQuery.of(context).size.width)
+            ? null
+            : AppBar(
           title: Text(context.l10n.storeMode),
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -2370,7 +2380,15 @@ class _StoreModeScreenState extends State<StoreModeScreen>
             // Dua panel = mode LANDSCAPE tablet (desain
             // referensi NUX 8 Nov 2026): pesanan di kiri,
             // katalog grid di kanan — lihat _buildLandscapeCashier.
-            return _buildLandscapeCashier(context);
+            // AppBar ditiadakan di mode ini; baris ramping di
+            // atas panel membawa fungsi kembali + chip operator.
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildLandscapeSlimBar(context),
+                Expanded(child: _buildLandscapeCashier(context)),
+              ],
+            );
           }
           return SingleChildScrollView(
             controller: _pageScrollController,
@@ -3045,6 +3063,45 @@ class _StoreModeScreenState extends State<StoreModeScreen>
   /// dengan keypad di bawahnya. Semua bloknya berbagi
   /// implementasi yang sama dengan layout portrait — yang
   /// berbeda hanya susunannya.
+  /// Baris ramping pengganti AppBar di mode landscape
+  /// (AppBar ditiadakan atas permintaan NUX 9 Nov 2026):
+  /// tombol kembali (lewat maybePop — pagar PopScope pesanan
+  /// belum selesai tetap berlaku), judul kecil, dan chip
+  /// operator yang sama dengan yang dulu di AppBar. Tampil
+  /// juga di atas gerbang Buka Shift, supaya kasir tetap
+  /// bisa keluar / ganti operator dari sana.
+  Widget _buildLandscapeSlimBar(BuildContext context) {
+    final l10n = context.l10n;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(6, 2, 8, 2),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back_rounded, size: 21),
+            onPressed: () => Navigator.of(context).maybePop(),
+            visualDensity: VisualDensity.compact,
+          ),
+          Text(
+            l10n.storeMode,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const Spacer(),
+          if (_operator != null)
+            TextButton.icon(
+              onPressed: _switchOperator,
+              icon: const Icon(Icons.person_rounded, size: 19),
+              label: Text(
+                '${_operator!.name} · ${_operator!.isOwner ? l10n.storeOperatorRoleOwner : l10n.storeOperatorRoleCashier}',
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildLandscapeCashier(BuildContext context) {
     if (_openShift == null) return _buildShiftGate(context);
     final l10n = context.l10n;
@@ -3054,67 +3111,74 @@ class _StoreModeScreenState extends State<StoreModeScreen>
       children: [
         Expanded(
           flex: 4,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(18, 4, 9, 18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildOrderLinesBlock(context),
-                      const SizedBox(height: 20),
-                      _buildStatusPanel(context),
-                    ],
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 0, 9, 14),
-                child: _buildOrderActions(context),
-              ),
-            ],
+          // Panel kiri sepenuhnya untuk daftar pesanan +
+          // panel status (permintaan NUX 9 Nov 2026): tombol
+          // bayar/tahan sudah pindah ke sisi kanan, jadi ruang
+          // geser pesanan memakai seluruh tinggi panel.
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(18, 2, 9, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildOrderLinesBlock(context),
+                const SizedBox(height: 20),
+                _buildStatusPanel(context),
+              ],
+            ),
           ),
         ),
         VerticalDivider(width: 1, color: context.palette.border),
         Expanded(
           flex: 6,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(9, 4, 18, 18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildCatalogHeaderRow(context),
-                const SizedBox(height: 6),
-                _buildSearchRow(context),
-                const SizedBox(height: 10),
-                if (catalogCategories(_catalog).isNotEmpty) ...[
-                  _buildCategoryChips(context),
-                  const SizedBox(height: 10),
-                ],
-                if (_catalog.isEmpty)
-                  Text(
-                    l10n.storeCatalogEmpty,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: context.palette.muted,
-                    ),
-                  )
-                else if (visibleCatalog.isEmpty)
-                  Text(
-                    l10n.storeSearchNoResults,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: context.palette.muted,
-                    ),
-                  )
-                else
-                  _buildProductGrid(context, visibleCatalog),
-                const SizedBox(height: 18),
-                _buildKeypadSection(context),
-              ],
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(9, 2, 18, 18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildCatalogHeaderRow(context),
+                      const SizedBox(height: 6),
+                      _buildSearchRow(context),
+                      const SizedBox(height: 10),
+                      if (catalogCategories(_catalog).isNotEmpty) ...[
+                        _buildCategoryChips(context),
+                        const SizedBox(height: 10),
+                      ],
+                      if (_catalog.isEmpty)
+                        Text(
+                          l10n.storeCatalogEmpty,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: context.palette.muted,
+                          ),
+                        )
+                      else if (visibleCatalog.isEmpty)
+                        Text(
+                          l10n.storeSearchNoResults,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: context.palette.muted,
+                          ),
+                        )
+                      else
+                        _buildProductGrid(context, visibleCatalog),
+                      const SizedBox(height: 18),
+                      _buildKeypadSection(context),
+                    ],
+                  ),
+                ),
+              ),
+              // Tombol Selesaikan Pembayaran + Tahan Pesanan di
+              // sisi kanan (permintaan NUX 9 Nov 2026), menempel
+              // di dasar panel katalog.
+              Padding(
+                padding: const EdgeInsets.fromLTRB(9, 0, 18, 14),
+                child: _buildOrderActions(context),
+              ),
+            ],
           ),
         ),
       ],
