@@ -66,6 +66,12 @@ class MainActivity : FlutterActivity() {
                     else -> hasil.notImplemented()
                 }
             }
+        // Saluran Bluetooth Classic milik sendiri untuk layar
+        // Pengaturan Printer (status adapter, penemuan, bonding) —
+        // pengganti paket flutter_blue_classic (GPL-3.0); lihat
+        // BluetoothKlasik.kt dan lib/services/bluetooth_klasik.dart.
+        BluetoothKlasik(applicationContext, this)
+            .pasang(flutterEngine.dartExecutor.binaryMessenger)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, saluranOta)
             .setMethodCallHandler { panggilan, hasil ->
                 when (panggilan.method) {
