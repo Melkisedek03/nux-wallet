@@ -993,5 +993,33 @@
   "offlineStatusDiscovering": "Mencari host…",
   "offlineStatusConnecting": "Menyambungkan jembatan…",
   "offlineStatusLinked": "Jembatan terhubung",
-  "offlineStatusError": "Kesalahan"
+  "offlineStatusError": "Kesalahan",
+  "channelsTitle": "Kelola Channel",
+  "channelsSubtitle": "Lihat dan tutup channel Lightning kamu",
+  "channelsEmpty": "Belum ada channel",
+  "channelsEmptyHint": "Channel pertama lahir otomatis saat kamu menerima pembayaran lewat LSP.",
+  "channelsLoadFailed": "Gagal memuat channel",
+  "channelCapacity": "Kapasitas",
+  "channelYourBalance": "Saldo kamu",
+  "channelStatusReady": "Siap",
+  "channelStatusPeerDown": "Siap (peer tidak tersambung)",
+  "channelStatusPending": "Menunggu konfirmasi",
+  "closeChannelButton": "Tutup Channel",
+  "closeChannelTitle": "Tutup channel ini?",
+  "closeChannelBody": "Saldo Lightning kamu di channel ini ({amount}) akan kembali ke dompet on-chain kamu sesudah transaksi penutup terkonfirmasi di jaringan, dikurangi biaya jaringan penutupan.",
+  "@closeChannelBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "closeChannelLspWarning": "Channel ini adalah jalurmu ke LSP. Menutupnya menghentikan penerimaan lewat LSP — Kode Bayar Statis dan invoice yang melahirkan channel baru tidak akan bisa dibayar — sampai channel baru lahir lagi secara otomatis pada penerimaan berikutnya saat kamu online.",
+  "closeChannelDirectWarning": "Channel ini adalah jalur pembayaran offline-mu dengan perangkat di seberang. Menutupnya mengakhiri jalur itu; membukanya lagi harus melalui proses pembukaan dari awal.",
+  "closeChannelStarted": "Penutupan dimulai. Saldo akan masuk ke dompet on-chain setelah transaksi penutup terkonfirmasi.",
+  "closeForceTitle": "Tutup kerja sama tidak berhasil",
+  "closeForceFallback": "Lawan channel tidak bisa diajak menutup bersama saat ini.",
+  "closeForceBody": "Tutup paksa menyiarkan keadaan terakhir channel secara sepihak: dana kamu terkunci jeda pengaman (diukur dalam blok) sebelum tersapu ke dompet on-chain, dan biaya on-chain-nya lebih mahal. Pakai hanya bila memang terpaksa.",
+  "closeForceButton": "Tutup Paksa",
+  "closeForceStarted": "Tutup paksa dimulai. Dana akan tersapu ke dompet on-chain sesudah jeda pengaman berakhir."
 }

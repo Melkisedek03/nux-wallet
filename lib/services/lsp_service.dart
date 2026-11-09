@@ -279,6 +279,34 @@ class LspService {
     return await _node!.listChannels();
   }
 
+  /// Tutup satu channel secara KERJA SAMA dengan lawannya:
+  /// kedua node menyepakati transaksi penutup yang membagi
+  /// saldo final — bagian pengguna mendarat di dompet on-chain
+  /// internal node (alamat dari frasa yang sama) sesudah
+  /// terkonfirmasi. Lawan harus terjangkau; bila tidak, panggilan
+  /// ini gagal dan jalan lanjutnya adalah [forceCloseChannel].
+  Future<void> closeChannel(ChannelDetails channel) async {
+    _ensureRunning();
+    await _node!.closeChannel(
+      counterpartyNodeId: channel.counterpartyNodeId,
+      userChannelId: channel.userChannelId,
+    );
+  }
+
+  /// Tutup PAKSA satu channel secara sepihak: menyiarkan
+  /// keadaan komitmen terakhir. Dana pengguna terkunci jeda
+  /// pengaman (diukur dalam blok) sebelum bisa disapu ke dompet
+  /// on-chain, dan biaya on-chain-nya lebih mahal daripada
+  /// tutup kerja sama — pakai hanya bila tutup kerja sama tidak
+  /// bisa (lawan tidak terjangkau / tidak kooperatif).
+  Future<void> forceCloseChannel(ChannelDetails channel) async {
+    _ensureRunning();
+    await _node!.forceCloseChannel(
+      counterpartyNodeId: channel.counterpartyNodeId,
+      userChannelId: channel.userChannelId,
+    );
+  }
+
   /// Total kapasitas terima (msat) dari channel yang usable saat
   /// ini — plafon nominal yang masih bisa diterima lewat invoice
   /// biasa tanpa melahirkan channel baru.
