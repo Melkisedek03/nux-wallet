@@ -2012,6 +2012,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get offlineOpenChannel => 'Buka Channel';
 
   @override
+  String get offlineOpenChannelToLsp => 'Buka Channel ke LSP';
+
+  @override
   String get offlineOpenBlockedOfflineSession =>
       'Sesi ini dimulai tanpa internet, jadi node tidak punya akses ke rantai dan siaran pendanaan channel baru tidak akan sampai ke jaringan. Mulai ulang aplikasi dengan internet untuk membuka channel.';
 

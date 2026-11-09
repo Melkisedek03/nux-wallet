@@ -976,6 +976,7 @@
   "offlineOnchainBalance": "Spendable on-chain balance",
   "offlineChannelAmount": "Channel amount (nusan)",
   "offlineOpenChannel": "Open Channel",
+  "offlineOpenChannelToLsp": "Open Channel to LSP",
   "offlineOpenBlockedOfflineSession": "This session started without internet, so the node has no chain access and a new channel's funding broadcast cannot reach the network. Restart the app with internet to open a channel.",
   "offlineChannelPending": "Awaiting confirmations",
   "offlineConfirmations": "Confirmations",
