@@ -125,4 +125,38 @@ void main() {
       );
     });
   });
+
+  group('receiveIsOfflineContext', () {
+    test('boot normal tanpa sesi jembatan: bukan konteks offline', () {
+      expect(
+        receiveIsOfflineContext(
+            bootedOffline: false, bridgeSessionActive: false),
+        isFalse,
+      );
+    });
+
+    test('boot offline saja: konteks offline', () {
+      expect(
+        receiveIsOfflineContext(
+            bootedOffline: true, bridgeSessionActive: false),
+        isTrue,
+      );
+    });
+
+    test('sesi jembatan aktif saja: konteks offline', () {
+      expect(
+        receiveIsOfflineContext(
+            bootedOffline: false, bridgeSessionActive: true),
+        isTrue,
+      );
+    });
+
+    test('keduanya: konteks offline', () {
+      expect(
+        receiveIsOfflineContext(
+            bootedOffline: true, bridgeSessionActive: true),
+        isTrue,
+      );
+    });
+  });
 }
