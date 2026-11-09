@@ -1240,10 +1240,16 @@ class _StoreModeScreenState extends State<StoreModeScreen>
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheet) {
           final l10n = ctx.l10n;
+          // Susunan lembar seperti Kelola Katalog (perbaikan
+          // ListView yang sama, persetujuan NUX 9 Nov 2026):
+          // tinggi dibatasi 75% layar, judul diam di atas,
+          // daftar entri ListView yang bergeser sendiri —
+          // susunan kolom utuh lama membuat atas lembar
+          // terpotong bila pesanan ditahan banyak.
           return SafeArea(
-            child: SingleChildScrollView(
+            child: SizedBox(
+              height: MediaQuery.of(ctx).size.height * 0.75,
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Padding(
@@ -1256,45 +1262,58 @@ class _StoreModeScreenState extends State<StoreModeScreen>
                       ),
                     ),
                   ),
-                  if (_heldOrders.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 6, 18, 18),
-                      child: Text(
-                        l10n.storeHeldEmpty,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: ctx.palette.muted,
-                        ),
-                      ),
-                    )
-                  else
-                    for (final held in _heldOrders)
-                      ListTile(
-                        leading: const Icon(Icons.pause_circle_outline_rounded),
-                        title: Text(
-                          _heldSummary(held),
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: Text(
-                          l10n.storeHeldEntryMeta(
-                            _receiptTime(held.heldAt),
-                            held.totalQty,
-                            'Rp${_fmtRp(held.grandTotalRp)}',
+                  Expanded(
+                    child: _heldOrders.isEmpty
+                        ? Padding(
+                            padding: const EdgeInsets.fromLTRB(18, 6, 18, 18),
+                            child: Text(
+                              l10n.storeHeldEmpty,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: ctx.palette.muted,
+                              ),
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount: _heldOrders.length,
+                            itemBuilder: (ctx, i) {
+                              final held = _heldOrders[i];
+                              return ListTile(
+                                leading: const Icon(
+                                  Icons.pause_circle_outline_rounded,
+                                ),
+                                title: Text(
+                                  _heldSummary(held),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  l10n.storeHeldEntryMeta(
+                                    _receiptTime(held.heldAt),
+                                    held.totalQty,
+                                    'Rp${_fmtRp(held.grandTotalRp)}',
+                                  ),
+                                ),
+                                trailing: IconButton(
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    size: 21,
+                                  ),
+                                  onPressed: () async {
+                                    final removed =
+                                        await _confirmDeleteHeld(held);
+                                    if (removed) setSheet(() {});
+                                  },
+                                ),
+                                onTap: () {
+                                  Navigator.pop(ctx);
+                                  _resumeHeldOrder(held);
+                                },
+                              );
+                            },
                           ),
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete_outline, size: 21),
-                          onPressed: () async {
-                            final removed = await _confirmDeleteHeld(held);
-                            if (removed) setSheet(() {});
-                          },
-                        ),
-                        onTap: () {
-                          Navigator.pop(ctx);
-                          _resumeHeldOrder(held);
-                        },
-                      ),
-                  const SizedBox(height: 10),
+                  ),
                 ],
               ),
             ),
