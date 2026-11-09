@@ -993,5 +993,33 @@
   "offlineStatusDiscovering": "Searching for hosts…",
   "offlineStatusConnecting": "Connecting the bridge…",
   "offlineStatusLinked": "Bridge linked",
-  "offlineStatusError": "Error"
+  "offlineStatusError": "Error",
+  "channelsTitle": "Manage Channels",
+  "channelsSubtitle": "View and close your Lightning channels",
+  "channelsEmpty": "No channels yet",
+  "channelsEmptyHint": "Your first channel is born automatically when you receive a payment via the LSP.",
+  "channelsLoadFailed": "Failed to load channels",
+  "channelCapacity": "Capacity",
+  "channelYourBalance": "Your balance",
+  "channelStatusReady": "Ready",
+  "channelStatusPeerDown": "Ready (peer not connected)",
+  "channelStatusPending": "Awaiting confirmations",
+  "closeChannelButton": "Close Channel",
+  "closeChannelTitle": "Close this channel?",
+  "closeChannelBody": "Your Lightning balance in this channel ({amount}) will return to your on-chain wallet once the closing transaction confirms on the network, minus the closing network fee.",
+  "@closeChannelBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "closeChannelLspWarning": "This channel is your path to the LSP. Closing it stops receiving via the LSP — your Static Payment Code and channel-birthing invoices cannot be paid — until a new channel is born automatically on a future incoming payment while you are online.",
+  "closeChannelDirectWarning": "This channel is your offline payment path to the device across from you. Closing it ends that path; opening it again has to go through the opening process from the start.",
+  "closeChannelStarted": "Closing has started. The balance will land in your on-chain wallet once the closing transaction confirms.",
+  "closeForceTitle": "Cooperative close did not succeed",
+  "closeForceFallback": "The channel counterparty cannot close together right now.",
+  "closeForceBody": "A force close broadcasts the channel's last state unilaterally: your funds stay locked for a safety delay (measured in blocks) before they are swept to your on-chain wallet, and its on-chain fees are higher. Use it only when there is no other way.",
+  "closeForceButton": "Force Close",
+  "closeForceStarted": "Force close has started. Funds will be swept to your on-chain wallet after the safety delay ends."
 }

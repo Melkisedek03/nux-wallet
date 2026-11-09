@@ -2065,4 +2065,76 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get offlineStatusError => 'Kesalahan';
+
+  @override
+  String get channelsTitle => 'Kelola Channel';
+
+  @override
+  String get channelsSubtitle => 'Lihat dan tutup channel Lightning kamu';
+
+  @override
+  String get channelsEmpty => 'Belum ada channel';
+
+  @override
+  String get channelsEmptyHint =>
+      'Channel pertama lahir otomatis saat kamu menerima pembayaran lewat LSP.';
+
+  @override
+  String get channelsLoadFailed => 'Gagal memuat channel';
+
+  @override
+  String get channelCapacity => 'Kapasitas';
+
+  @override
+  String get channelYourBalance => 'Saldo kamu';
+
+  @override
+  String get channelStatusReady => 'Siap';
+
+  @override
+  String get channelStatusPeerDown => 'Siap (peer tidak tersambung)';
+
+  @override
+  String get channelStatusPending => 'Menunggu konfirmasi';
+
+  @override
+  String get closeChannelButton => 'Tutup Channel';
+
+  @override
+  String get closeChannelTitle => 'Tutup channel ini?';
+
+  @override
+  String closeChannelBody(String amount) {
+    return 'Saldo Lightning kamu di channel ini ($amount) akan kembali ke dompet on-chain kamu sesudah transaksi penutup terkonfirmasi di jaringan, dikurangi biaya jaringan penutupan.';
+  }
+
+  @override
+  String get closeChannelLspWarning =>
+      'Channel ini adalah jalurmu ke LSP. Menutupnya menghentikan penerimaan lewat LSP — Kode Bayar Statis dan invoice yang melahirkan channel baru tidak akan bisa dibayar — sampai channel baru lahir lagi secara otomatis pada penerimaan berikutnya saat kamu online.';
+
+  @override
+  String get closeChannelDirectWarning =>
+      'Channel ini adalah jalur pembayaran offline-mu dengan perangkat di seberang. Menutupnya mengakhiri jalur itu; membukanya lagi harus melalui proses pembukaan dari awal.';
+
+  @override
+  String get closeChannelStarted =>
+      'Penutupan dimulai. Saldo akan masuk ke dompet on-chain setelah transaksi penutup terkonfirmasi.';
+
+  @override
+  String get closeForceTitle => 'Tutup kerja sama tidak berhasil';
+
+  @override
+  String get closeForceFallback =>
+      'Lawan channel tidak bisa diajak menutup bersama saat ini.';
+
+  @override
+  String get closeForceBody =>
+      'Tutup paksa menyiarkan keadaan terakhir channel secara sepihak: dana kamu terkunci jeda pengaman (diukur dalam blok) sebelum tersapu ke dompet on-chain, dan biaya on-chain-nya lebih mahal. Pakai hanya bila memang terpaksa.';
+
+  @override
+  String get closeForceButton => 'Tutup Paksa';
+
+  @override
+  String get closeForceStarted =>
+      'Tutup paksa dimulai. Dana akan tersapu ke dompet on-chain sesudah jeda pengaman berakhir.';
 }

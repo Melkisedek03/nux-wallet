@@ -2062,4 +2062,76 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get offlineStatusError => 'Error';
+
+  @override
+  String get channelsTitle => 'Manage Channels';
+
+  @override
+  String get channelsSubtitle => 'View and close your Lightning channels';
+
+  @override
+  String get channelsEmpty => 'No channels yet';
+
+  @override
+  String get channelsEmptyHint =>
+      'Your first channel is born automatically when you receive a payment via the LSP.';
+
+  @override
+  String get channelsLoadFailed => 'Failed to load channels';
+
+  @override
+  String get channelCapacity => 'Capacity';
+
+  @override
+  String get channelYourBalance => 'Your balance';
+
+  @override
+  String get channelStatusReady => 'Ready';
+
+  @override
+  String get channelStatusPeerDown => 'Ready (peer not connected)';
+
+  @override
+  String get channelStatusPending => 'Awaiting confirmations';
+
+  @override
+  String get closeChannelButton => 'Close Channel';
+
+  @override
+  String get closeChannelTitle => 'Close this channel?';
+
+  @override
+  String closeChannelBody(String amount) {
+    return 'Your Lightning balance in this channel ($amount) will return to your on-chain wallet once the closing transaction confirms on the network, minus the closing network fee.';
+  }
+
+  @override
+  String get closeChannelLspWarning =>
+      'This channel is your path to the LSP. Closing it stops receiving via the LSP — your Static Payment Code and channel-birthing invoices cannot be paid — until a new channel is born automatically on a future incoming payment while you are online.';
+
+  @override
+  String get closeChannelDirectWarning =>
+      'This channel is your offline payment path to the device across from you. Closing it ends that path; opening it again has to go through the opening process from the start.';
+
+  @override
+  String get closeChannelStarted =>
+      'Closing has started. The balance will land in your on-chain wallet once the closing transaction confirms.';
+
+  @override
+  String get closeForceTitle => 'Cooperative close did not succeed';
+
+  @override
+  String get closeForceFallback =>
+      'The channel counterparty cannot close together right now.';
+
+  @override
+  String get closeForceBody =>
+      'A force close broadcasts the channel\'s last state unilaterally: your funds stay locked for a safety delay (measured in blocks) before they are swept to your on-chain wallet, and its on-chain fees are higher. Use it only when there is no other way.';
+
+  @override
+  String get closeForceButton => 'Force Close';
+
+  @override
+  String get closeForceStarted =>
+      'Force close has started. Funds will be swept to your on-chain wallet after the safety delay ends.';
 }

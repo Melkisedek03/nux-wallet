@@ -21,6 +21,7 @@ import 'screens/receive_screen.dart';
 import 'screens/restore_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/send_screen.dart';
+import 'screens/channels_screen.dart';
 import 'screens/offline_spike_screen.dart';
 import 'screens/printer_settings_screen.dart';
 import 'screens/store_mode_screen.dart';
@@ -2000,6 +2001,62 @@ class _ProfilePage extends StatelessWidget {
                         const SizedBox(height: 3),
                         Text(
                           context.l10n.storeModeSubtitle,
+                          style: TextStyle(
+                              fontSize: 12, color: context.palette.muted),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right_rounded,
+                      color: context.palette.muted),
+                ],
+              ),
+            ),
+          ),
+          // Baris Kelola Channel — daftar channel (LSP dan
+          // langsung) beserta penutupannya dari sisi pengguna;
+          // saldo penutupan kembali ke dompet on-chain internal.
+          GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ChannelsScreen(lspService: lspService),
+              ),
+            ),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: context.palette.card,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: context.palette.border),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      gradient: LinearGradient(colors: [
+                        const Color(0xFF10B981).withValues(alpha: 0.25),
+                        const Color(0xFF10B981).withValues(alpha: 0.08),
+                      ]),
+                    ),
+                    child: const Icon(Icons.hub_rounded,
+                        color: Color(0xFF34D399), size: 20),
+                  ),
+                  const SizedBox(width: 13),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(context.l10n.channelsTitle,
+                            style: TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 3),
+                        Text(
+                          context.l10n.channelsSubtitle,
                           style: TextStyle(
                               fontSize: 12, color: context.palette.muted),
                         ),

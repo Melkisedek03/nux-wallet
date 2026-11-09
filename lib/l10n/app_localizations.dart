@@ -3793,6 +3793,132 @@ abstract class AppLocalizations {
   /// In id, this message translates to:
   /// **'Kesalahan'**
   String get offlineStatusError;
+
+  /// No description provided for @channelsTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Kelola Channel'**
+  String get channelsTitle;
+
+  /// No description provided for @channelsSubtitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Lihat dan tutup channel Lightning kamu'**
+  String get channelsSubtitle;
+
+  /// No description provided for @channelsEmpty.
+  ///
+  /// In id, this message translates to:
+  /// **'Belum ada channel'**
+  String get channelsEmpty;
+
+  /// No description provided for @channelsEmptyHint.
+  ///
+  /// In id, this message translates to:
+  /// **'Channel pertama lahir otomatis saat kamu menerima pembayaran lewat LSP.'**
+  String get channelsEmptyHint;
+
+  /// No description provided for @channelsLoadFailed.
+  ///
+  /// In id, this message translates to:
+  /// **'Gagal memuat channel'**
+  String get channelsLoadFailed;
+
+  /// No description provided for @channelCapacity.
+  ///
+  /// In id, this message translates to:
+  /// **'Kapasitas'**
+  String get channelCapacity;
+
+  /// No description provided for @channelYourBalance.
+  ///
+  /// In id, this message translates to:
+  /// **'Saldo kamu'**
+  String get channelYourBalance;
+
+  /// No description provided for @channelStatusReady.
+  ///
+  /// In id, this message translates to:
+  /// **'Siap'**
+  String get channelStatusReady;
+
+  /// No description provided for @channelStatusPeerDown.
+  ///
+  /// In id, this message translates to:
+  /// **'Siap (peer tidak tersambung)'**
+  String get channelStatusPeerDown;
+
+  /// No description provided for @channelStatusPending.
+  ///
+  /// In id, this message translates to:
+  /// **'Menunggu konfirmasi'**
+  String get channelStatusPending;
+
+  /// No description provided for @closeChannelButton.
+  ///
+  /// In id, this message translates to:
+  /// **'Tutup Channel'**
+  String get closeChannelButton;
+
+  /// No description provided for @closeChannelTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Tutup channel ini?'**
+  String get closeChannelTitle;
+
+  /// No description provided for @closeChannelBody.
+  ///
+  /// In id, this message translates to:
+  /// **'Saldo Lightning kamu di channel ini ({amount}) akan kembali ke dompet on-chain kamu sesudah transaksi penutup terkonfirmasi di jaringan, dikurangi biaya jaringan penutupan.'**
+  String closeChannelBody(String amount);
+
+  /// No description provided for @closeChannelLspWarning.
+  ///
+  /// In id, this message translates to:
+  /// **'Channel ini adalah jalurmu ke LSP. Menutupnya menghentikan penerimaan lewat LSP — Kode Bayar Statis dan invoice yang melahirkan channel baru tidak akan bisa dibayar — sampai channel baru lahir lagi secara otomatis pada penerimaan berikutnya saat kamu online.'**
+  String get closeChannelLspWarning;
+
+  /// No description provided for @closeChannelDirectWarning.
+  ///
+  /// In id, this message translates to:
+  /// **'Channel ini adalah jalur pembayaran offline-mu dengan perangkat di seberang. Menutupnya mengakhiri jalur itu; membukanya lagi harus melalui proses pembukaan dari awal.'**
+  String get closeChannelDirectWarning;
+
+  /// No description provided for @closeChannelStarted.
+  ///
+  /// In id, this message translates to:
+  /// **'Penutupan dimulai. Saldo akan masuk ke dompet on-chain setelah transaksi penutup terkonfirmasi.'**
+  String get closeChannelStarted;
+
+  /// No description provided for @closeForceTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Tutup kerja sama tidak berhasil'**
+  String get closeForceTitle;
+
+  /// No description provided for @closeForceFallback.
+  ///
+  /// In id, this message translates to:
+  /// **'Lawan channel tidak bisa diajak menutup bersama saat ini.'**
+  String get closeForceFallback;
+
+  /// No description provided for @closeForceBody.
+  ///
+  /// In id, this message translates to:
+  /// **'Tutup paksa menyiarkan keadaan terakhir channel secara sepihak: dana kamu terkunci jeda pengaman (diukur dalam blok) sebelum tersapu ke dompet on-chain, dan biaya on-chain-nya lebih mahal. Pakai hanya bila memang terpaksa.'**
+  String get closeForceBody;
+
+  /// No description provided for @closeForceButton.
+  ///
+  /// In id, this message translates to:
+  /// **'Tutup Paksa'**
+  String get closeForceButton;
+
+  /// No description provided for @closeForceStarted.
+  ///
+  /// In id, this message translates to:
+  /// **'Tutup paksa dimulai. Dana akan tersapu ke dompet on-chain sesudah jeda pengaman berakhir.'**
+  String get closeForceStarted;
 }
 
 class _AppLocalizationsDelegate
