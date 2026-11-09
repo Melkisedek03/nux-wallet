@@ -1191,7 +1191,9 @@ class _HomeScreenState extends State<HomeScreen>
                         context,
                         MaterialPageRoute(
                           builder: (_) =>
-                              ReceiveScreen(lspService: lspService),
+                              ReceiveScreen(
+                                  lspService: lspService,
+                                  bridge: offlineBridge),
                         ),
                       ).then((_) => _refreshDashboard());
                     }),

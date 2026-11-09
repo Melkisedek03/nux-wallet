@@ -659,3 +659,27 @@ ReceiveInvoiceRoute chooseReceiveInvoiceRoute({
       ? ReceiveInvoiceRoute.regular
       : ReceiveInvoiceRoute.jit;
 }
+
+/// Konteks Terima offline: benar bila sesi berjalan dari boot
+/// offline ([bootedOffline] — node dibangun tanpa LSPS2 sama
+/// sekali) atau niat sesi jembatan offline sedang hidup
+/// ([bridgeSessionActive] — lawan bicara adalah perangkat di
+/// sebelah lewat channel langsung).
+///
+/// Pada konteks ini layar Terima memaksa invoice Bolt11 biasa
+/// dan menyembunyikan Kode Bayar Statis (offer Bolt12): invoice
+/// JIT tidak bisa lahir tanpa LSP yang terjangkau, dan invoice
+/// yang lahir dari offer Bolt12 menyusun jalur buta masuknya
+/// lewat LSP dari peta jaringan publik — tidak terjangkau oleh
+/// pembayar di sebelah yang hanya terhubung lewat channel
+/// langsung (kegagalan terbukti lapangan: offer satu HP tidak
+/// bisa dibayar HP sebelahnya saat keduanya offline). Invoice
+/// Bolt11 biasa membawa petunjuk rute ke channel langsungnya
+/// sendiri dan sudah terbukti mengalir dua arah saat offline.
+/// Ini mitigasi tingkat aplikasi; perbaikan akarnya adalah
+/// mode Bolt12 dua-mode di tingkat LDK.
+bool receiveIsOfflineContext({
+  required bool bootedOffline,
+  required bool bridgeSessionActive,
+}) =>
+    bootedOffline || bridgeSessionActive;

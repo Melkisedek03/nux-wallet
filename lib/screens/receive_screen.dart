@@ -9,6 +9,7 @@ import 'package:ldk_node/src/generated/api/types.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../services/bolt12_service.dart';
 import '../services/lsp_service.dart';
+import '../services/offline_bridge.dart';
 import '../services/payment_notes.dart';
 import '../services/saved_invoices.dart';
 import '../utils/animated_checkmark.dart';
@@ -44,7 +45,13 @@ import '../utils/receive_watch.dart';
 class ReceiveScreen extends StatefulWidget {
   final LspService lspService;
 
-  const ReceiveScreen({super.key, required this.lspService});
+  /// Jembatan offline milik aplikasi (dipasang pemiliknya):
+  /// niat sesinya adalah salah satu penanda konteks Terima
+  /// offline — lihat [_ReceiveScreenState._konteksOffline].
+  /// Boleh kosong (uji widget), berarti tidak ada sesi.
+  final OfflineBridgeService? bridge;
+
+  const ReceiveScreen({super.key, required this.lspService, this.bridge});
 
   @override
   State<ReceiveScreen> createState() => _ReceiveScreenState();
@@ -110,6 +117,16 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   String? _staticOffer;
   String? _staticError;
 
+  /// Konteks Terima offline sesi ini (dinilai segar setiap
+  /// kali dibaca — niat sesi jembatan bisa berubah selama
+  /// aplikasi terbuka): invoice dipaksa Bolt11 biasa dan Kode
+  /// Bayar Statis disembunyikan. Lihat [receiveIsOfflineContext]
+  /// untuk alasan lengkapnya.
+  bool get _konteksOffline => receiveIsOfflineContext(
+        bootedOffline: widget.lspService.isOfflineMode,
+        bridgeSessionActive: widget.bridge?.sessionActive ?? false,
+      );
+
   @override
   void initState() {
     super.initState();
@@ -137,6 +154,10 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
       _customOfferDescription ?? context.l10n.staticOfferDescription;
 
   Future<void> _prefetchStaticOffer() async {
+    // Konteks offline: panel Kode Bayar Statis disembunyikan,
+    // jadi offer tidak disiapkan — pembuatannya juga menuntut
+    // peer LSP yang memang tidak terjangkau dalam konteks ini.
+    if (_konteksOffline) return;
     // Label kustom dibaca lebih dulu: offer yang dibuat/
     // dipakai harus yang berlabel berlaku, bukan bawaan.
     _customOfferDescription =
@@ -358,15 +379,24 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
     // membaca kapasitas (node sesaat tidak siap) tidak boleh
     // menggagalkan pembuatan invoice: pilihannya jatuh ke JIT —
     // perilaku lama yang sudah terbukti.
+    //
+    // Konteks offline dikecualikan dari pemilihan itu: jalurnya
+    // selalu invoice biasa. JIT mustahil lahir (LSP tidak
+    // terjangkau), dan kapasitas channel LSP tidak bisa dipakai
+    // pembayar di sebelah — yang berlaku hanya channel langsung.
     var route = ReceiveInvoiceRoute.jit;
-    try {
-      final inbound = await widget.lspService.usableInboundCapacityMsat();
-      route = chooseReceiveInvoiceRoute(
-        amountMsat: amountMsat,
-        usableInboundCapacityMsat: inbound,
-      );
-    } catch (_) {
-      route = ReceiveInvoiceRoute.jit;
+    if (_konteksOffline) {
+      route = ReceiveInvoiceRoute.regular;
+    } else {
+      try {
+        final inbound = await widget.lspService.usableInboundCapacityMsat();
+        route = chooseReceiveInvoiceRoute(
+          amountMsat: amountMsat,
+          usableInboundCapacityMsat: inbound,
+        );
+      } catch (_) {
+        route = ReceiveInvoiceRoute.jit;
+      }
     }
 
     try {
@@ -887,6 +917,14 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
             // Kode Bayar Statis (offer Bolt12) — fondasi Mode
             // Toko: satu kode untuk semua pembayaran masuk,
             // pembayar yang menentukan jumlahnya.
+            //
+            // Seluruh bagian ini disembunyikan dalam konteks
+            // offline: invoice dari offer merutekan jalur buta
+            // masuknya lewat LSP, jadi kode ini tidak bisa
+            // dibayar oleh perangkat di sebelah — menampilkannya
+            // hanya menawarkan jalan yang pasti gagal. Yang
+            // berlaku offline adalah invoice Bolt11 di atas.
+            if (!_konteksOffline) ...[
             const SizedBox(height: 28),
             OutlinedButton.icon(
               onPressed: _toggleStaticCode,
@@ -1002,6 +1040,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                   child: Text(context.l10n.updateRetry),
                 ),
               ],
+            ],
             ],
           ],
         ),
