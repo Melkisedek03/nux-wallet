@@ -3560,6 +3560,12 @@ abstract class AppLocalizations {
   /// **'Tamu (mencari host)'**
   String get offlineRoleGuest;
 
+  /// No description provided for @offlineRoleCombined.
+  ///
+  /// In id, this message translates to:
+  /// **'Mode Gabung (uji, tanpa peran)'**
+  String get offlineRoleCombined;
+
   /// No description provided for @offlineStop.
   ///
   /// In id, this message translates to:
@@ -3571,6 +3577,18 @@ abstract class AppLocalizations {
   /// In id, this message translates to:
   /// **'Host Ditemukan'**
   String get offlineDiscoveredHosts;
+
+  /// No description provided for @offlineDiscoveredDevices.
+  ///
+  /// In id, this message translates to:
+  /// **'Perangkat Ditemukan'**
+  String get offlineDiscoveredDevices;
+
+  /// No description provided for @offlineHelloPeer.
+  ///
+  /// In id, this message translates to:
+  /// **'ID node peer (dari HELLO)'**
+  String get offlineHelloPeer;
 
   /// No description provided for @offlineConnect.
   ///

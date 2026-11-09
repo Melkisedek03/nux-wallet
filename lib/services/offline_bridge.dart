@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
@@ -14,6 +15,46 @@ Duration offlineResumeBackoff(int attempt) {
   final seconds = 2 << attempt;
   return Duration(seconds: seconds > 30 ? 30 : seconds);
 }
+
+/// Awalan ajaib muatan kendali HELLO mode gabung: begitu tautan
+/// Nearby terbentuk, kedua sisi saling mengirim muatan ini —
+/// di luar aliran berbingkai node — untuk bertukar ID node
+/// penuh TANPA tempel manual. Versi melekat di awalan supaya
+/// formatnya bisa berevolusi tanpa menebak-nebak.
+const String helloMagic = 'ELNUX-HELLO/1:';
+
+/// Bentuk muatan HELLO untuk [nodeIdHex] (66 karakter hex).
+Uint8List encodeHelloPayload(String nodeIdHex) =>
+    Uint8List.fromList(utf8.encode('$helloMagic${nodeIdHex.toLowerCase()}'));
+
+/// Baca muatan HELLO; kembalikan ID node pengirim, atau null
+/// bila muatan ini BUKAN HELLO yang sah (awalan salah, panjang
+/// salah, atau isi bukan 66 hex). Ketat dengan sengaja: byte
+/// pertama protokol Lightning yang menyerupai awalan ini secara
+/// kriptografis tidak masuk akal, dan pemeriksaan panjang + hex
+/// membuatnya mustahil lolos sebagai data.
+String? parseHelloPayload(Uint8List bytes) {
+  if (bytes.length != helloMagic.length + 66) return null;
+  final String text;
+  try {
+    text = utf8.decode(bytes);
+  } on FormatException {
+    return null;
+  }
+  if (!text.startsWith(helloMagic)) return null;
+  final id = text.substring(helloMagic.length);
+  if (!RegExp(r'^[0-9a-fA-F]{66}$').hasMatch(id)) return null;
+  return id.toLowerCase();
+}
+
+/// Inisiator tautan yang dipertahankan bila dua tautan ke
+/// perangkat yang sama terbentuk nyaris bersamaan (kedua
+/// pengguna mengetuk dalam saat yang berdekatan): nama endpoint
+/// inisiator yang lebih kecil menang. Nama endpoint berbentuk
+/// ELNUX-<8 hex pertama ID node>, jadi perbandingan leksikal ini
+/// deterministik dan kedua sisi menghitung pemenang yang sama
+/// dari data yang sama — tautan satunya dilepas.
+String survivingInitiator(String a, String b) => a.compareTo(b) <= 0 ? a : b;
 
 /// Pembingkaian aliran byte jembatan offline: potongan byte dari
 /// socket TCP dipotong menjadi bingkai berukuran maks
@@ -96,7 +137,7 @@ class DiscoveredHost {
   const DiscoveredHost(this.endpointId, this.name);
 }
 
-enum OfflineBridgeRole { none, host, guest }
+enum OfflineBridgeRole { none, host, guest, combined }
 
 enum OfflineBridgePhase {
   idle,
@@ -176,11 +217,50 @@ class OfflineBridgeService {
   Timer? _resumeTimer;
   int _resumeAttempt = 0;
 
+  // --- Keadaan khusus mode gabung (combined) ---
+  /// ID node lokal penuh, untuk muatan HELLO dan pemulihan sesi.
+  String? _localNodeIdHex;
+
+  /// ID node peer yang dipelajari dari HELLO tautan ini.
+  String? _helloPeerNodeId;
+
+  /// Endpoint yang DIMULAI sisi ini (requestConnection) dan nama
+  /// inisiator tiap endpoint yang dikenal — bahan aturan
+  /// dedupe tautan ganda (lihat [survivingInitiator]).
+  final Set<String> _outboundEndpoints = {};
+  final Map<String, String> _initiatorByEndpoint = {};
+
+  /// Endpoint yang kalah dedupe: pemutusannya diabaikan, bukan
+  /// dianggap sesi putus.
+  final Set<String> _droppedEndpoints = {};
+
+  /// Tautan gabung yang sudah menetap (pemenang dedupe).
+  String? _survivorEndpointId;
+
+  /// Sisi ini penelpon Lightning pada tautan menetap (yang
+  /// memulai tautan Nearby yang menang); lawannya pendengar.
+  bool _combinedDialer = false;
+
+  /// Tugas tautan (sambung socket node / telepon peer) sudah
+  /// dijalankan untuk tautan menetap saat ini.
+  bool _dutiesDone = false;
+
+  /// Sambung otomatis ke peer yang diingat DIPERBOLEHKAN:
+  /// hanya pada jalur pulih (tautan pernah terbentuk lalu putus,
+  /// atau sesi dipulihkan) — mulai segar selalu lewat ketukan
+  /// pengguna pada daftar kandidat.
+  bool _resumeArmed = false;
+
+  /// ID node peer yang saat ini dikenal sesi (diingat manual pada
+  /// mode lama, dipelajari dari HELLO pada mode gabung).
+  String? get peerNodeId => _peerNodeId;
+
   static const _kActive = 'offline_bridge_session_active';
   static const _kRole = 'offline_bridge_role';
   static const _kLocalName = 'offline_bridge_local_name';
   static const _kPeerNodeId = 'offline_bridge_peer_node_id';
   static const _kHostName = 'offline_bridge_host_name';
+  static const _kLocalNodeId = 'offline_bridge_local_node_id';
 
   Socket? _nodeSocket;
   StreamSubscription<Uint8List>? _nodeSocketSub;
@@ -213,6 +293,9 @@ class OfflineBridgeService {
     if (_rememberedHostName != null) {
       await prefs.setString(_kHostName, _rememberedHostName!);
     }
+    if (_localNodeIdHex != null) {
+      await prefs.setString(_kLocalNodeId, _localNodeIdHex!);
+    }
   }
 
   Future<void> _clearPersistedIntent() async {
@@ -222,6 +305,7 @@ class OfflineBridgeService {
     await prefs.remove(_kLocalName);
     await prefs.remove(_kPeerNodeId);
     await prefs.remove(_kHostName);
+    await prefs.remove(_kLocalNodeId);
   }
 
   /// Lanjutkan niat sesi dari penyimpanan setelah aplikasi dimulai
@@ -243,6 +327,16 @@ class OfflineBridgeService {
       await startHost(savedName);
     } else if (savedRole == OfflineBridgeRole.guest.name) {
       await startDiscovery(savedName);
+    } else if (savedRole == OfflineBridgeRole.combined.name) {
+      final savedLocalId = prefs.getString(_kLocalNodeId);
+      if (savedLocalId == null) return false;
+      // Sesi gabung yang dipulihkan adalah jalur pulih: peer yang
+      // diingat boleh disambung otomatis saat ditemukan kembali.
+      await startCombined(
+        localName: savedName,
+        localNodeIdHex: savedLocalId,
+        resumeArmed: true,
+      );
     } else {
       return false;
     }
@@ -427,6 +521,275 @@ class OfflineBridgeService {
     }
   }
 
+  /// Mulai mode GABUNG: mengiklankan diri DAN mencari perangkat
+  /// lain pada saat yang sama (strategi P2P_CLUSTER), tanpa
+  /// peran induk/tamu yang dipilih manusia. Kedua sisi menekan
+  /// tombol yang sama; siapa menelepon Lightning diputuskan dari
+  /// siapa yang memulai tautan yang menang (lihat
+  /// [_settleSurvivor]). Menghidupkan niat sesi seperti peran
+  /// lain. [resumeArmed] hanya untuk pemulihan sesi: penemuan
+  /// peer yang diingat langsung disambung; mulai segar selalu
+  /// lewat ketukan pengguna pada daftar kandidat.
+  Future<void> startCombined({
+    required String localName,
+    required String localNodeIdHex,
+    bool resumeArmed = false,
+  }) async {
+    await _teardown();
+    sessionActive = true;
+    _localName = localName;
+    _localNodeIdHex = localNodeIdHex;
+    _resumeAttempt = 0;
+    _resumeArmed = resumeArmed;
+    role = OfflineBridgeRole.combined;
+    await _persistIntent();
+    await _advertiseAndDiscover();
+    await _sinkronLayananLatar();
+  }
+
+  Future<void> _advertiseAndDiscover() async {
+    phase = OfflineBridgePhase.discovering;
+    lastError = null;
+    discovered.clear();
+    _notify();
+    _log('Mode gabung: mengiklankan + mencari perangkat ($_localName)…');
+    final okIklan = await _nearby.startAdvertising(
+      _localName ?? '',
+      Strategy.P2P_CLUSTER,
+      serviceId: serviceId,
+      onConnectionInitiated: (endpointId, info) {
+        // Tautan masuk: inisiatornya adalah perangkat seberang.
+        _initiatorByEndpoint[endpointId] = info.endpointName;
+        linkedEndpointName = info.endpointName;
+        _log('Permintaan gabung dari ${info.endpointName}; menerima…');
+        _nearby.acceptConnection(
+          endpointId,
+          onPayLoadRecieved: _onPayloadReceived,
+        );
+      },
+      onConnectionResult: (endpointId, status) {
+        if (status == Status.CONNECTED) {
+          _onLinked(endpointId);
+        } else {
+          _log('Tautan masuk gabung gagal: $status');
+          _notify();
+        }
+      },
+      onDisconnected: (endpointId) => _onUnlinked(endpointId),
+    );
+    final okCari = await _nearby.startDiscovery(
+      _localName ?? '',
+      Strategy.P2P_CLUSTER,
+      serviceId: serviceId,
+      onEndpointFound: (endpointId, endpointName, _) {
+        discovered.removeWhere((h) => h.endpointId == endpointId);
+        final host = DiscoveredHost(endpointId, endpointName);
+        discovered.add(host);
+        _log('Perangkat ditemukan: $endpointName');
+        _notify();
+        // Sambung otomatis HANYA pada jalur pulih (sesi pernah
+        // tertaut / dipulihkan) ke peer yang diingat — mulai
+        // segar tidak pernah menyambung tanpa ketukan pengguna.
+        if (sessionActive &&
+            _resumeArmed &&
+            _survivorEndpointId == null &&
+            _rememberedHostName != null &&
+            endpointName == _rememberedHostName) {
+          _log('Peer sesi ini ditemukan lagi; menyambung otomatis…');
+          connectCombined(host).catchError((Object e) {
+            _log('Sambung otomatis gabung gagal: $e');
+          });
+        }
+      },
+      onEndpointLost: (endpointId) {
+        discovered.removeWhere((h) => h.endpointId == endpointId);
+        _notify();
+      },
+    );
+    if (!okIklan || !okCari) {
+      phase = OfflineBridgePhase.error;
+      lastError =
+          'Mode gabung gagal dimulai (iklan: $okIklan, cari: $okCari)';
+      _log(lastError!);
+      _notify();
+      _scheduleResume();
+    }
+  }
+
+  /// Pengguna mengetuk satu kandidat: sisi ini menjadi pemulai
+  /// tautan. Listener TCP lokal diikat lebih dulu (pola
+  /// [connectToHost]) supaya node sisi ini bisa langsung
+  /// menelepon begitu tautan menetap dan HELLO tiba; bila
+  /// dedupe menjadikan sisi ini pendengar, listener itu ditutup
+  /// lagi di [_teardownLinkDuties].
+  Future<void> connectCombined(DiscoveredHost host) async {
+    if (role != OfflineBridgeRole.combined) return;
+    if (_survivorEndpointId != null) return;
+    _rememberedHostName = host.name;
+    _persistIntent();
+    await _ensureGuestServer();
+    linkedEndpointName = host.name;
+    phase = OfflineBridgePhase.connecting;
+    _notify();
+    _log('Menyambung gabung ke ${host.name}…');
+    _outboundEndpoints.add(host.endpointId);
+    _initiatorByEndpoint[host.endpointId] = _localName ?? '';
+    final ok = await _nearby.requestConnection(
+      _localName ?? '',
+      host.endpointId,
+      onConnectionInitiated: (endpointId, info) {
+        _nearby.acceptConnection(
+          endpointId,
+          onPayLoadRecieved: _onPayloadReceived,
+        );
+      },
+      onConnectionResult: (endpointId, status) {
+        if (status == Status.CONNECTED) {
+          _onLinked(endpointId);
+        } else {
+          _outboundEndpoints.remove(endpointId);
+          lastError = 'Sambung gabung ke ${host.name} gagal: $status';
+          phase = OfflineBridgePhase.discovering;
+          _log(lastError!);
+          _notify();
+        }
+      },
+      onDisconnected: (endpointId) => _onUnlinked(endpointId),
+    );
+    if (!ok) {
+      _outboundEndpoints.remove(host.endpointId);
+      phase = OfflineBridgePhase.discovering;
+      lastError = 'requestConnection gabung gagal';
+      _log(lastError!);
+      _notify();
+    }
+  }
+
+  /// Tautan gabung terbentuk: kirim HELLO, lalu menangkan
+  /// dedupe. Bila dua tautan ke perangkat yang sama hidup
+  /// bersamaan, yang dipertahankan adalah tautan yang
+  /// inisiatornya menang menurut [survivingInitiator]; yang
+  /// kalah diputus dan pemutusannya ditandai supaya tidak
+  /// dibaca sebagai sesi putus.
+  void _onLinkedCombined(String endpointId) {
+    _sendHello(endpointId);
+    if (_survivorEndpointId == null) {
+      _settleSurvivor(endpointId);
+      return;
+    }
+    if (_survivorEndpointId == endpointId) return;
+    final existingInitiator = _initiatorByEndpoint[_survivorEndpointId!] ?? '';
+    final newInitiator = _initiatorByEndpoint[endpointId] ?? '';
+    if (existingInitiator == newInitiator ||
+        survivingInitiator(existingInitiator, newInitiator) ==
+            existingInitiator) {
+      _log('Tautan ganda ke peer yang sama; yang baru dilepas.');
+      _droppedEndpoints.add(endpointId);
+      _nearby.disconnectFromEndpoint(endpointId);
+      return;
+    }
+    _log('Tautan ganda: tautan lama dilepas, yang baru menang.');
+    _droppedEndpoints.add(_survivorEndpointId!);
+    _nearby.disconnectFromEndpoint(_survivorEndpointId!);
+    _teardownLinkDuties();
+    _settleSurvivor(endpointId);
+  }
+
+  /// Tetapkan tautan yang menang: penelpon Lightning adalah
+  /// sisi yang memulai tautan ini; lawannya pendengar. Tugas
+  /// tautan dijalankan lewat [_maybeRunDuties] (penelpon masih
+  /// menunggu HELLO peer sebelum bisa menelepon).
+  void _settleSurvivor(String endpointId) {
+    _survivorEndpointId = endpointId;
+    linkedEndpointId = endpointId;
+    phase = OfflineBridgePhase.linked;
+    _resumeAttempt = 0;
+    _resumeTimer?.cancel();
+    _resumeTimer = null;
+    _combinedDialer = _outboundEndpoints.contains(endpointId);
+    _log(
+      'Jembatan gabung terhubung ke $linkedEndpointName '
+      '(${_combinedDialer ? 'sisi ini menelepon' : 'sisi ini mendengarkan'})',
+    );
+    _notify();
+    _maybeRunDuties();
+  }
+
+  /// Ikat listener telepon lokal bila belum terikat (pola
+  /// [connectToHost]): node penelpon connect() ke port ini.
+  /// Idempoten — dedupe yang membalik peran menutup listener
+  /// lewat [_teardownLinkDuties], dan tugas penelpon mengikat
+  /// ulang lewat sini sebelum menelepon.
+  Future<void> _ensureGuestServer() async {
+    if (_guestServer != null) return;
+    await _closeGuestServer();
+    _guestServer = await ServerSocket.bind(
+      InternetAddress.loopbackIPv4,
+      guestBridgePort,
+    );
+    _guestServerSub = _guestServer!.listen(
+      _onGuestTcpAccepted,
+      onError: (Object e) => _log('Listener jembatan gabung error: $e'),
+    );
+  }
+
+  /// Jalankan tugas tautan menetap sekali saja: pendengar
+  /// menyambungkan jembatan ke listener node lokalnya (pola
+  /// host lama); penelpon menelepon peer lewat [peerConnector]
+  /// begitu ID node peer diketahui dari HELLO.
+  void _maybeRunDuties() {
+    if (role != OfflineBridgeRole.combined) return;
+    if (_survivorEndpointId == null || _dutiesDone) return;
+    if (_combinedDialer) {
+      final peerId = _helloPeerNodeId;
+      if (peerId == null) return; // HELLO belum tiba; dipanggil lagi nanti.
+      _dutiesDone = true;
+      () async {
+        try {
+          await _ensureGuestServer();
+          _log('HELLO lengkap; menelepon peer Lightning…');
+          await connectGuestNode(peerId);
+        } catch (e) {
+          _log('Telepon peer gabung gagal: $e');
+        }
+      }();
+    } else {
+      _dutiesDone = true;
+      Socket.connect(InternetAddress.loopbackIPv4, nodeListenPort).then(
+        (socket) {
+          _log('Socket ke node pendengar tersambung');
+          _attachNodeSocket(socket);
+        },
+        onError: (Object e) {
+          lastError = 'Gagal menyambung ke node pendengar: $e';
+          _log(lastError!);
+          _notify();
+        },
+      );
+    }
+  }
+
+  /// Lepas tugas tautan (tautan menetap digantikan / putus):
+  /// socket node dan listener telepon lokal ditutup, penanda
+  /// tugas direset. Niat sesi tidak disentuh.
+  void _teardownLinkDuties() {
+    _detachNodeSocket();
+    _closeGuestServer();
+    _dutiesDone = false;
+    _combinedDialer = false;
+  }
+
+  /// Kirim HELLO ke satu endpoint: ID node lokal penuh, di luar
+  /// aliran node. Kegagalan kirim hanya tercatat — HELLO peer
+  /// yang tidak tiba membuat penelpon menunggu, bukan rusak.
+  void _sendHello(String endpointId) {
+    final id = _localNodeIdHex;
+    if (id == null) return;
+    _nearby
+        .sendBytesPayload(endpointId, encodeHelloPayload(id))
+        .catchError((Object e) => _log('Kirim HELLO gagal: $e'));
+  }
+
   /// Akhiri sesi secara eksplisit: niat sesi dimatikan, ingatan
   /// peer/host dilupakan, simpanan niat dihapus, lalu semua peran
   /// dan socket dihentikan. Inilah satu-satunya jalan mematikan
@@ -467,9 +830,12 @@ class OfflineBridgeService {
   Future<void> _teardown() async {
     await _detachNodeSocket();
     await _closeGuestServer();
-    if (role == OfflineBridgeRole.host) {
+    if (role == OfflineBridgeRole.host ||
+        role == OfflineBridgeRole.combined) {
       await _nearby.stopAdvertising();
-    } else if (role == OfflineBridgeRole.guest) {
+    }
+    if (role == OfflineBridgeRole.guest ||
+        role == OfflineBridgeRole.combined) {
       await _nearby.stopDiscovery();
     }
     await _nearby.stopAllEndpoints();
@@ -478,6 +844,14 @@ class OfflineBridgeService {
     linkedEndpointId = null;
     linkedEndpointName = null;
     discovered.clear();
+    _survivorEndpointId = null;
+    _helloPeerNodeId = null;
+    _outboundEndpoints.clear();
+    _initiatorByEndpoint.clear();
+    _droppedEndpoints.clear();
+    _combinedDialer = false;
+    _dutiesDone = false;
+    _resumeArmed = false;
     _deframer.reset();
     _notify();
   }
@@ -498,6 +872,19 @@ class OfflineBridgeService {
 
   Future<void> _resume() async {
     if (!sessionActive || isLinked) return;
+    if (role == OfflineBridgeRole.combined) {
+      if (phase == OfflineBridgePhase.idle ||
+          phase == OfflineBridgePhase.error) {
+        _log('Memulai ulang iklan + pencarian gabung…');
+        await _advertiseAndDiscover();
+      } else if (phase == OfflineBridgePhase.discovering) {
+        // Pencarian masih hidup; penemuan peer yang diingat
+        // menyambung sendiri. Periksa lagi nanti selama belum
+        // tertaut.
+        _scheduleResume();
+      }
+      return;
+    }
     if (role == OfflineBridgeRole.host) {
       if (phase == OfflineBridgePhase.idle ||
           phase == OfflineBridgePhase.error) {
@@ -529,6 +916,10 @@ class OfflineBridgeService {
   }
 
   void _onLinked(String endpointId) {
+    if (role == OfflineBridgeRole.combined) {
+      _onLinkedCombined(endpointId);
+      return;
+    }
     linkedEndpointId = endpointId;
     phase = OfflineBridgePhase.linked;
     _resumeAttempt = 0;
@@ -565,6 +956,13 @@ class OfflineBridgeService {
   }
 
   void _onUnlinked(String endpointId) {
+    // Endpoint yang kalah dedupe gabung: pemutusannya disengaja,
+    // bukan sesi putus — bersihkan catatan lalu selesai.
+    if (_droppedEndpoints.remove(endpointId)) {
+      _initiatorByEndpoint.remove(endpointId);
+      _outboundEndpoints.remove(endpointId);
+      return;
+    }
     if (endpointId != linkedEndpointId) return;
     _log('Jembatan putus dari $linkedEndpointName');
     linkedEndpointId = null;
@@ -572,6 +970,16 @@ class OfflineBridgeService {
     _detachNodeSocket();
     _closeGuestServer();
     _deframer.reset();
+    if (role == OfflineBridgeRole.combined) {
+      // Tautan menetap berakhir: bersihkan keadaan gabung dan
+      // persenjatai sambung otomatis — penemuan kembali peer yang
+      // diingat sekarang boleh menyambung sendiri (jalur pulih).
+      _survivorEndpointId = null;
+      _helloPeerNodeId = null;
+      _dutiesDone = false;
+      _combinedDialer = false;
+      _resumeArmed = true;
+    }
     phase = role == OfflineBridgeRole.host
         ? OfflineBridgePhase.advertising
         : OfflineBridgePhase.discovering;
@@ -636,6 +1044,23 @@ class OfflineBridgeService {
 
   void _onPayloadReceived(String endpointId, Payload payload) {
     if (payload.type != PayloadType.BYTES || payload.bytes == null) return;
+    // Mode gabung: muatan HELLO adalah kendali, bukan data node —
+    // pelajari ID pengirimnya, ingat sebagai peer sesi, lalu
+    // jalankan tugas tautan yang menunggunya. Muatan ini tidak
+    // pernah diteruskan ke socket node.
+    if (role == OfflineBridgeRole.combined) {
+      final helloId = parseHelloPayload(payload.bytes!);
+      if (helloId != null) {
+        if (helloId != _helloPeerNodeId) {
+          _helloPeerNodeId = helloId;
+          rememberPeerNodeId(helloId);
+          _log('HELLO diterima: ID node peer $helloId');
+          _notify();
+        }
+        _maybeRunDuties();
+        return;
+      }
+    }
     final List<Uint8List> messages;
     try {
       messages = _deframer.feed(payload.bytes!);

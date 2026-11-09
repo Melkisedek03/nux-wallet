@@ -1948,10 +1948,19 @@ class AppLocalizationsId extends AppLocalizations {
   String get offlineRoleGuest => 'Tamu (mencari host)';
 
   @override
+  String get offlineRoleCombined => 'Mode Gabung (uji, tanpa peran)';
+
+  @override
   String get offlineStop => 'Berhenti';
 
   @override
   String get offlineDiscoveredHosts => 'Host Ditemukan';
+
+  @override
+  String get offlineDiscoveredDevices => 'Perangkat Ditemukan';
+
+  @override
+  String get offlineHelloPeer => 'ID node peer (dari HELLO)';
 
   @override
   String get offlineConnect => 'Sambung';

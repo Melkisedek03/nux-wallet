@@ -1945,10 +1945,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get offlineRoleGuest => 'Guest (searches for a host)';
 
   @override
+  String get offlineRoleCombined => 'Combined Mode (test, no roles)';
+
+  @override
   String get offlineStop => 'Stop';
 
   @override
   String get offlineDiscoveredHosts => 'Discovered Hosts';
+
+  @override
+  String get offlineDiscoveredDevices => 'Discovered Devices';
+
+  @override
+  String get offlineHelloPeer => 'Peer node ID (from HELLO)';
 
   @override
   String get offlineConnect => 'Connect';

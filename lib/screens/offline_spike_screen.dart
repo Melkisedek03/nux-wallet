@@ -308,6 +308,18 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
     await _bridge.startDiscovery(_localName);
   }
 
+  /// Mode gabung (PR A tuas produksi): tanpa peran, ID node
+  /// sendiri wajib ada karena ia isi muatan HELLO.
+  Future<void> _startCombined() async {
+    if (!await _ensurePermissions()) return;
+    final id = _ownNodeId;
+    if (id == null) {
+      _addLog('ID node sendiri belum terbaca; mode gabung dibatalkan.');
+      return;
+    }
+    await _bridge.startCombined(localName: _localName, localNodeIdHex: id);
+  }
+
   /// Pindai QR ID node host dari HP seberang (kartu ID node di
   /// layarnya menampilkan QR-nya) dan isi kolom ID tujuan.
   Future<void> _scanHostNodeId() async {
@@ -644,6 +656,14 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: _startCombined,
+                      child: Text(l10n.offlineRoleCombined),
+                    ),
+                  ),
                 ] else ...[
                   Align(
                     alignment: Alignment.centerRight,
@@ -653,11 +673,14 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
                     ),
                   ),
                 ],
-                if (bridge.role == OfflineBridgeRole.guest &&
+                if ((bridge.role == OfflineBridgeRole.guest ||
+                        bridge.role == OfflineBridgeRole.combined) &&
                     bridge.phase == OfflineBridgePhase.discovering) ...[
                   const SizedBox(height: 8),
                   Text(
-                    l10n.offlineDiscoveredHosts,
+                    bridge.role == OfflineBridgeRole.combined
+                        ? l10n.offlineDiscoveredDevices
+                        : l10n.offlineDiscoveredHosts,
                     style: const TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
@@ -675,10 +698,32 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
                         style: const TextStyle(fontSize: 13),
                       ),
                       trailing: TextButton(
-                        onPressed: () => bridge.connectToHost(host, _localName),
+                        onPressed: () =>
+                            bridge.role == OfflineBridgeRole.combined
+                                ? bridge.connectCombined(host)
+                                : bridge.connectToHost(host, _localName),
                         child: Text(l10n.offlineConnect),
                       ),
                     ),
+                ],
+                if (bridge.role == OfflineBridgeRole.combined &&
+                    bridge.isLinked) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    l10n.offlineHelloPeer,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  SelectableText(
+                    bridge.peerNodeId ?? '—',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
                 ],
                 if (bridge.role == OfflineBridgeRole.guest &&
                     bridge.isLinked) ...[
