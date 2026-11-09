@@ -973,6 +973,7 @@
   "offlineOnchainBalance": "Saldo on-chain siap pakai",
   "offlineChannelAmount": "Jumlah channel (nusan)",
   "offlineOpenChannel": "Buka Channel",
+  "offlineOpenChannelToLsp": "Buka Channel ke LSP",
   "offlineOpenBlockedOfflineSession": "Sesi ini dimulai tanpa internet, jadi node tidak punya akses ke rantai dan siaran pendanaan channel baru tidak akan sampai ke jaringan. Mulai ulang aplikasi dengan internet untuk membuka channel.",
   "offlineChannelPending": "Menunggu konfirmasi",
   "offlineConfirmations": "Konfirmasi",

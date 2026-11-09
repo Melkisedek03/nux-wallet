@@ -3668,6 +3668,12 @@ abstract class AppLocalizations {
   /// **'Buka Channel'**
   String get offlineOpenChannel;
 
+  /// No description provided for @offlineOpenChannelToLsp.
+  ///
+  /// In id, this message translates to:
+  /// **'Buka Channel ke LSP'**
+  String get offlineOpenChannelToLsp;
+
   /// No description provided for @offlineOpenBlockedOfflineSession.
   ///
   /// In id, this message translates to:
