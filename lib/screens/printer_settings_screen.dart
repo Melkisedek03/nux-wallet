@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_blue_classic/flutter_blue_classic.dart';
 import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
 
 import '../locale_controller.dart';
+import '../services/bluetooth_klasik.dart';
 import '../services/print_service.dart';
 import '../theme.dart';
 
@@ -49,10 +49,10 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
   bool _btOn = true;
   bool _scanning = false;
   String? _bondingAddress;
-  List<BluetoothDevice> _discovered = const [];
-  final _blueClassic = FlutterBlueClassic();
-  StreamSubscription<BluetoothAdapterState>? _adapterSub;
-  StreamSubscription<BluetoothDevice>? _scanSub;
+  List<PerangkatBluetoothKlasik> _discovered = const [];
+  final _bluetoothKlasik = BluetoothKlasik();
+  StreamSubscription<StatusAdapterBluetooth>? _adapterSub;
+  StreamSubscription<PerangkatBluetoothKlasik>? _scanSub;
   StreamSubscription<bool>? _scanningSub;
   final _headerController = TextEditingController();
   final _footerController = TextEditingController();
@@ -68,7 +68,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
     _adapterSub?.cancel();
     _scanSub?.cancel();
     _scanningSub?.cancel();
-    _blueClassic.stopScan();
+    _bluetoothKlasik.stopScan();
     _headerController.dispose();
     _footerController.dispose();
     super.dispose();
@@ -83,17 +83,17 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
       _footerController.text = settings.footerText;
       _loaded = true;
     });
-    _adapterSub = _blueClassic.adapterState.listen((state) {
+    _adapterSub = _bluetoothKlasik.adapterState.listen((state) {
       if (!mounted) return;
-      final on = state == BluetoothAdapterState.on;
+      final on = state == StatusAdapterBluetooth.menyala;
       if (on == _btOn) return;
       setState(() => _btOn = on);
       if (on) _refreshPaired(autoScan: true);
     });
-    _scanningSub = _blueClassic.isScanning.listen((scanning) {
+    _scanningSub = _bluetoothKlasik.isScanning.listen((scanning) {
       if (mounted) setState(() => _scanning = scanning);
     });
-    final enabled = await _blueClassic.isEnabled;
+    final enabled = await _bluetoothKlasik.isEnabled;
     if (!mounted) return;
     setState(() => _btOn = enabled);
     if (!enabled) {
@@ -101,7 +101,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
       // Android menampilkan satu dialog konfirmasi sistem,
       // pengguna tidak perlu keluar aplikasi. Daftar dimuat
       // oleh pendengar adapterState saat Bluetooth menyala.
-      await _blueClassic.turnOn();
+      await _bluetoothKlasik.turnOn();
       return;
     }
     await _refreshPaired(autoScan: true);
@@ -122,7 +122,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
     if (!granted || !mounted) return;
     setState(() => _discovered = const []);
     _scanSub?.cancel();
-    _scanSub = _blueClassic.scanResults.listen((device) {
+    _scanSub = _bluetoothKlasik.scanResults.listen((device) {
       if (!mounted) return;
       setState(() {
         final next = [..._discovered];
@@ -135,20 +135,20 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
         _discovered = next;
       });
     });
-    _blueClassic.startScan();
+    _bluetoothKlasik.startScan();
   }
 
   void _stopScan() {
-    _blueClassic.stopScan();
+    _bluetoothKlasik.stopScan();
     _scanSub?.cancel();
     _scanSub = null;
   }
 
-  Future<void> _bondAndSelect(BluetoothDevice device) async {
+  Future<void> _bondAndSelect(PerangkatBluetoothKlasik device) async {
     final l10n = context.l10n;
-    if (device.bondState != BluetoothBondState.bonded) {
+    if (device.statusBond != StatusBondBluetooth.terpasang) {
       setState(() => _bondingAddress = device.address);
-      final ok = await _blueClassic.bondDevice(device.address);
+      final ok = await _bluetoothKlasik.bondDevice(device.address);
       if (!mounted) return;
       setState(() => _bondingAddress = null);
       if (!ok) {
@@ -332,7 +332,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                         ),
                         const SizedBox(height: 10),
                         ElevatedButton(
-                          onPressed: () => _blueClassic.turnOn(),
+                          onPressed: () => _bluetoothKlasik.turnOn(),
                           child: Text(l10n.printerTurnOn),
                         ),
                       ],
