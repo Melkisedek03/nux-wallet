@@ -1,5 +1,7 @@
 import 'package:ldk_node/src/generated/api/types.dart';
 
+import 'payment_notes.dart';
+
 /// Penyusun CSV riwayat transaksi untuk ekspor dari tab Riwayat.
 ///
 /// Kolom dan nilainya sengaja kanonis dan bebas format tampilan
@@ -9,17 +11,25 @@ import 'package:ldk_node/src/generated/api/types.dart';
 /// baris di layar, dan amount_msat menyimpan nilai mentah persis
 /// dari node. Urutan baris mengikuti urutan masukan (terbaru di
 /// depan, sama seperti daftar Riwayat yang diekspor).
-String buildTransactionsCsv(List<PaymentDetails> payments) {
+String buildTransactionsCsv(
+  List<PaymentDetails> payments, {
+  Map<String, String> routeTags = const {},
+}) {
   final buf = StringBuffer()
     ..writeln(
       'date_iso,type,direction,status,amount_nusan,'
       'amount_msat,payment_id,payment_hash,txid',
     );
   for (final payment in payments) {
+    final hashHex = _paymentHashHex(payment.kind);
+    final typeLabel = _typeLabel(
+      payment.kind,
+      routeTag: hashHex == null ? null : routeTags[hashHex],
+    );
     buf.writeln(
       [
         _cell(_isoTime(payment)),
-        _cell(_typeLabel(payment.kind)),
+        _cell(typeLabel),
         _cell(
           payment.direction == PaymentDirection.inbound
               ? 'Incoming'
@@ -42,9 +52,13 @@ String _isoTime(PaymentDetails payment) => DateTime.fromMillisecondsSinceEpoch(
   payment.latestUpdateTimestamp.toInt() * 1000,
 ).toIso8601String();
 
-String _typeLabel(PaymentKind kind) {
+String _typeLabel(PaymentKind kind, {String? routeTag}) {
   if (kind is PaymentKind_Onchain) return 'On-chain';
   if (kind is PaymentKind_Bolt11Jit) return 'Lightning JIT';
+  // Tag rute lokal (PaymentTagStore): pembayaran Lightning yang
+  // tercatat berjalan lewat channel langsung — samakan dengan
+  // label baris Riwayat.
+  if (routeTag == paymentTagDirect) return 'Lightning Direct';
   if (kind is PaymentKind_Bolt11) return 'Lightning';
   if (kind is PaymentKind_Spontaneous) return 'Spontaneous';
   return 'Lightning';

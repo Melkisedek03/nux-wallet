@@ -165,6 +165,12 @@ class _HomeScreenState extends State<HomeScreen>
   /// Riwayat dibaca dari peta ini (lihat PaymentNoteStore).
   Map<String, String> _paymentNotes = const {};
 
+  /// Tag rute pembayaran lokal (hash hex → tag), dimuat bersama
+  /// catatan. Catatan node tidak memuat channel jalur pembayaran,
+  /// jadi tag "direct" dicatat aplikasi pada saat transaksi
+  /// terjadi dalam konteks offline (lihat PaymentTagStore).
+  Map<String, String> _paymentTags = const {};
+
   /// Deteksi koin masuk: true setelah muat riwayat pertama selesai —
   /// riwayat lama tidak memicu bunyi/getar, hanya kedatangan baru.
   bool _paymentsPrimed = false;
@@ -279,17 +285,40 @@ class _HomeScreenState extends State<HomeScreen>
               p.status == PaymentStatus.succeeded)
           .map(_paymentKey)
           .toSet();
-      if (_paymentsPrimed &&
-          succeededIn.difference(_receivedAlertKeys).isNotEmpty) {
+      final freshIn = succeededIn.difference(_receivedAlertKeys);
+      if (_paymentsPrimed && freshIn.isNotEmpty) {
         CoinAlert.play();
+        // Tag rute langsung untuk pembayaran masuk yang BARU
+        // terdeteksi selama konteks offline (boot offline / sesi
+        // jembatan aktif): LSP tidak terjangkau dalam konteks
+        // itu, jadi pembayaran ini pasti tiba lewat channel
+        // langsung. Node tidak mencatat channel jalur pembayaran
+        // — kedatangan dalam konteks inilah satu-satunya bukti,
+        // dicatat sekarang atau hilang. Muat pertama tidak
+        // menandai apa pun: jalur riwayat lama tidak bisa
+        // dibuktikan lagi.
+        if (receiveIsOfflineContext(
+          bootedOffline: lspService.isOfflineMode,
+          bridgeSessionActive: offlineBridge.sessionActive,
+        )) {
+          for (final p in payments) {
+            if (!freshIn.contains(_paymentKey(p))) continue;
+            final hashHex = _paymentHashHex(p);
+            if (hashHex != null) {
+              await PaymentTagStore().saveDirect(hashHex);
+            }
+          }
+        }
       }
       _receivedAlertKeys.addAll(succeededIn);
       _paymentsPrimed = true;
       final notes = await PaymentNoteStore().loadAll();
+      final tags = await PaymentTagStore().loadAll();
       if (mounted) {
         setState(() {
           _payments = payments;
           _paymentNotes = notes;
+          _paymentTags = tags;
         });
       }
     } catch (_) {
@@ -709,7 +738,8 @@ class _HomeScreenState extends State<HomeScreen>
   /// sama seperti di layar.
   Future<void> _exportHistoryCsv() async {
     try {
-      final csv = buildTransactionsCsv(_historyPayments);
+      final csv =
+          buildTransactionsCsv(_historyPayments, routeTags: _paymentTags);
       final now = DateTime.now();
       String two(int v) => v.toString().padLeft(2, '0');
       final stamp = '${now.year}${two(now.month)}${two(now.day)}'
@@ -1175,7 +1205,9 @@ class _HomeScreenState extends State<HomeScreen>
                         context,
                         MaterialPageRoute(
                           builder: (_) =>
-                              SendScreen(lspService: lspService),
+                              SendScreen(
+                                  lspService: lspService,
+                                  bridge: offlineBridge),
                         ),
                       ).then((_) => _refreshDashboard());
                     }),
@@ -1398,11 +1430,11 @@ class _HomeScreenState extends State<HomeScreen>
     final hashHex = _paymentHashHex(payment);
     final note = hashHex == null ? null : _paymentNotes[hashHex];
     final kind = payment.kind;
-    final tag = kind is PaymentKind_Bolt11Jit
-        ? '\u26A1 JIT'
-        : kind is PaymentKind_Onchain
-            ? '\u26D3 on-chain'
-            : '\u26A1';
+    final tag = historyRowTag(
+      isJit: kind is PaymentKind_Bolt11Jit,
+      isOnchain: kind is PaymentKind_Onchain,
+      routeTag: hashHex == null ? null : _paymentTags[hashHex],
+    );
     final amount = payment.amountMsat == null
         ? '\u2014'
         : '${isIn ? '+' : '\u2212'}${context.formatWalletAmountNumber(payment.amountMsat!)}';
@@ -1459,6 +1491,10 @@ class _HomeScreenState extends State<HomeScreen>
     if (hashHex != null) {
       saved = await SavedInvoiceStore().findByHash(hashHex);
     }
+    // Hash untuk tag rute memakai pengekstrak umum (mencakup
+    // Bolt12Offer juga); hashHex di atas khusus pencarian invoice
+    // tersimpan yang memang hanya ada untuk Bolt11/JIT.
+    final tagHashHex = _paymentHashHex(payment);
     if (!mounted) return;
     await Navigator.push(
       context,
@@ -1467,6 +1503,7 @@ class _HomeScreenState extends State<HomeScreen>
           payment: payment,
           savedInvoice: saved,
           note: hashHex == null ? null : _paymentNotes[hashHex],
+          routeTag: tagHashHex == null ? null : _paymentTags[tagHashHex],
         ),
       ),
     );

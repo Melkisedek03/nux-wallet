@@ -7,6 +7,7 @@ import '../unit_controller.dart';
 import '../theme.dart';
 import 'package:flutter/services.dart';
 import '../services/lsp_service.dart';
+import '../services/offline_bridge.dart';
 import '../services/payment_notes.dart';
 import '../utils/amount_input.dart';
 import '../utils/animated_checkmark.dart';
@@ -62,7 +63,11 @@ String normalizeInvoice(String raw) {
 class SendScreen extends StatefulWidget {
   final LspService lspService;
 
-  const SendScreen({super.key, required this.lspService});
+  /// Jembatan offline (diterima sama seperti di ReceiveScreen);
+  /// sesi jembatannya yang aktif ikut menandai konteks langsung.
+  final OfflineBridgeService? bridge;
+
+  const SendScreen({super.key, required this.lspService, this.bridge});
 
   @override
   State<SendScreen> createState() => _SendScreenState();
@@ -358,10 +363,25 @@ class _SendScreenState extends State<SendScreen> {
           if (hash != null && invoiceDescription != null) {
             await PaymentNoteStore().save(hash, invoiceDescription);
           }
+          if (hash != null && _directContext) {
+            await PaymentTagStore().saveDirect(hash);
+          }
         },
       );
     }
   }
+
+  /// Konteks langsung saat ini: node boot offline atau sesi
+  /// jembatan offline aktif. Pembayaran yang dikirim dari
+  /// konteks ini pasti berjalan lewat channel langsung (LSP
+  /// tidak terjangkau), jadi hash-nya dicatat bertag direct
+  /// untuk Riwayat (lihat PaymentTagStore) — node sendiri tidak
+  /// mencatat channel jalur pembayaran. Predikat konteksnya sama
+  /// dengan yang dipakai layar Terima.
+  bool get _directContext => receiveIsOfflineContext(
+        bootedOffline: widget.lspService.isOfflineMode,
+        bridgeSessionActive: widget.bridge?.sessionActive ?? false,
+      );
 
   /// Pemeriksaan pra-bayar bersama untuk invoice Bolt11 dan
   /// offer Bolt12: nilai [amountMsat] terhadap saldo & kapasitas
@@ -512,6 +532,9 @@ class _SendScreenState extends State<SendScreen> {
               findBolt12PaymentHashHex(payments, paymentIdHex(sentId!));
           if (hashHex != null) {
             await PaymentNoteStore().save(hashHex, description);
+            if (_directContext) {
+              await PaymentTagStore().saveDirect(hashHex);
+            }
           }
         } catch (_) {
           // Abaikan — catatan tambahan, bukan bagian pembayaran.

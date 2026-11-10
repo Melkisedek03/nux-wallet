@@ -5,6 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../locale_controller.dart';
 import '../unit_controller.dart';
+import '../services/payment_notes.dart';
 import '../services/print_service.dart';
 import '../services/saved_invoices.dart';
 import '../theme.dart';
@@ -49,11 +50,17 @@ class TransactionDetailScreen extends StatelessWidget {
   /// pembayaran node sendiri tidak membawa deskripsi.
   final String? note;
 
+  /// Tag rute lokal pembayaran (lihat PaymentTagStore); null bila
+  /// tidak tercatat. Saat ini hanya 'direct' yang dikenal:
+  /// pembayaran berjalan lewat channel langsung antar-HP.
+  final String? routeTag;
+
   const TransactionDetailScreen({
     super.key,
     required this.payment,
     this.savedInvoice,
     this.note,
+    this.routeTag,
   });
 
   String _hex(Iterable<int> bytes) =>
@@ -121,8 +128,13 @@ class TransactionDetailScreen extends StatelessWidget {
     final amountText = payment.amountMsat == null
         ? '-'
         : '${isIn ? '+' : '-'}${context.formatWalletAmount(payment.amountMsat!)}';
-    final typeText =
-        _isJit ? 'Lightning JIT' : _isOnchain ? 'On-chain' : 'Lightning';
+    final typeText = _isJit
+        ? 'Lightning JIT'
+        : _isOnchain
+            ? 'On-chain'
+            : routeTag == paymentTagDirect
+                ? 'Lightning Direct'
+                : 'Lightning';
     final txid = _txid;
     final hashHex = _paymentHashHex;
     final printableInvoice = savedInvoice != null &&
@@ -170,7 +182,9 @@ class TransactionDetailScreen extends StatelessWidget {
         ? '⚡ JIT'
         : _isOnchain
             ? '⛓ on-chain'
-            : '⚡ Lightning';
+            : routeTag == paymentTagDirect
+                ? '⚡ direct'
+                : '⚡ Lightning';
     final hashHex = _paymentHashHex;
     final txid = _txid;
 

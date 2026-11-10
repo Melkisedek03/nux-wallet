@@ -112,3 +112,76 @@ class PaymentNoteStore {
     }
   }
 }
+
+/// Nilai tag rute yang dikenal untuk [PaymentTagStore]: pembayaran
+/// berjalan lewat channel langsung antar-HP, bukan lewat LSP.
+const String paymentTagDirect = 'direct';
+
+/// Tag baris riwayat dari jenis pembayaran + tag rute tercatat.
+///
+/// JIT dan on-chain dibaca dari jenis pembayaran node (persis);
+/// tag rute lokal hanya mengisi sisanya — pembayaran Lightning
+/// biasa yang tercatat berjalan lewat channel langsung. Urutan
+/// ini penting: pembayaran JIT menurut definisinya lahir dari
+/// LSP, tidak pernah langsung; on-chain bukan Lightning.
+String historyRowTag({
+  required bool isJit,
+  required bool isOnchain,
+  required String? routeTag,
+}) {
+  if (isJit) return '⚡ JIT';
+  if (isOnchain) return '⛓ on-chain';
+  if (routeTag == paymentTagDirect) return '⚡ direct';
+  return '⚡';
+}
+
+/// Penyimpanan tag rute pembayaran di SharedPreferences
+/// (hash hex → tag). Pola sama seperti [PaymentNoteStore]:
+/// fail-open, kegagalan tulis ditelan — tag adalah lapisan
+/// tampilan riwayat, bukan data dana.
+///
+/// Mengapa dicatat, bukan dibaca dari node: catatan pembayaran
+/// LDK tidak memuat channel yang dilalui pembayaran, jadi rute
+/// hanya bisa dibuktikan pada saat transaksi terjadi — konteks
+/// offline (boot offline / sesi jembatan aktif) saat kirim atau
+/// terima. Sekali tercatat, tag melekat pada hash pembayaran itu.
+class PaymentTagStore {
+  static const String storageKey = 'payment_route_tags_v1';
+
+  /// Batas simpanan: tag terlama terbuang lebih dulu (pola sama
+  /// seperti PaymentNoteStore.maxKeep).
+  static const int maxKeep = 500;
+
+  /// Muat seluruh tag (peta hash hex → tag).
+  Future<Map<String, String>> loadAll() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return decodePaymentNotes(prefs.getString(storageKey));
+    } catch (_) {
+      return <String, String>{};
+    }
+  }
+
+  /// Simpan (atau perbarui) tag untuk [paymentHashHex].
+  Future<void> save(String paymentHashHex, String tag) async {
+    final trimmed = tag.trim();
+    if (paymentHashHex.length != 64 || trimmed.isEmpty) return;
+    try {
+      final tags = await loadAll();
+      tags.remove(paymentHashHex);
+      tags[paymentHashHex] = trimmed;
+      while (tags.length > maxKeep) {
+        tags.remove(tags.keys.first);
+      }
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(storageKey, encodePaymentNotes(tags));
+    } catch (_) {
+      // Gagal simpan = baris ini tampil tanpa tag rute, seperti
+      // sebelum fitur ini ada.
+    }
+  }
+
+  /// Catat pembayaran ini berjalan lewat channel langsung.
+  Future<void> saveDirect(String paymentHashHex) =>
+      save(paymentHashHex, paymentTagDirect);
+}
