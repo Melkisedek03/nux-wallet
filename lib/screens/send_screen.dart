@@ -682,6 +682,15 @@ class _SendScreenState extends State<SendScreen> {
             const SizedBox(height: 8),
             TextField(
               controller: _invoiceController,
+              // Readonly (keputusan NUX 10 Nov 2026): invoice adalah
+              // data ber-checksum — mengetik/mengeditnya manual hanya
+              // bisa merusak, tidak pernah memperbaiki. Dua jalur
+              // masuk yang sah (tombol Tempel & Pindai di bawah)
+              // mengisi field ini secara program sehingga tidak
+              // terpengaruh; keyboard pun tidak lagi muncul saat
+              // field disentuh. Pengganti edit manual adalah tombol
+              // hapus (x) di ujung field (suffixIcon di bawah).
+              readOnly: true,
               onChanged: (_) {
                 // Kotak cadangan menunjuk invoice sebelumnya —
                 // invoice berubah, kotaknya gugur.
@@ -711,6 +720,30 @@ class _SendScreenState extends State<SendScreen> {
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide.none,
+                ),
+                // Tombol hapus: hanya tampil bila field terisi.
+                // Mengosongkan field + mereset keadaan yang menunjuk
+                // invoice lama (pesan error & kotak cadangan) —
+                // meniru reset pada jalur Pindai.
+                suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _invoiceController,
+                  builder: (context, value, _) {
+                    if (value.text.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+                    return IconButton(
+                      icon: Icon(Icons.close_rounded,
+                          size: 19, color: context.palette.muted),
+                      onPressed: () {
+                        _invoiceController.clear();
+                        setState(() {
+                          _error = null;
+                          _reserveHeldMsat = null;
+                          _reserveSendableMsat = null;
+                        });
+                      },
+                    );
+                  },
                 ),
               ),
             ),
