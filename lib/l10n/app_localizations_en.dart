@@ -795,7 +795,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeSaveNote => 'Save';
 
   @override
-  String get storeHoldOrder => 'Hold Order';
+  String get storeHoldOrder => 'Hold';
 
   @override
   String get storeHeldSaved =>
@@ -1412,7 +1412,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeNoDiscount => 'No Discount';
 
   @override
-  String get storeCheckout => 'Settle Payment';
+  String get storeCheckout => 'Finish';
 
   @override
   String get storePayTitle => 'Settle Payment';
@@ -1791,7 +1791,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Leave empty for the default text in the app language.';
 
   @override
-  String get storeSettingsTitle => 'Store Settings';
+  String get storeSettingsTitle => 'Settings';
 
   @override
   String get storeSettingsStoreName => 'Store Name';

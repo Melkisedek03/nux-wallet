@@ -796,7 +796,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeSaveNote => 'Simpan';
 
   @override
-  String get storeHoldOrder => 'Tahan Pesanan';
+  String get storeHoldOrder => 'Tahan';
 
   @override
   String get storeHeldSaved =>
@@ -1412,7 +1412,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeNoDiscount => 'Tanpa Diskon';
 
   @override
-  String get storeCheckout => 'Selesaikan Pembayaran';
+  String get storeCheckout => 'Selesai';
 
   @override
   String get storePayTitle => 'Penyelesaian Pembayaran';
@@ -1793,7 +1793,7 @@ class AppLocalizationsId extends AppLocalizations {
       'Kosongkan untuk teks bawaan bahasa aplikasi.';
 
   @override
-  String get storeSettingsTitle => 'Pengaturan Toko';
+  String get storeSettingsTitle => 'Pengaturan';
 
   @override
   String get storeSettingsStoreName => 'Nama Toko';

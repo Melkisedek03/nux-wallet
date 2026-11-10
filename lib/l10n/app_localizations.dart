@@ -1523,7 +1523,7 @@ abstract class AppLocalizations {
   /// No description provided for @storeHoldOrder.
   ///
   /// In id, this message translates to:
-  /// **'Tahan Pesanan'**
+  /// **'Tahan'**
   String get storeHoldOrder;
 
   /// No description provided for @storeHeldSaved.
@@ -2633,7 +2633,7 @@ abstract class AppLocalizations {
   /// No description provided for @storeCheckout.
   ///
   /// In id, this message translates to:
-  /// **'Selesaikan Pembayaran'**
+  /// **'Selesai'**
   String get storeCheckout;
 
   /// No description provided for @storePayTitle.
@@ -3293,7 +3293,7 @@ abstract class AppLocalizations {
   /// No description provided for @storeSettingsTitle.
   ///
   /// In id, this message translates to:
-  /// **'Pengaturan Toko'**
+  /// **'Pengaturan'**
   String get storeSettingsTitle;
 
   /// No description provided for @storeSettingsStoreName.
