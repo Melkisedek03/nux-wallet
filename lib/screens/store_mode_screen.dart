@@ -2963,6 +2963,13 @@ class _StoreModeScreenState extends State<StoreModeScreen>
         const SizedBox(height: 6),
         _buildSearchRow(context),
         const SizedBox(height: 10),
+        // Urutan alur lapangan (permintaan NUX 11 Nov 2026):
+        // kasir menyebut JUMLAH yang dipesan dulu, baru nama
+        // produknya — jadi keypad tepat di bawah baris pencarian
+        // (yang tetap paling atas), dan segmen produk (kategori +
+        // pager) di bawah keypad.
+        _buildKeypadSection(context),
+        const SizedBox(height: 18),
         if (catalogCategories(_catalog).isNotEmpty) ...[
           _buildCategoryChips(context),
           const SizedBox(height: 10),
@@ -2991,8 +2998,6 @@ class _StoreModeScreenState extends State<StoreModeScreen>
                       '${_discountBadge(item.defaultDiscount!)}',
             onTap: _addProduct,
           ),
-        const SizedBox(height: 18),
-        _buildKeypadSection(context),
         const SizedBox(height: 20),
         _buildOrderLinesBlock(context),
         _buildOrderActions(context),
@@ -3160,6 +3165,12 @@ class _StoreModeScreenState extends State<StoreModeScreen>
                       const SizedBox(height: 6),
                       _buildSearchRow(context),
                       const SizedBox(height: 10),
+                      // Urutan alur lapangan (permintaan NUX
+                      // 11 Nov 2026): keypad tepat di bawah baris
+                      // pencarian, segmen produk (kategori + grid)
+                      // di bawahnya — sama seperti portrait.
+                      _buildKeypadSection(context),
+                      const SizedBox(height: 18),
                       if (catalogCategories(_catalog).isNotEmpty) ...[
                         _buildCategoryChips(context),
                         const SizedBox(height: 10),
@@ -3182,8 +3193,6 @@ class _StoreModeScreenState extends State<StoreModeScreen>
                         )
                       else
                         _buildProductGrid(context, visibleCatalog),
-                      const SizedBox(height: 18),
-                      _buildKeypadSection(context),
                     ],
                   ),
                 ),
