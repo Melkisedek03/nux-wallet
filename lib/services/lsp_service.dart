@@ -722,6 +722,24 @@ ReceiveInvoiceRoute chooseReceiveInvoiceRoute({
       : ReceiveInvoiceRoute.jit;
 }
 
+/// Gerbang Kode Bayar Statis (offer Bolt12) di layar Terima:
+/// kode hanya bisa dibayar bila node punya kapasitas terima
+/// usable. Invoice yang diterbitkan untuk sebuah offer menyusun
+/// jalur bayarnya dari channel masuk yang sudah ada, dan Bolt12
+/// tidak punya mekanisme melahirkan channel seperti invoice
+/// JIT — tanpa ruang terima, kode yang dibagikan pasti gagal
+/// di sisi pembayar, jadi panelnya dinonaktifkan sampai ruang
+/// itu ada.
+///
+/// Saklarnya mengikuti RUANG, bukan sejarah: jenis channel
+/// tidak relevan (JIT, self-funded, atau langsung — yang
+/// dihitung kapasitas terima usable-nya, sensor yang sama
+/// dengan pemilihan jalur invoice di [chooseReceiveInvoiceRoute]).
+bool staticCodeIsActive({
+  required BigInt usableInboundCapacityMsat,
+}) =>
+    usableInboundCapacityMsat > BigInt.zero;
+
 /// Konteks Terima offline: benar bila sesi berjalan dari boot
 /// offline ([bootedOffline] — node dibangun tanpa LSPS2 sama
 /// sekali) atau niat sesi jembatan offline sedang hidup

@@ -159,4 +159,25 @@ void main() {
       );
     });
   });
+
+  group('staticCodeIsActive', () {
+    test('kapasitas terima nol: kode nonaktif', () {
+      expect(
+        staticCodeIsActive(usableInboundCapacityMsat: BigInt.zero),
+        isFalse,
+      );
+    });
+
+    test('kapasitas terima positif sekecil apa pun: kode aktif', () {
+      expect(
+        staticCodeIsActive(usableInboundCapacityMsat: BigInt.one),
+        isTrue,
+      );
+      expect(
+        staticCodeIsActive(
+            usableInboundCapacityMsat: BigInt.from(20000000000)),
+        isTrue,
+      );
+    });
+  });
 }

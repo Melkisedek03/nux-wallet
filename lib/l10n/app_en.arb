@@ -161,6 +161,7 @@
   "shareInvoiceHint": "Share this invoice with the sender. The channel will open automatically when the payment is received.",
   "staticCodeTitle": "Static Payment Code",
   "staticCodeHint": "This code can be used again and again with no expiry — share it once, and the payer chooses the amount each time they pay.",
+  "staticCodeInactive": "Static code is not active yet. Receive one payment via an invoice first — once the first path is in place, this code activates on its own.",
   "staticCodeCopied": "Payment code copied",
   "staticCodeNeedsConnection": "Your payment code is created once the wallet is connected. Check your connection, then try again.",
   "staticCodeFailed": "Couldn't create your payment code. Try again.",
