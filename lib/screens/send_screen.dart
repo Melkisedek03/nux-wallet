@@ -8,6 +8,7 @@ import '../theme.dart';
 import 'package:flutter/services.dart';
 import '../services/lsp_service.dart';
 import '../services/payment_notes.dart';
+import '../utils/amount_input.dart';
 import '../utils/animated_checkmark.dart';
 import '../utils/bolt11_info.dart';
 import '../utils/bolt12_info.dart';
@@ -865,6 +866,26 @@ class _SendScreenState extends State<SendScreen> {
                 const SizedBox(height: 8),
                 TextField(
                   controller: _offerAmountController,
+                  // Pemformat nominal bersama (sama seperti kolom
+                  // nominal Terima): ribuan dikelompokkan on-the-fly
+                  // mengikuti locale, dan karakter asing — termasuk
+                  // '.' sebagai desimal pada locale id — dibuang
+                  // saat diketik, bukan baru ditolak di pagar akhir
+                  // (permintaan NUX 10 Nov 2026).
+                  inputFormatters: [
+                    AmountInputFormatter(
+                      thousandsSep:
+                          LocaleController.locale.value.languageCode ==
+                                  'en'
+                              ? ','
+                              : '.',
+                      decimalSep:
+                          LocaleController.locale.value.languageCode ==
+                                  'en'
+                              ? '.'
+                              : ',',
+                    ),
+                  ],
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   style: const TextStyle(

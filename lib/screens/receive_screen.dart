@@ -12,6 +12,7 @@ import '../services/lsp_service.dart';
 import '../services/offline_bridge.dart';
 import '../services/payment_notes.dart';
 import '../services/saved_invoices.dart';
+import '../utils/amount_input.dart';
 import '../utils/animated_checkmark.dart';
 import '../utils/coin_alert.dart';
 import '../utils/bolt11_info.dart';
@@ -682,7 +683,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
             TextField(
               controller: _amountController,
               inputFormatters: [
-                _ThousandsSeparatorFormatter(
+                AmountInputFormatter(
                   thousandsSep:
                       context.l10n.localeName == 'en' ? ',' : '.',
                   decimalSep: context.l10n.localeName == 'en' ? '.' : ',',
@@ -1049,62 +1050,3 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   }
 }
 
-/// Pemformat kolom nominal Terima: terapkan pemisah ribuan
-/// secara langsung saat user mengetik, supaya tampilan selalu
-/// rapi — bukan hanya saat nilai diisi program (mis. pulihan
-/// invoice pending yang terisi "1.000", lalu rusak formatnya
-/// begitu user mengedit). Pemisah mengikuti locale aplikasi
-/// (id: '.' ribuan & ',' desimal; en sebaliknya) — pasangan
-/// pemisah yang sama dengan parser terpusat
-/// [parseAmountInputToMsat]. Format hanya tampilan: nilai angka
-/// murninya dipulihkan saat parsing di
-/// _ReceiveScreenState._createInvoice. Pecahan TIDAK dipotong di
-/// sini: batas presisi satuan ditegakkan parser saat pembuatan
-/// invoice, jadi pemformat tidak pernah diam-diam mengubah angka
-/// yang diketik user.
-class _ThousandsSeparatorFormatter extends TextInputFormatter {
-  final String thousandsSep;
-  final String decimalSep;
-
-  const _ThousandsSeparatorFormatter({
-    this.thousandsSep = '.',
-    this.decimalSep = ',',
-  });
-
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final raw = newValue.text;
-    if (raw.isEmpty) return newValue;
-
-    // Pisah bagian bulat dan pecahan pada pemisah desimal
-    // pertama; selain digit dibuang (termasuk pemisah ribuan
-    // lama).
-    final comma = raw.indexOf(decimalSep);
-    var intDigits = (comma >= 0 ? raw.substring(0, comma) : raw)
-        .replaceAll(RegExp(r'[^0-9]'), '');
-    final fracDigits = comma >= 0
-        ? raw.substring(comma + 1).replaceAll(RegExp(r'[^0-9]'), '')
-        : null;
-
-    // Buang nol di depan yang berlebih: "05" -> "5", "00" -> "0".
-    intDigits = intDigits.replaceFirst(RegExp(r'^0+(?=\d)'), '');
-
-    // Kelompokkan ribuan dengan pemisah locale.
-    final buf = StringBuffer();
-    for (var i = 0; i < intDigits.length; i++) {
-      if (i > 0 && (intDigits.length - i) % 3 == 0) buf.write(thousandsSep);
-      buf.write(intDigits[i]);
-    }
-    var text = buf.toString();
-    if (fracDigits != null) text = '$text$decimalSep$fracDigits';
-
-    // Kursor selalu di akhir teks hasil format.
-    return TextEditingValue(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
-    );
-  }
-}
