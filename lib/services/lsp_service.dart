@@ -596,6 +596,28 @@ PaymentStatus? findPaymentStatus(List<PaymentDetails> payments, String idHex) {
   return null;
 }
 
+/// Payment hash (hex) pembayaran Bolt12 ber-ID [idHex] dalam
+/// daftar [payments]; null bila catatannya belum muncul, bukan
+/// pembayaran offer, atau hash-nya belum terbit (invoice dari
+/// offer belum diambil node).
+///
+/// Dipakai layar Kirim untuk menautkan deskripsi offer sebagai
+/// catatan riwayat: tidak seperti Bolt11 — yang hash-nya sudah
+/// tertulis di invoice sebelum membayar — hash pembayaran offer
+/// baru diketahui dari catatan node sesudah pembayaran berjalan.
+String? findBolt12PaymentHashHex(List<PaymentDetails> payments, String idHex) {
+  for (final p in payments) {
+    if (paymentIdHex(p.id) != idHex) continue;
+    final kind = p.kind;
+    if (kind is PaymentKind_Bolt12Offer) {
+      final hash = kind.hash;
+      return hash == null ? null : paymentHashHex(hash);
+    }
+    return null;
+  }
+  return null;
+}
+
 /// Apakah invoice ber-payment-hash [hashHex] sudah LUNAS
 /// menurut catatan pembayaran node: ada pembayaran MASUK berstatus
 /// succeeded yang hash-nya sama.

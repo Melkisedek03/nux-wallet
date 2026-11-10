@@ -489,9 +489,34 @@ class _SendScreenState extends State<SendScreen> {
       ),
     );
     if (confirmed == true && mounted) {
-      await _pay(() => fixedAmount
-          ? widget.lspService.payOffer(offer)
-          : widget.lspService.payOfferUsingAmount(offer, amountMsat));
+      final description = info.description;
+      PaymentId? sentId;
+      await _pay(() async {
+        final id = await (fixedAmount
+            ? widget.lspService.payOffer(offer)
+            : widget.lspService.payOfferUsingAmount(offer, amountMsat));
+        sentId = id;
+        return id;
+      });
+      // Tautkan deskripsi offer sebagai catatan riwayat (judul
+      // baris di Riwayat pengirim), meniru jalur Bolt11. Bedanya:
+      // hash pembayaran offer tidak diketahui sebelum membayar —
+      // ia baru muncul di catatan node sesudah invoice penerbit
+      // diambil — jadi penautan dilakukan di sini, sesudah _pay
+      // menunggu hasil akhir. Gagal taut tidak masalah: riwayat
+      // jatuh ke judul baku, pembayaran tidak terpengaruh.
+      if (description != null && sentId != null) {
+        try {
+          final payments = await widget.lspService.listPayments();
+          final hashHex =
+              findBolt12PaymentHashHex(payments, paymentIdHex(sentId!));
+          if (hashHex != null) {
+            await PaymentNoteStore().save(hashHex, description);
+          }
+        } catch (_) {
+          // Abaikan — catatan tambahan, bukan bagian pembayaran.
+        }
+      }
     }
   }
 

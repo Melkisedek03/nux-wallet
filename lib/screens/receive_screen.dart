@@ -151,6 +151,12 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   /// dan saat itu node mungkin sudah tersambung.
   /// Deskripsi offer yang berlaku: label kustom user bila
   /// dipasang, selain itu teks bawaan bahasa aplikasi.
+  ///
+  /// Ini cermin TAMPILAN (baris label di panel). Deskripsi yang
+  /// benar-benar dipakai untuk offer diputuskan Bolt12OfferService
+  /// langsung dari simpanan label — state ini bisa tertinggal
+  /// (mis. panel dibuka sebelum muatan label selesai) dan tidak
+  /// boleh menjadi wewenang atas offer yang berlaku.
   String get _offerDescription =>
       _customOfferDescription ?? context.l10n.staticOfferDescription;
 
@@ -159,13 +165,13 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
     // jadi offer tidak disiapkan — pembuatannya juga menuntut
     // peer LSP yang memang tidak terjangkau dalam konteks ini.
     if (_konteksOffline) return;
-    // Label kustom dibaca lebih dulu: offer yang dibuat/
-    // dipakai harus yang berlabel berlaku, bukan bawaan.
+    // Label kustom dimuat ke state untuk cermin tampilan;
+    // offer-nya sendiri diputuskan service dari simpanan.
     _customOfferDescription =
         await Bolt12OfferStore().loadCustomDescription();
     if (!mounted) return;
     final result = await _bolt12Service.ensureOffer(
-        description: _offerDescription);
+        defaultDescription: context.l10n.staticOfferDescription);
     if (result.outcome == StaticOfferOutcome.ready && mounted) {
       setState(() => _staticOffer = result.offer);
     }
@@ -196,12 +202,20 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   }
 
   Future<void> _loadStaticOffer() async {
+    final defaultDescription = context.l10n.staticOfferDescription;
+    // Segarkan cermin label dari simpanan supaya baris label di
+    // panel sama dengan yang service pakai untuk offer — jalur
+    // buka panel ini bisa berjalan sebelum prefetch sempat
+    // memuat label ke state.
+    _customOfferDescription =
+        await Bolt12OfferStore().loadCustomDescription();
+    if (!mounted) return;
     setState(() {
       _staticLoading = true;
       _staticError = null;
     });
     final result = await _bolt12Service.ensureOffer(
-        description: _offerDescription);
+        defaultDescription: defaultDescription);
     if (!mounted) return;
     setState(() {
       _staticLoading = false;

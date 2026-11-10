@@ -1383,6 +1383,13 @@ class _HomeScreenState extends State<HomeScreen>
     if (kind is PaymentKind_Bolt11) return _hashHex(kind.hash.data);
     if (kind is PaymentKind_Bolt11Jit) return _hashHex(kind.hash.data);
     if (kind is PaymentKind_Spontaneous) return _hashHex(kind.hash.data);
+    // Bolt12: hash bersifat opsional — belum terbit selama invoice
+    // dari offer belum diambil node; sesudahnya catatan deskripsi
+    // offer yang disimpan layar Kirim tertaut ke baris ini.
+    if (kind is PaymentKind_Bolt12Offer) {
+      final hash = kind.hash;
+      return hash == null ? null : _hashHex(hash.data);
+    }
     return null;
   }
 

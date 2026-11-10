@@ -178,7 +178,20 @@ class Bolt12OfferService {
   Bolt12OfferService(this._lspService, {Bolt12OfferStore? store})
     : _store = store ?? Bolt12OfferStore();
 
-  Future<StaticOfferResult> ensureOffer({required String description}) async {
+  Future<StaticOfferResult> ensureOffer({
+    required String defaultDescription,
+  }) async {
+    // Deskripsi berlaku diputuskan DI SINI dari label kustom
+    // tersimpan — bukan dipercayakan ke perhitungan pemanggil.
+    // Pemanggil (layar Terima) bisa saja berjalan sebelum label
+    // kustom selesai dimuat ke state-nya, dan satu panggilan yang
+    // lolos dengan deskripsi bawaan akan membuang offer berlabel
+    // kustom lalu menimpanya dengan offer bawaan, padahal label
+    // tersimpannya sendiri utuh (temuan lapangan NUX 10 Nov
+    // 2026). Pemanggil hanya menyerahkan teks bawaan bahasa
+    // aplikasi; label kustom selalu dibaca segar dari simpanan.
+    final description =
+        await _store.loadCustomDescription() ?? defaultDescription;
     var stored = await _store.load();
     // Offer tersimpan hanya sah untuk deskripsi yang sama:
     // label berubah (kustom dipasang/diubah/dihapus) → offer

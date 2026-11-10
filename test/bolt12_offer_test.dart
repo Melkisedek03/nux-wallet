@@ -101,7 +101,7 @@ void main() {
       // LspService belum init (node mati): jalur simpanan tidak
       // boleh menyentuhnya sama sekali.
       final service = Bolt12OfferService(LspService());
-      final result = await service.ensureOffer(description: 'uji');
+      final result = await service.ensureOffer(defaultDescription: 'uji');
       expect(result.outcome, StaticOfferOutcome.ready);
       expect(result.offer, _offerContoh);
     });
@@ -109,23 +109,58 @@ void main() {
     test('tanpa simpanan + node mati: failed, tidak melempar', () async {
       SharedPreferences.setMockInitialValues({});
       final service = Bolt12OfferService(LspService());
-      final result = await service.ensureOffer(description: 'uji');
+      final result = await service.ensureOffer(defaultDescription: 'uji');
       expect(result.outcome, StaticOfferOutcome.failed);
       expect(result.offer, isNull);
     });
 
-    test('deskripsi tercatat berbeda: offer simpanan TIDAK '
-        'dipakai ulang (label berubah = offer baru)', () async {
+    test('label kustom berubah dari yang tercatat: offer simpanan '
+        'TIDAK dipakai ulang (label berubah = offer baru)', () async {
       SharedPreferences.setMockInitialValues({
         Bolt12OfferStore.storageKey: _offerContoh,
         Bolt12OfferStore.offerDescriptionKey: 'label lama',
+        Bolt12OfferStore.customDescriptionKey: 'label baru',
       });
       final service = Bolt12OfferService(LspService());
       // Node mati: bila offer lama dipakai ulang hasilnya akan
       // ready; yang benar adalah usaha buat baru → failed.
-      final result = await service.ensureOffer(description: 'label baru');
+      final result =
+          await service.ensureOffer(defaultDescription: 'bawaan');
       expect(result.outcome, StaticOfferOutcome.failed);
       expect(result.offer, isNull);
+    });
+
+    test('REGRESI 10 Nov 2026: label kustom utuh di simpanan — '
+        'panggilan berteks bawaan TIDAK menimpa offer berlabel',
+        () async {
+      // Persis bug lapangan: offer tersimpan lahir dari label
+      // kustom, label itu masih tersimpan, tetapi pemanggil hanya
+      // menyerahkan teks bawaan (state labelnya belum termuat).
+      // Service wajib memutuskan deskripsi dari simpanan label,
+      // jadi offer berlabel tetap dipakai ulang.
+      SharedPreferences.setMockInitialValues({
+        Bolt12OfferStore.storageKey: _offerContoh,
+        Bolt12OfferStore.offerDescriptionKey: 'Toko Berkah',
+        Bolt12OfferStore.customDescriptionKey: 'Toko Berkah',
+      });
+      final service = Bolt12OfferService(LspService());
+      final result =
+          await service.ensureOffer(defaultDescription: 'Terima NUX');
+      expect(result.outcome, StaticOfferOutcome.ready);
+      expect(result.offer, _offerContoh);
+    });
+
+    test('tanpa label kustom: offer tercatat berteks bawaan '
+        'dipakai ulang', () async {
+      SharedPreferences.setMockInitialValues({
+        Bolt12OfferStore.storageKey: _offerContoh,
+        Bolt12OfferStore.offerDescriptionKey: 'Terima NUX',
+      });
+      final service = Bolt12OfferService(LspService());
+      final result =
+          await service.ensureOffer(defaultDescription: 'Terima NUX');
+      expect(result.outcome, StaticOfferOutcome.ready);
+      expect(result.offer, _offerContoh);
     });
   });
 }
