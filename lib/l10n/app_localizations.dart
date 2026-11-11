@@ -776,6 +776,12 @@ abstract class AppLocalizations {
   /// **'Kode ini bisa dipakai berulang kali tanpa kedaluwarsa — bagikan sekali, pembayar menentukan jumlahnya setiap kali membayar.'**
   String get staticCodeHint;
 
+  /// No description provided for @staticCodeInactive.
+  ///
+  /// In id, this message translates to:
+  /// **'Kode statis belum aktif. Terima satu pembayaran lewat invoice terlebih dahulu — sesudah jalur pertama terbentuk, kode ini aktif dengan sendirinya.'**
+  String get staticCodeInactive;
+
   /// No description provided for @staticCodeCopied.
   ///
   /// In id, this message translates to:

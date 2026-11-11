@@ -161,6 +161,7 @@
   "shareInvoiceHint": "Bagikan invoice ini ke pengirim. Channel akan dibuka otomatis saat pembayaran diterima.",
   "staticCodeTitle": "Kode Bayar Statis",
   "staticCodeHint": "Kode ini bisa dipakai berulang kali tanpa kedaluwarsa — bagikan sekali, pembayar menentukan jumlahnya setiap kali membayar.",
+  "staticCodeInactive": "Kode statis belum aktif. Terima satu pembayaran lewat invoice terlebih dahulu — sesudah jalur pertama terbentuk, kode ini aktif dengan sendirinya.",
   "staticCodeCopied": "Kode bayar disalin",
   "staticCodeNeedsConnection": "Kode bayar dibuat begitu dompet tersambung. Periksa koneksimu, lalu coba lagi.",
   "staticCodeFailed": "Gagal membuat kode bayar. Coba lagi.",

@@ -382,6 +382,10 @@ class AppLocalizationsId extends AppLocalizations {
       'Kode ini bisa dipakai berulang kali tanpa kedaluwarsa — bagikan sekali, pembayar menentukan jumlahnya setiap kali membayar.';
 
   @override
+  String get staticCodeInactive =>
+      'Kode statis belum aktif. Terima satu pembayaran lewat invoice terlebih dahulu — sesudah jalur pertama terbentuk, kode ini aktif dengan sendirinya.';
+
+  @override
   String get staticCodeCopied => 'Kode bayar disalin';
 
   @override

@@ -382,6 +382,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'This code can be used again and again with no expiry — share it once, and the payer chooses the amount each time they pay.';
 
   @override
+  String get staticCodeInactive =>
+      'Static code is not active yet. Receive one payment via an invoice first — once the first path is in place, this code activates on its own.';
+
+  @override
   String get staticCodeCopied => 'Payment code copied';
 
   @override
