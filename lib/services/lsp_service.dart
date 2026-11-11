@@ -110,6 +110,13 @@ class LspService {
       // fee pertamanya gagal). Boot normal tidak berubah: flag
       // mati dan kegagalan yang sama tetap menghentikan boot.
       tolerateOfflineStart: offlineMode,
+      // Plafon dana channel masuk dicabut penuh (u64::MAX, pola yang
+      // sama dengan server LSP): batas bawaan LDK sebesar 16.777.215
+      // nusan (±0,168 NUX) menolak channel langsung antar-HP skala
+      // besar di sisi penerima — misalnya kebutuhan lapangan 1.000
+      // NUX pada jalur offline. Nilai ini hanya ditegakkan di sisi
+      // penerima channel; sisi pengirim tidak pernah digerbangnya.
+      maxFundingSatoshis: BigInt.parse('18446744073709551615'),
     );
 
     final chainConfig = ChainDataSourceConfig.electrum(serverUrl: electrumUrl);
