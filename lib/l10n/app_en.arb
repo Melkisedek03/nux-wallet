@@ -49,6 +49,16 @@
       }
     }
   },
+  "balanceLspShort": "LSP",
+  "balanceSelf": "Self",
+  "balanceDirectShort": "Direct",
+  "onchainTitle": "On-chain Wallet",
+  "onchainSubtitle": "On-chain balance and deposit address",
+  "onchainTotal": "Total",
+  "onchainAddress": "Deposit address",
+  "onchainAddressHint": "Send NUX to this address to fund the on-chain wallet.",
+  "onchainCopied": "Address copied",
+  "onchainLoadFailed": "Could not load the on-chain wallet",
   "networkTestnet": "Lightning Network • Testnet",
   "networkMainnet": "Lightning Network • Mainnet",
   "lightningActive": "Lightning active — ready for instant receive",

@@ -14,6 +14,7 @@ ChannelDetails _channel({
   required BigInt outboundMsat,
   BigInt? reserveSats,
   String counterpartyHex = _lspId,
+  bool isOutbound = true,
 }) {
   return ChannelDetails(
     channelId: ChannelId(
@@ -26,7 +27,7 @@ ChannelDetails _channel({
     feerateSatPer1000Weight: 1000,
     outboundCapacityMsat: outboundMsat,
     inboundCapacityMsat: BigInt.zero,
-    isOutbound: true,
+    isOutbound: isOutbound,
     isChannelReady: true,
     isUsable: true,
     counterpartyUnspendablePunishmentReserve: BigInt.from(1000),
@@ -84,15 +85,23 @@ void main() {
   });
 
   group('splitBalanceBySource', () {
-    test('memisahkan subtotal LSP dan channel langsung', () {
+    test('memisahkan JIT, Self, dan channel langsung', () {
       final channels = [
-        _channel(outboundMsat: BigInt.from(5000000)),
+        // Channel JIT: ke LSP, didanai LSP (inbound).
+        _channel(outboundMsat: BigInt.from(5000000), isOutbound: false),
+        // Channel self-funded: ke LSP, didanai sendiri (outbound).
+        _channel(outboundMsat: BigInt.from(3000000)),
+        // Channel langsung: pihak seberang bukan LSP.
         _channel(outboundMsat: BigInt.from(1000000), counterpartyHex: _peerId),
       ];
       final split = splitBalanceBySource(channels, _lspId);
-      expect(split.lspMsat, BigInt.from(5000000));
+      expect(split.jitMsat, BigInt.from(5000000));
+      expect(split.selfFundedMsat, BigInt.from(3000000));
       expect(split.directMsat, BigInt.from(1000000));
-      expect(split.lspMsat + split.directMsat, BigInt.from(6000000));
+      expect(
+        split.jitMsat + split.selfFundedMsat + split.directMsat,
+        BigInt.from(9000000),
+      );
     });
 
     test('cadangan hantu channel langsung tidak bocor ke rincian', () {
@@ -106,19 +115,38 @@ void main() {
       ];
       final split = splitBalanceBySource(channels, _lspId);
       expect(split.directMsat, BigInt.zero);
-      expect(split.lspMsat, BigInt.from(5000000));
+      expect(split.selfFundedMsat, BigInt.from(5000000));
+      expect(split.jitMsat, BigInt.zero);
+    });
+
+    test('channel langsung masuk (penerima) tetap langsung', () {
+      // Pihak yang menerima channel langsung melihatnya inbound —
+      // arah tidak boleh memindahkannya ke JIT.
+      final channels = [
+        _channel(
+          outboundMsat: BigInt.from(2000000),
+          counterpartyHex: _peerId,
+          isOutbound: false,
+        ),
+      ];
+      final split = splitBalanceBySource(channels, _lspId);
+      expect(split.directMsat, BigInt.from(2000000));
+      expect(split.jitMsat, BigInt.zero);
+      expect(split.selfFundedMsat, BigInt.zero);
     });
 
     test('ID LSP dicocokkan tanpa peka huruf besar/kecil', () {
       final channels = [_channel(outboundMsat: BigInt.from(7000))];
       final split = splitBalanceBySource(channels, _lspId.toUpperCase());
-      expect(split.lspMsat, BigInt.from(7000));
+      expect(split.selfFundedMsat, BigInt.from(7000));
+      expect(split.jitMsat, BigInt.zero);
       expect(split.directMsat, BigInt.zero);
     });
 
-    test('daftar kosong menghasilkan nol untuk keduanya', () {
+    test('daftar kosong menghasilkan nol untuk ketiganya', () {
       final split = splitBalanceBySource(const [], _lspId);
-      expect(split.lspMsat, BigInt.zero);
+      expect(split.jitMsat, BigInt.zero);
+      expect(split.selfFundedMsat, BigInt.zero);
       expect(split.directMsat, BigInt.zero);
     });
   });

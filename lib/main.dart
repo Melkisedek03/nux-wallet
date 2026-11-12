@@ -22,6 +22,7 @@ import 'screens/restore_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/send_screen.dart';
 import 'screens/channels_screen.dart';
+import 'screens/onchain_screen.dart';
 import 'screens/offline_spike_screen.dart';
 import 'screens/printer_settings_screen.dart';
 import 'screens/store_mode_screen.dart';
@@ -150,17 +151,13 @@ class _HomeScreenState extends State<HomeScreen>
   /// Saldo Lightning terakhir dari node (msat); null = belum terbaca.
   BigInt? _balanceMsat;
 
-  /// Rincian saldo per sumber (LSP vs channel langsung); null =
-  /// belum terbaca. Ditampilkan di kartu hanya bila porsi channel
-  /// langsung tidak nol — satu-satunya keadaan yang membuat total
-  /// gabungan bisa salah dibaca sebagai kemampuan belanja offline.
-  ({BigInt lspMsat, BigInt directMsat})? _balanceBreakdown;
-
-  /// Ringkasan saldo on-chain dompet internal; null = belum
-  /// terbaca. Baris totalnya tampil permanen di kartu saldo,
-  /// baris turunannya (siap pakai / terkunci timelock) hanya bila
-  /// menambah informasi.
-  OnchainOverview? _onchainOverview;
+  /// Rincian saldo per sumber (JIT vs self-funded vs channel
+  /// langsung); null = belum terbaca. Baris rincian ditampilkan
+  /// di kartu hanya bila dua segmen atau lebih tidak nol — satu
+  /// segmen saja sama dengan total hero, jadi tidak ada yang
+  /// perlu dirinci.
+  ({BigInt jitMsat, BigInt selfFundedMsat, BigInt directMsat})?
+      _balanceBreakdown;
 
   /// Riwayat pembayaran terakhir dari node (terbaru di depan).
   List<PaymentDetails> _payments = const [];
@@ -248,22 +245,22 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  /// Baca ulang saldo Lightning + ringkasan on-chain dari node dan
-  /// tampilkan di dashboard. Kegagalan baca (mis. node belum
-  /// sinkron) tidak mengosongkan nilai terakhir yang berhasil dibaca.
+  /// Baca ulang saldo Lightning dari node dan tampilkan di dashboard.
+  /// Kegagalan baca (mis. node belum sinkron) tidak mengosongkan nilai
+  /// terakhir yang berhasil dibaca.
   Future<void> _refreshBalance() async {
     if (!lspService.isRunning) return;
     try {
-      // Satu bacaan untuk total + rincian: total adalah jumlah kedua
+      // Satu bacaan untuk total + rincian: total adalah jumlah ketiga
       // subtotal rincian, jadi angka kartu dan rinciannya tidak bisa
       // berbeda bacaan.
       final breakdown = await lspService.getLightningBalanceBreakdown();
-      final onchain = await lspService.getOnchainOverview();
       if (mounted) {
         setState(() {
-          _balanceMsat = breakdown.lspMsat + breakdown.directMsat;
+          _balanceMsat = breakdown.jitMsat +
+              breakdown.selfFundedMsat +
+              breakdown.directMsat;
           _balanceBreakdown = breakdown;
-          _onchainOverview = onchain;
         });
       }
     } catch (_) {
@@ -797,7 +794,6 @@ class _HomeScreenState extends State<HomeScreen>
       _legacyWallet = false;
       _balanceMsat = null;
       _balanceBreakdown = null;
-      _onchainOverview = null;
       _payments = const [];
       _tabIndex = 0;
       _booting = true;
@@ -842,7 +838,6 @@ class _HomeScreenState extends State<HomeScreen>
       _legacyWallet = false;
       _balanceMsat = null;
       _balanceBreakdown = null;
-      _onchainOverview = null;
       _payments = const [];
       // Primer ulang: riwayat dompet hasil restore tidak boleh memicu
       // bunyi koin masuk saat muat pertama.
@@ -1135,52 +1130,37 @@ class _HomeScreenState extends State<HomeScreen>
                             : context.l10n.networkMainnet,
                         style: const TextStyle(
                             fontSize: 13, color: Colors.white70)),
-                    // Rincian per sumber, hanya bila ada channel
-                    // langsung bersaldo: total gabungan saja bisa
-                    // salah dibaca sebagai yang bisa dibelanjakan
-                    // saat offline, padahal yang bergerak offline
-                    // hanya porsi channel langsung.
+                    // Rincian per sumber (JIT / Self / Langsung): hanya
+                    // segmen yang tidak nol, dan hanya bila dua segmen
+                    // atau lebih tidak nol — satu segmen saja sama
+                    // dengan total hero, jadi tidak ada yang perlu
+                    // dirinci. Total gabungan saja bisa salah dibaca
+                    // sebagai yang bisa dibelanjakan saat offline,
+                    // padahal yang bergerak offline hanya porsi channel
+                    // langsung. Kartu ini khusus Lightning: saldo
+                    // on-chain tinggal di halaman Dompet On-chain di
+                    // Profil (baris on-chain di kartu terbukti membuat
+                    // kartu membengkak — QA visual build 109).
                     if (_balanceBreakdown != null &&
-                        _balanceBreakdown!.directMsat > BigInt.zero) ...[
+                        [
+                          _balanceBreakdown!.jitMsat,
+                          _balanceBreakdown!.selfFundedMsat,
+                          _balanceBreakdown!.directMsat,
+                        ].where((s) => s > BigInt.zero).length >= 2) ...[
                       const SizedBox(height: 4),
                       Text(
-                          '${context.l10n.balanceViaLsp} ${context.formatWalletAmountNumber(_balanceBreakdown!.lspMsat)} • ${context.l10n.balanceDirectChannel} ${context.formatWalletAmountNumber(_balanceBreakdown!.directMsat)} ${context.displayUnit.label}',
+                          [
+                            if (_balanceBreakdown!.jitMsat > BigInt.zero)
+                              '${context.l10n.balanceLspShort} ${context.formatWalletAmountNumber(_balanceBreakdown!.jitMsat)}',
+                            if (_balanceBreakdown!.selfFundedMsat >
+                                BigInt.zero)
+                              '${context.l10n.balanceSelf} ${context.formatWalletAmountNumber(_balanceBreakdown!.selfFundedMsat)}',
+                            if (_balanceBreakdown!.directMsat > BigInt.zero)
+                              '${context.l10n.balanceDirectShort} ${context.formatWalletAmountNumber(_balanceBreakdown!.directMsat)}',
+                          ].join(' • ') +
+                              ' ${context.displayUnit.label}',
                           style: const TextStyle(
                               fontSize: 12.5, color: Colors.white70)),
-                    ],
-                    // Saldo on-chain dompet internal: baris total tampil
-                    // permanen supaya dana hasil penutupan channel (dan
-                    // deposit) selalu punya tempat yang terlihat di kartu
-                    // — sebelumnya angka ini hanya ada di layar uji,
-                    // sehingga dana yang kembali on-chain mudah
-                    // terlupakan walau frasa backup tersimpan. Baris
-                    // turunan hanya muncul bila menambah informasi:
-                    // porsi yang belum bisa dipakai, dan dana yang
-                    // masih terkunci jeda pengaman penutupan paksa.
-                    // Angka utama kartu tetap khusus Lightning: saldo
-                    // on-chain TIDAK dijumlahkan ke dalamnya, karena
-                    // tidak bisa dibelanjakan lewat Lightning.
-                    if (_onchainOverview != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                          '${context.l10n.balanceOnchain} ${context.formatWalletAmountNumber(_onchainOverview!.totalSats * BigInt.from(1000))} ${context.displayUnit.label}',
-                          style: const TextStyle(
-                              fontSize: 12.5, color: Colors.white70)),
-                      if (_onchainOverview!.spendableSats !=
-                          _onchainOverview!.totalSats) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                            '${context.l10n.balanceSpendable} ${context.formatWalletAmountNumber(_onchainOverview!.spendableSats * BigInt.from(1000))} ${context.displayUnit.label}',
-                            style: const TextStyle(
-                                fontSize: 12.5, color: Colors.white70)),
-                      ],
-                      if (_onchainOverview!.timelockSats > BigInt.zero) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                            '${context.l10n.balanceTimelock} ${context.formatWalletAmountNumber(_onchainOverview!.timelockSats * BigInt.from(1000))} ${context.displayUnit.label}${_onchainOverview!.timelockHeight == null ? '' : ' • ${context.l10n.balanceTimelockUnlocks(_onchainOverview!.timelockHeight!)}'}',
-                            style: const TextStyle(
-                                fontSize: 12.5, color: Colors.white70)),
-                      ],
                     ],
                     const SizedBox(height: 14),
                     // Pil status: widget khusus yang isinya
@@ -2145,6 +2125,64 @@ class _ProfilePage extends StatelessWidget {
                         const SizedBox(height: 3),
                         Text(
                           context.l10n.channelsSubtitle,
+                          style: TextStyle(
+                              fontSize: 12, color: context.palette.muted),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right_rounded,
+                      color: context.palette.muted),
+                ],
+              ),
+            ),
+          ),
+          // Baris Dompet On-chain — saldo dompet on-chain internal
+          // (total, siap pakai, terkunci timelock) beserta alamat
+          // deposit. Rumah saldo on-chain sesudah barisnya di
+          // kartu saldo Beranda terbukti membuat kartu membengkak
+          // (QA visual build 109).
+          GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => OnchainScreen(lspService: lspService),
+              ),
+            ),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: context.palette.card,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: context.palette.border),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      gradient: LinearGradient(colors: [
+                        const Color(0xFF10B981).withValues(alpha: 0.25),
+                        const Color(0xFF10B981).withValues(alpha: 0.08),
+                      ]),
+                    ),
+                    child: const Icon(Icons.account_balance_wallet_rounded,
+                        color: Color(0xFF34D399), size: 20),
+                  ),
+                  const SizedBox(width: 13),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(context.l10n.onchainTitle,
+                            style: TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 3),
+                        Text(
+                          context.l10n.onchainSubtitle,
                           style: TextStyle(
                               fontSize: 12, color: context.palette.muted),
                         ),

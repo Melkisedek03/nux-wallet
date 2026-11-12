@@ -290,6 +290,66 @@ abstract class AppLocalizations {
   /// **'terbuka ~blok {height}'**
   String balanceTimelockUnlocks(int height);
 
+  /// No description provided for @balanceLspShort.
+  ///
+  /// In id, this message translates to:
+  /// **'LSP'**
+  String get balanceLspShort;
+
+  /// No description provided for @balanceSelf.
+  ///
+  /// In id, this message translates to:
+  /// **'Self'**
+  String get balanceSelf;
+
+  /// No description provided for @balanceDirectShort.
+  ///
+  /// In id, this message translates to:
+  /// **'Langsung'**
+  String get balanceDirectShort;
+
+  /// No description provided for @onchainTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Dompet On-chain'**
+  String get onchainTitle;
+
+  /// No description provided for @onchainSubtitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Saldo dan alamat deposit on-chain'**
+  String get onchainSubtitle;
+
+  /// No description provided for @onchainTotal.
+  ///
+  /// In id, this message translates to:
+  /// **'Total'**
+  String get onchainTotal;
+
+  /// No description provided for @onchainAddress.
+  ///
+  /// In id, this message translates to:
+  /// **'Alamat deposit'**
+  String get onchainAddress;
+
+  /// No description provided for @onchainAddressHint.
+  ///
+  /// In id, this message translates to:
+  /// **'Kirim NUX ke alamat ini untuk mengisi dompet on-chain.'**
+  String get onchainAddressHint;
+
+  /// No description provided for @onchainCopied.
+  ///
+  /// In id, this message translates to:
+  /// **'Alamat disalin'**
+  String get onchainCopied;
+
+  /// No description provided for @onchainLoadFailed.
+  ///
+  /// In id, this message translates to:
+  /// **'Gagal memuat dompet on-chain'**
+  String get onchainLoadFailed;
+
   /// No description provided for @networkTestnet.
   ///
   /// In id, this message translates to:
