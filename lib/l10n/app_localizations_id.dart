@@ -99,6 +99,20 @@ class AppLocalizationsId extends AppLocalizations {
   String get balanceDirectChannel => 'Channel langsung';
 
   @override
+  String get balanceOnchain => 'On-chain';
+
+  @override
+  String get balanceSpendable => 'Siap pakai';
+
+  @override
+  String get balanceTimelock => 'Menunggu timelock';
+
+  @override
+  String balanceTimelockUnlocks(int height) {
+    return 'terbuka ~blok $height';
+  }
+
+  @override
   String get networkTestnet => 'Lightning Network • Testnet';
 
   @override

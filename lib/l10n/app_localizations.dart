@@ -266,6 +266,30 @@ abstract class AppLocalizations {
   /// **'Channel langsung'**
   String get balanceDirectChannel;
 
+  /// No description provided for @balanceOnchain.
+  ///
+  /// In id, this message translates to:
+  /// **'On-chain'**
+  String get balanceOnchain;
+
+  /// No description provided for @balanceSpendable.
+  ///
+  /// In id, this message translates to:
+  /// **'Siap pakai'**
+  String get balanceSpendable;
+
+  /// No description provided for @balanceTimelock.
+  ///
+  /// In id, this message translates to:
+  /// **'Menunggu timelock'**
+  String get balanceTimelock;
+
+  /// No description provided for @balanceTimelockUnlocks.
+  ///
+  /// In id, this message translates to:
+  /// **'terbuka ~blok {height}'**
+  String balanceTimelockUnlocks(int height);
+
   /// No description provided for @networkTestnet.
   ///
   /// In id, this message translates to:

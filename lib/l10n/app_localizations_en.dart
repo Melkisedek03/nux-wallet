@@ -100,6 +100,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get balanceDirectChannel => 'Direct channels';
 
   @override
+  String get balanceOnchain => 'On-chain';
+
+  @override
+  String get balanceSpendable => 'Spendable';
+
+  @override
+  String get balanceTimelock => 'Awaiting timelock';
+
+  @override
+  String balanceTimelockUnlocks(int height) {
+    return 'unlocks ~block $height';
+  }
+
+  @override
   String get networkTestnet => 'Lightning Network • Testnet';
 
   @override
