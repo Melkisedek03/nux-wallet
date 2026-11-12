@@ -55,21 +55,26 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Menunggu timelock'), findsOneWidget);
 
-    // Nilai "10.000 nusan • terbuka ~blok 73683" boleh terlipat
-    // di batas kata, tapi tidak boleh menumpuk kata-per-kata
-    // menjadi kolom vertikal (temuan lapangan build 110: bentuk
-    // Row lama melipatnya sampai ~6 baris).
+    // Yang dijaga di sini adalah LABEL: bentuk Row lama membuat
+    // label "Menunggu timelock" kebagian lebar 0 dan menumpuk
+    // vertikal setinggi 320dp (nilai tetap satu baris horizontal
+    // dan meluber ke kanan) — koreksi NUX 13 Nov. Nilai boleh
+    // terlipat di batas kata, tapi tidak boleh menumpuk.
+    final labelFinder = find.text('Menunggu timelock');
+    expect(labelFinder, findsOneWidget);
+    final labelRect = tester.getRect(labelFinder);
+    expect(labelRect.height, lessThan(30));
+
     final valueFinder = find.textContaining('terbuka ~blok 73683');
     expect(valueFinder, findsOneWidget);
     final valueRect = tester.getRect(valueFinder);
     // Momo (font aplikasi) punya tinggi baris ~21dp pada 15sp:
     // nilai terlipat wajar jadi 3 baris pada lebar 320 — batas 70
-    // (3 baris) memisahkan ini dari bentuk Row lama yang menumpuk
-    // ~6 baris (≈126dp).
+    // (3 baris) memisahkan ini dari bentuk Row lama yang meluber
+    // 247dp ke kanan kartu.
     expect(valueRect.height, lessThan(70));
 
     // Column: label di atas, nilai di bawah.
-    final labelRect = tester.getRect(find.text('Menunggu timelock'));
     expect(labelRect.bottom, lessThanOrEqualTo(valueRect.top + 1));
   });
 

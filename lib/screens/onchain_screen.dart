@@ -224,13 +224,18 @@ class _OnchainScreenState extends State<OnchainScreen> {
 
   /// Kartu keterangan (rincian saldo): label di atas, nilai di
   /// bawah — Column, bukan Row. Bentuk Row sebelumnya membuat
-  /// kolom nilai terjepit di antara label yang panjang
-  /// ("Menunggu timelock") dan lebar kartu: nilai "jumlah • buka
-  /// ~blok N" terlipat kata-per-kata menjadi kolom vertikal
-  /// (temuan lapangan NUX, build 110). Dalam Column kedua teks
-  /// memakai lebar penuh kartu dan hanya terlipat di batas kata.
-  /// Bentuknya sengaja mengikuti kartu total di atas (label kecil
-  /// di atas, angka di bawah) supaya satu bahasa visual.
+  /// LABEL yang menumpuk vertikal, bukan nilai: nilai (tanpa
+  /// flex) diukur duluan dengan lebar intrinsik penuhnya
+  /// (~484dp untuk "jumlah • terbuka ~blok N"), sehingga label
+  /// Expanded hanya kebagian lebar 0 dan menumpuk kata-per-kata
+  /// setinggi 320dp, sementara nilai tetap satu baris horizontal
+  /// dan meluber 247dp ke kanan kartu (diukur dari bentuk Row
+  /// lama pada HP 320; koreksi NUX 13 Nov — laporan pertama
+  /// Strider sempat tertukar menyebut nilai yang menumpuk).
+  /// Dalam Column kedua teks memakai lebar penuh kartu dan hanya
+  /// terlipat di batas kata. Bentuknya sengaja mengikuti kartu
+  /// total di atas (label kecil di atas, angka di bawah) supaya
+  /// satu bahasa visual.
   Widget _row(BuildContext context, String label, String value) {
     return Container(
       width: double.infinity,
