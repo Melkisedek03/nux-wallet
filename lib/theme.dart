@@ -169,7 +169,18 @@ extension AppPaletteContext on BuildContext {
 /// Dua ThemeData aplikasi — aksen hijau emerald dipertahankan di
 /// kedua tema; yang berubah hanya permukaan & teks lewat [AppPalette].
 class AppTheme {
-  static final darkTheme = ThemeData.dark().copyWith(
+  /// Keluarga font aplikasi: Momo Trust Display (Google Fonts).
+  /// Satu-satunya sumber nama keluarga — dipakai ThemeData dan
+  /// teks brand splash screen.
+  static const String fontFamily = 'Momo Trust Display';
+
+  // Konstruktor ThemeData langsung (bukan ThemeData.dark()/light()
+  // + copyWith): fontFamily hanya ada di konstruktor, dan kedua
+  // factory itu sendiri hanyalah ThemeData(brightness: ...) —
+  // jadi perilaku identik, font tinggal ditambahkan.
+  static final darkTheme = ThemeData(
+    brightness: Brightness.dark,
+    fontFamily: fontFamily,
     scaffoldBackgroundColor: AppPalette.dark.background,
     colorScheme: const ColorScheme.dark(
       primary: Color(0xFF10B981),
@@ -179,7 +190,9 @@ class AppTheme {
     extensions: const [AppPalette.dark],
   );
 
-  static final lightTheme = ThemeData.light().copyWith(
+  static final lightTheme = ThemeData(
+    brightness: Brightness.light,
+    fontFamily: fontFamily,
     scaffoldBackgroundColor: AppPalette.light.background,
     colorScheme: const ColorScheme.light(
       primary: Color(0xFF10B981),

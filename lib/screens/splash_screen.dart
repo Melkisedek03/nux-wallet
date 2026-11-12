@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../locale_controller.dart';
+import '../theme.dart';
 
 /// Layar awal ELNUX: logo di tengah, partikel modern melayang,
 /// tagline di bawah logo, dan indikator proses boot di bawah.
@@ -60,6 +61,7 @@ class SplashScreen extends StatelessWidget {
                 const Text(
                   'ELNUX',
                   style: TextStyle(
+                    fontFamily: AppTheme.fontFamily,
                     color: Colors.white,
                     fontSize: 30,
                     fontWeight: FontWeight.w800,
@@ -70,6 +72,7 @@ class SplashScreen extends StatelessWidget {
                 Text(
                   context.l10n.splashTagline,
                   style: const TextStyle(
+                    fontFamily: AppTheme.fontFamily,
                     color: Color(0xFF6EE7B7),
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
