@@ -159,6 +159,10 @@ flutter:
     - assets/app_icon.png
     - assets/splash_logo.png
     - assets/sounds/cling.wav
+    # Teks lisensi font aplikasi — ikut ter-bundle di APK supaya
+    # setiap salinan font membawa copyright + lisensinya (syarat
+    # OFL 1.1, pasal 2). Bukan gambar/suara, tapi aset teks.
+    - assets/fonts/OFL.txt
 
   # Font aplikasi: Momo Trust Display (Google Fonts, Type Associates,
   # lisensi SIL OFL 1.1 — lihat assets/fonts/OFL.txt). Satu bobot

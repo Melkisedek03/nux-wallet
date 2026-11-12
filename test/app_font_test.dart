@@ -35,6 +35,15 @@ void main() {
     );
   });
 
+  test('teks lisensi font ikut ter-bundle di APK', () async {
+    // Syarat OFL 1.1 pasal 2: setiap salinan font harus memuat
+    // copyright + lisensi. Repo saja tidak cukup — APK yang
+    // didistribusikan juga harus membawanya.
+    final data = await rootBundle.loadString('assets/fonts/OFL.txt');
+    expect(data, contains('SIL OPEN FONT LICENSE Version 1.1'));
+    expect(data, contains('MoMo Trust Display Project Authors'));
+  });
+
   test('berkas font terdaftar dan ikut ter-bundle', () async {
     final data =
         await rootBundle.load('assets/fonts/MomoTrustDisplay-Regular.ttf');
