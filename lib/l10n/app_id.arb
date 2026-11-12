@@ -38,6 +38,17 @@
   "totalBalance": "Total Saldo",
   "balanceViaLsp": "Via LSP",
   "balanceDirectChannel": "Channel langsung",
+  "balanceOnchain": "On-chain",
+  "balanceSpendable": "Siap pakai",
+  "balanceTimelock": "Menunggu timelock",
+  "balanceTimelockUnlocks": "terbuka ~blok {height}",
+  "@balanceTimelockUnlocks": {
+    "placeholders": {
+      "height": {
+        "type": "int"
+      }
+    }
+  },
   "networkTestnet": "Lightning Network • Testnet",
   "networkMainnet": "Lightning Network • Mainnet",
   "lightningActive": "Lightning aktif — siap terima instan",

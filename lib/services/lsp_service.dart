@@ -294,6 +294,20 @@ class LspService {
     return balances.spendableOnchainBalanceSats;
   }
 
+  /// Ringkasan saldo on-chain untuk kartu saldo Beranda: total
+  /// dompet on-chain, porsi yang bisa dibelanjakan, dan dana yang
+  /// masih terkunci jeda pengaman sesudah penutupan paksa (dengan
+  /// tinggi blok terbukanya). Satu bacaan listBalances untuk
+  /// semuanya, jadi angka-angka ini konsisten satu sama lain.
+  /// Tanpa ringkasan ini, dana hasil penutupan channel tidak
+  /// punya tempat yang terlihat di UI produksi — kartu saldo
+  /// hanya menjumlahkan channel Lightning — sehingga mudah
+  /// terlupakan walau frasa backup tersimpan.
+  Future<OnchainOverview> getOnchainOverview() async {
+    _ensureRunning();
+    return onchainOverviewFromBalances(await _node!.listBalances());
+  }
+
   /// Buat offer Bolt12 statis: nominal bebas (ditentukan pembayar)
   /// dan TANPA kedaluwarsa — satu string `lno1…` yang bisa dibayar
   /// berulang kali, fondasi kode bayar Mode Toko.
@@ -581,6 +595,59 @@ BigInt countedChannelBalanceMsat(ChannelDetails channel) {
     }
   }
   return (lspMsat: lspMsat, directMsat: directMsat);
+}
+
+/// Ringkasan saldo on-chain dompet internal node (semua angka
+/// dalam nusan utuh, kecuali tinggi blok):
+/// - totalSats: seluruh saldo dompet on-chain.
+/// - spendableSats: porsi yang bisa dibelanjakan saat ini
+///   (total dikurangi cadangan anchor + dana belum terkonfirmasi).
+/// - timelockSats: dana channel tertutup yang masih terkunci jeda
+///   pengaman (belum menjadi UTXO dompet, jadi belum termasuk
+///   di totalSats).
+/// - timelockHeight: tinggi blok saat chunk terakhir dana
+///   terkunci itu bisa diklaim; null bila tidak ada dana terkunci.
+typedef OnchainOverview = ({
+  BigInt totalSats,
+  BigInt spendableSats,
+  BigInt timelockSats,
+  int? timelockHeight,
+});
+
+/// Turunkan [OnchainOverview] dari satu bacaan [BalanceDetails].
+/// Murni (tanpa node) supaya bisa diuji unit.
+///
+/// Baris timelock hanya menghitung entri
+/// ClaimableAwaitingConfirmations bersumber tutup paksa atau HTLC:
+/// - Entri tutup kerja sama (coopClose) DIKECUALIKAN — dananya
+///   sudah berupa UTXO dompet dan sudah terhitung di
+///   totalOnchainBalanceSats; memasukkannya akan menampilkan dana
+///   yang sama dua kali selama ~6 blok sesudah penutupan.
+/// - Entri channel yang masih terbuka (ClaimableOnChannelClose)
+///   bukan dana tertutup — itu perkiraan "seandainya ditutup
+///   paksa sekarang", jadi tidak masuk.
+/// - Bila beberapa entri terkunci, jumlahnya dijumlah dan tinggi
+///   yang dipakai adalah yang TERBESAR — saat chunk terakhir
+///   terbuka, bukan yang pertama.
+OnchainOverview onchainOverviewFromBalances(BalanceDetails balances) {
+  var timelockSats = BigInt.zero;
+  int? timelockHeight;
+  for (final balance in balances.lightningBalances) {
+    if (balance is LightningBalance_ClaimableAwaitingConfirmations) {
+      if (balance.source == BalanceSource.coopClose) continue;
+      timelockSats += balance.amountSatoshis;
+      final height = balance.confirmationHeight;
+      if (timelockHeight == null || height > timelockHeight) {
+        timelockHeight = height;
+      }
+    }
+  }
+  return (
+    totalSats: balances.totalOnchainBalanceSats,
+    spendableSats: balances.spendableOnchainBalanceSats,
+    timelockSats: timelockSats,
+    timelockHeight: timelockHeight,
+  );
 }
 
 /// Bentuk hex ID pembayaran. Pencocokan pembayaran antar-panggilan

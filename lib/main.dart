@@ -156,6 +156,12 @@ class _HomeScreenState extends State<HomeScreen>
   /// gabungan bisa salah dibaca sebagai kemampuan belanja offline.
   ({BigInt lspMsat, BigInt directMsat})? _balanceBreakdown;
 
+  /// Ringkasan saldo on-chain dompet internal; null = belum
+  /// terbaca. Baris totalnya tampil permanen di kartu saldo,
+  /// baris turunannya (siap pakai / terkunci timelock) hanya bila
+  /// menambah informasi.
+  OnchainOverview? _onchainOverview;
+
   /// Riwayat pembayaran terakhir dari node (terbaru di depan).
   List<PaymentDetails> _payments = const [];
 
@@ -242,9 +248,9 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  /// Baca ulang saldo Lightning dari node dan tampilkan di dashboard.
-  /// Kegagalan baca (mis. node belum sinkron) tidak mengosongkan nilai
-  /// terakhir yang berhasil dibaca.
+  /// Baca ulang saldo Lightning + ringkasan on-chain dari node dan
+  /// tampilkan di dashboard. Kegagalan baca (mis. node belum
+  /// sinkron) tidak mengosongkan nilai terakhir yang berhasil dibaca.
   Future<void> _refreshBalance() async {
     if (!lspService.isRunning) return;
     try {
@@ -252,10 +258,12 @@ class _HomeScreenState extends State<HomeScreen>
       // subtotal rincian, jadi angka kartu dan rinciannya tidak bisa
       // berbeda bacaan.
       final breakdown = await lspService.getLightningBalanceBreakdown();
+      final onchain = await lspService.getOnchainOverview();
       if (mounted) {
         setState(() {
           _balanceMsat = breakdown.lspMsat + breakdown.directMsat;
           _balanceBreakdown = breakdown;
+          _onchainOverview = onchain;
         });
       }
     } catch (_) {
@@ -789,6 +797,7 @@ class _HomeScreenState extends State<HomeScreen>
       _legacyWallet = false;
       _balanceMsat = null;
       _balanceBreakdown = null;
+      _onchainOverview = null;
       _payments = const [];
       _tabIndex = 0;
       _booting = true;
@@ -833,6 +842,7 @@ class _HomeScreenState extends State<HomeScreen>
       _legacyWallet = false;
       _balanceMsat = null;
       _balanceBreakdown = null;
+      _onchainOverview = null;
       _payments = const [];
       // Primer ulang: riwayat dompet hasil restore tidak boleh memicu
       // bunyi koin masuk saat muat pertama.
@@ -1137,6 +1147,40 @@ class _HomeScreenState extends State<HomeScreen>
                           '${context.l10n.balanceViaLsp} ${context.formatWalletAmountNumber(_balanceBreakdown!.lspMsat)} • ${context.l10n.balanceDirectChannel} ${context.formatWalletAmountNumber(_balanceBreakdown!.directMsat)} ${context.displayUnit.label}',
                           style: const TextStyle(
                               fontSize: 12.5, color: Colors.white70)),
+                    ],
+                    // Saldo on-chain dompet internal: baris total tampil
+                    // permanen supaya dana hasil penutupan channel (dan
+                    // deposit) selalu punya tempat yang terlihat di kartu
+                    // — sebelumnya angka ini hanya ada di layar uji,
+                    // sehingga dana yang kembali on-chain mudah
+                    // terlupakan walau frasa backup tersimpan. Baris
+                    // turunan hanya muncul bila menambah informasi:
+                    // porsi yang belum bisa dipakai, dan dana yang
+                    // masih terkunci jeda pengaman penutupan paksa.
+                    // Angka utama kartu tetap khusus Lightning: saldo
+                    // on-chain TIDAK dijumlahkan ke dalamnya, karena
+                    // tidak bisa dibelanjakan lewat Lightning.
+                    if (_onchainOverview != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                          '${context.l10n.balanceOnchain} ${context.formatWalletAmountNumber(_onchainOverview!.totalSats * BigInt.from(1000))} ${context.displayUnit.label}',
+                          style: const TextStyle(
+                              fontSize: 12.5, color: Colors.white70)),
+                      if (_onchainOverview!.spendableSats !=
+                          _onchainOverview!.totalSats) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                            '${context.l10n.balanceSpendable} ${context.formatWalletAmountNumber(_onchainOverview!.spendableSats * BigInt.from(1000))} ${context.displayUnit.label}',
+                            style: const TextStyle(
+                                fontSize: 12.5, color: Colors.white70)),
+                      ],
+                      if (_onchainOverview!.timelockSats > BigInt.zero) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                            '${context.l10n.balanceTimelock} ${context.formatWalletAmountNumber(_onchainOverview!.timelockSats * BigInt.from(1000))} ${context.displayUnit.label}${_onchainOverview!.timelockHeight == null ? '' : ' • ${context.l10n.balanceTimelockUnlocks(_onchainOverview!.timelockHeight!)}'}',
+                            style: const TextStyle(
+                                fontSize: 12.5, color: Colors.white70)),
+                      ],
                     ],
                     const SizedBox(height: 14),
                     // Pil status: widget khusus yang isinya

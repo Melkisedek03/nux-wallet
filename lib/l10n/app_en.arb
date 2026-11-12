@@ -38,6 +38,17 @@
   "totalBalance": "Total Balance",
   "balanceViaLsp": "Via LSP",
   "balanceDirectChannel": "Direct channels",
+  "balanceOnchain": "On-chain",
+  "balanceSpendable": "Spendable",
+  "balanceTimelock": "Awaiting timelock",
+  "balanceTimelockUnlocks": "unlocks ~block {height}",
+  "@balanceTimelockUnlocks": {
+    "placeholders": {
+      "height": {
+        "type": "int"
+      }
+    }
+  },
   "networkTestnet": "Lightning Network • Testnet",
   "networkMainnet": "Lightning Network • Mainnet",
   "lightningActive": "Lightning active — ready for instant receive",
