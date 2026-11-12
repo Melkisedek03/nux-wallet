@@ -222,6 +222,15 @@ class _OnchainScreenState extends State<OnchainScreen> {
     );
   }
 
+  /// Kartu keterangan (rincian saldo): label di atas, nilai di
+  /// bawah — Column, bukan Row. Bentuk Row sebelumnya membuat
+  /// kolom nilai terjepit di antara label yang panjang
+  /// ("Menunggu timelock") dan lebar kartu: nilai "jumlah • buka
+  /// ~blok N" terlipat kata-per-kata menjadi kolom vertikal
+  /// (temuan lapangan NUX, build 110). Dalam Column kedua teks
+  /// memakai lebar penuh kartu dan hanya terlipat di batas kata.
+  /// Bentuknya sengaja mengikuti kartu total di atas (label kecil
+  /// di atas, angka di bawah) supaya satu bahasa visual.
   Widget _row(BuildContext context, String label, String value) {
     return Container(
       width: double.infinity,
@@ -232,17 +241,16 @@ class _OnchainScreenState extends State<OnchainScreen> {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: context.palette.border),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Text(label,
-                style: TextStyle(
-                    fontSize: 14, color: context.palette.label)),
-          ),
-          const SizedBox(width: 12),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 13, color: context.palette.muted)),
+          const SizedBox(height: 4),
           Text(value,
               style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 15,
                   fontWeight: FontWeight.w600,
                   color: context.palette.label)),
         ],
