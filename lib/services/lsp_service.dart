@@ -479,13 +479,14 @@ class LspService {
   }
 
   /// Rincian saldo Lightning per sumber channel: subtotal channel
-  /// yang pihak seberangnya node LSP dan subtotal channel langsung
-  /// (antar-HP). Jumlah keduanya selalu sama dengan
-  /// [getLightningBalance]. Rincian ini penting karena kemampuan
-  /// belanja tidak melebur seperti angkanya: saat offline, hanya
-  /// porsi channel langsung yang bisa bergerak, jadi kartu saldo
-  /// yang hanya menampilkan total gabungan menyesatkan.
-  Future<({BigInt lspMsat, BigInt directMsat})>
+  /// JIT (didanai LSP), subtotal channel self-funded ke LSP
+  /// (didanai sendiri), dan subtotal channel langsung (antar-HP).
+  /// Jumlah ketiganya selalu sama dengan [getLightningBalance].
+  /// Rincian ini penting karena kemampuan belanja tidak melebur
+  /// seperti angkanya: saat offline, hanya porsi channel langsung
+  /// yang bisa bergerak, jadi kartu saldo yang hanya menampilkan
+  /// total gabungan menyesatkan.
+  Future<({BigInt jitMsat, BigInt selfFundedMsat, BigInt directMsat})>
   getLightningBalanceBreakdown() async {
     _ensureRunning();
     return splitBalanceBySource(await listChannels(), _lspNodeId ?? '');
@@ -573,28 +574,45 @@ BigInt countedChannelBalanceMsat(ChannelDetails channel) {
   return outboundMsat + reserveMsat;
 }
 
-/// Pisahkan total saldo channel menjadi subtotal per sumber:
-/// channel yang pihak seberangnya node LSP [lspNodeIdHex] masuk
-/// lspMsat, sisanya (channel langsung antar-HP) masuk directMsat.
-/// Per channel memakai [countedChannelBalanceMsat], jadi subtotal
-/// mewarisi batas cadangan yang sama dan jumlah kedua subtotal
-/// selalu sama dengan total kartu saldo.
-({BigInt lspMsat, BigInt directMsat}) splitBalanceBySource(
+/// Pisahkan total saldo channel menjadi tiga subtotal per sumber:
+/// - jitMsat: channel ke node LSP [lspNodeIdHex] yang didanai LSP
+///   (inbound — lahir dari invoice JIT).
+/// - selfFundedMsat: channel ke node LSP yang didanai sendiri
+///   (outbound — dibuka dari dompet on-chain sendiri).
+/// - directMsat: channel langsung antar-HP (pihak seberang bukan
+///   node LSP), apa pun arahnya — penerima channel langsung tetap
+///   masuk sini, bukan ke JIT.
+/// Pembedanya adalah [ChannelDetails.isOutbound], yang membedakan
+/// siapa yang mendanai pembukaan channel. Per channel memakai
+/// [countedChannelBalanceMsat], jadi subtotal mewarisi batas
+/// cadangan yang sama dan jumlah ketiga subtotal selalu sama
+/// dengan total kartu saldo.
+({BigInt jitMsat, BigInt selfFundedMsat, BigInt directMsat})
+splitBalanceBySource(
   List<ChannelDetails> channels,
   String lspNodeIdHex,
 ) {
   final lsp = lspNodeIdHex.toLowerCase();
-  var lspMsat = BigInt.zero;
+  var jitMsat = BigInt.zero;
+  var selfFundedMsat = BigInt.zero;
   var directMsat = BigInt.zero;
   for (final channel in channels) {
     final amount = countedChannelBalanceMsat(channel);
     if (channel.counterpartyNodeId.hex.toLowerCase() == lsp) {
-      lspMsat += amount;
+      if (channel.isOutbound) {
+        selfFundedMsat += amount;
+      } else {
+        jitMsat += amount;
+      }
     } else {
       directMsat += amount;
     }
   }
-  return (lspMsat: lspMsat, directMsat: directMsat);
+  return (
+    jitMsat: jitMsat,
+    selfFundedMsat: selfFundedMsat,
+    directMsat: directMsat,
+  );
 }
 
 /// Ringkasan saldo on-chain dompet internal node (semua angka

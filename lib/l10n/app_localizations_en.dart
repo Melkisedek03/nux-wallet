@@ -114,6 +114,37 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get balanceLspShort => 'LSP';
+
+  @override
+  String get balanceSelf => 'Self';
+
+  @override
+  String get balanceDirectShort => 'Direct';
+
+  @override
+  String get onchainTitle => 'On-chain Wallet';
+
+  @override
+  String get onchainSubtitle => 'On-chain balance and deposit address';
+
+  @override
+  String get onchainTotal => 'Total';
+
+  @override
+  String get onchainAddress => 'Deposit address';
+
+  @override
+  String get onchainAddressHint =>
+      'Send NUX to this address to fund the on-chain wallet.';
+
+  @override
+  String get onchainCopied => 'Address copied';
+
+  @override
+  String get onchainLoadFailed => 'Could not load the on-chain wallet';
+
+  @override
   String get networkTestnet => 'Lightning Network • Testnet';
 
   @override

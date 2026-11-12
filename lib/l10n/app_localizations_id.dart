@@ -113,6 +113,37 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String get balanceLspShort => 'LSP';
+
+  @override
+  String get balanceSelf => 'Self';
+
+  @override
+  String get balanceDirectShort => 'Langsung';
+
+  @override
+  String get onchainTitle => 'Dompet On-chain';
+
+  @override
+  String get onchainSubtitle => 'Saldo dan alamat deposit on-chain';
+
+  @override
+  String get onchainTotal => 'Total';
+
+  @override
+  String get onchainAddress => 'Alamat deposit';
+
+  @override
+  String get onchainAddressHint =>
+      'Kirim NUX ke alamat ini untuk mengisi dompet on-chain.';
+
+  @override
+  String get onchainCopied => 'Alamat disalin';
+
+  @override
+  String get onchainLoadFailed => 'Gagal memuat dompet on-chain';
+
+  @override
   String get networkTestnet => 'Lightning Network • Testnet';
 
   @override

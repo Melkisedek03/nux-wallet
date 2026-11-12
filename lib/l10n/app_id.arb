@@ -49,6 +49,16 @@
       }
     }
   },
+  "balanceLspShort": "LSP",
+  "balanceSelf": "Self",
+  "balanceDirectShort": "Langsung",
+  "onchainTitle": "Dompet On-chain",
+  "onchainSubtitle": "Saldo dan alamat deposit on-chain",
+  "onchainTotal": "Total",
+  "onchainAddress": "Alamat deposit",
+  "onchainAddressHint": "Kirim NUX ke alamat ini untuk mengisi dompet on-chain.",
+  "onchainCopied": "Alamat disalin",
+  "onchainLoadFailed": "Gagal memuat dompet on-chain",
   "networkTestnet": "Lightning Network • Testnet",
   "networkMainnet": "Lightning Network • Mainnet",
   "lightningActive": "Lightning aktif — siap terima instan",
