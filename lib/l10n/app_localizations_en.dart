@@ -1969,6 +1969,42 @@ class AppLocalizationsEn extends AppLocalizations {
       'Connect two phones over Bluetooth (experimental)';
 
   @override
+  String get offlineModeTitle => 'Offline Mode';
+
+  @override
+  String get offlineModeOff => 'Pay without internet with a nearby device';
+
+  @override
+  String get offlineModeSearching => 'Looking for nearby devices…';
+
+  @override
+  String get offlineModeConnect => 'Connect';
+
+  @override
+  String get offlineModeConnected => 'Connected';
+
+  @override
+  String offlineModeConnectedTo(String name) {
+    return 'Connected to $name';
+  }
+
+  @override
+  String get offlineModeMyCode => 'My device code';
+
+  @override
+  String get offlineModeNoPath => 'No payment path yet';
+
+  @override
+  String get offlineModeReady => 'Path ready — you can pay without internet';
+
+  @override
+  String get offlineModeEndSession => 'End Session';
+
+  @override
+  String get offlineModeStartFailed =>
+      'Offline Mode failed to start. Try again.';
+
+  @override
   String get offlineIntro =>
       'Stage 2 test: two ELNUX nodes connect as peers over a Bluetooth bridge, open a direct channel, then pay over Lightning while both phones are offline. Open the channel while the phones are side by side and the funder (the opening phone) is online; offline payments use a channel that is already ready. Turn on Bluetooth and Location services on both phones before starting.';
 

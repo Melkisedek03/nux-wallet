@@ -173,6 +173,22 @@ class OfflineBridgeService {
   /// selama ia tampil dan melepasnya saat ditutup.
   void Function()? onChanged;
 
+  /// Pendengar tambahan perubahan keadaan — [onChanged] hanya
+  /// menampung satu callback, padahal baris Mode Offline di
+  /// Profil dan layar Mode Offline harus hidup BERSAMAAN (baris
+  /// tetap terpasang di balik layar yang terbuka di atasnya).
+  /// Keduanya berlangganan di sini; [onChanged] tetap bekerja
+  /// seperti sebelumnya untuk layar uji.
+  final List<void Function()> _listeners = [];
+
+  void addListener(void Function() listener) {
+    if (!_listeners.contains(listener)) _listeners.add(listener);
+  }
+
+  void removeListener(void Function() listener) {
+    _listeners.remove(listener);
+  }
+
   /// Catatan kejadian terbaca manusia untuk layar uji.
   void Function(String message)? onLog;
 
@@ -271,7 +287,12 @@ class OfflineBridgeService {
   bool get isLinked =>
       phase == OfflineBridgePhase.linked && linkedEndpointId != null;
 
-  void _notify() => onChanged?.call();
+  void _notify() {
+    onChanged?.call();
+    for (final listener in List.of(_listeners)) {
+      listener();
+    }
+  }
 
   void _log(String message) {
     logHistory.add(message);

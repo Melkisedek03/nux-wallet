@@ -969,6 +969,24 @@
   "storeReportPointsRedeemed": "Points Redeemed",
   "offlineSpike": "Lightning Offline Test",
   "offlineSpikeSubtitle": "Connect two phones over Bluetooth (experimental)",
+  "offlineModeTitle": "Offline Mode",
+  "offlineModeOff": "Pay without internet with a nearby device",
+  "offlineModeSearching": "Looking for nearby devices…",
+  "offlineModeConnect": "Connect",
+  "offlineModeConnected": "Connected",
+  "offlineModeConnectedTo": "Connected to {name}",
+  "@offlineModeConnectedTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineModeMyCode": "My device code",
+  "offlineModeNoPath": "No payment path yet",
+  "offlineModeReady": "Path ready — you can pay without internet",
+  "offlineModeEndSession": "End Session",
+  "offlineModeStartFailed": "Offline Mode failed to start. Try again.",
   "offlineIntro": "Stage 2 test: two ELNUX nodes connect as peers over a Bluetooth bridge, open a direct channel, then pay over Lightning while both phones are offline. Open the channel while the phones are side by side and the funder (the opening phone) is online; offline payments use a channel that is already ready. Turn on Bluetooth and Location services on both phones before starting.",
   "offlineOwnNodeId": "This Phone's Node ID",
   "offlineNodeNotRunning": "Node is not running yet",
