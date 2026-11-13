@@ -24,6 +24,7 @@ import 'screens/send_screen.dart';
 import 'screens/channels_screen.dart';
 import 'screens/onchain_screen.dart';
 import 'screens/offline_spike_screen.dart';
+import 'screens/offline_mode_screen.dart';
 import 'screens/printer_settings_screen.dart';
 import 'screens/store_mode_screen.dart';
 import 'screens/transaction_detail_screen.dart';
@@ -2195,6 +2196,15 @@ class _ProfilePage extends StatelessWidget {
               ),
             ),
           ),
+          // Baris Mode Offline — tuas produksi sesi jembatan mode
+          // gabung (PR B rancangan tuas Mode Offline): subjudulnya
+          // memantulkan keadaan sesi secara langsung. Baris ini
+          // hanya tampil di build testnet, sama seperti baris Uji
+          // Offline di bawahnya, sampai keputusan soak mainnet
+          // diambil. Layar Uji Offline tetap tinggal sebagai
+          // permukaan diagnostik testnet.
+          if (isTestnet)
+            OfflineModeRow(lspService: lspService, bridge: offlineBridge),
           // Baris Uji Offline — spike jembatan Bluetooth antar-HP
           // (tahap 1: dua node tersambung sebagai peer tanpa
           // internet). Layar eksperimental khusus testnet; tidak

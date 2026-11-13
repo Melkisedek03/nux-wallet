@@ -1972,6 +1972,42 @@ class AppLocalizationsId extends AppLocalizations {
       'Sambung dua HP lewat Bluetooth (eksperimental)';
 
   @override
+  String get offlineModeTitle => 'Mode Offline';
+
+  @override
+  String get offlineModeOff =>
+      'Bayar tanpa internet dengan perangkat di dekatmu';
+
+  @override
+  String get offlineModeSearching => 'Mencari perangkat di dekat…';
+
+  @override
+  String get offlineModeConnect => 'Sambungkan';
+
+  @override
+  String get offlineModeConnected => 'Terhubung';
+
+  @override
+  String offlineModeConnectedTo(String name) {
+    return 'Terhubung ke $name';
+  }
+
+  @override
+  String get offlineModeMyCode => 'Kode perangkat saya';
+
+  @override
+  String get offlineModeNoPath => 'Jalur pembayaran belum ada';
+
+  @override
+  String get offlineModeReady => 'Jalur siap — bisa bayar tanpa internet';
+
+  @override
+  String get offlineModeEndSession => 'Akhiri Sesi';
+
+  @override
+  String get offlineModeStartFailed => 'Mode Offline gagal dimulai. Coba lagi.';
+
+  @override
   String get offlineIntro =>
       'Uji tahap 2: dua node ELNUX tersambung sebagai peer lewat jembatan Bluetooth, membuka channel langsung, lalu membayar Lightning saat kedua HP offline. Buka channel-nya saat kedua HP berdampingan dan pendana (HP yang membuka) sedang online; pembayaran offline memakai channel yang sudah siap. Nyalakan Bluetooth dan layanan Lokasi di kedua HP sebelum mulai.';
 

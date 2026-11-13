@@ -3602,6 +3602,72 @@ abstract class AppLocalizations {
   /// **'Sambung dua HP lewat Bluetooth (eksperimental)'**
   String get offlineSpikeSubtitle;
 
+  /// No description provided for @offlineModeTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Mode Offline'**
+  String get offlineModeTitle;
+
+  /// No description provided for @offlineModeOff.
+  ///
+  /// In id, this message translates to:
+  /// **'Bayar tanpa internet dengan perangkat di dekatmu'**
+  String get offlineModeOff;
+
+  /// No description provided for @offlineModeSearching.
+  ///
+  /// In id, this message translates to:
+  /// **'Mencari perangkat di dekat…'**
+  String get offlineModeSearching;
+
+  /// No description provided for @offlineModeConnect.
+  ///
+  /// In id, this message translates to:
+  /// **'Sambungkan'**
+  String get offlineModeConnect;
+
+  /// No description provided for @offlineModeConnected.
+  ///
+  /// In id, this message translates to:
+  /// **'Terhubung'**
+  String get offlineModeConnected;
+
+  /// No description provided for @offlineModeConnectedTo.
+  ///
+  /// In id, this message translates to:
+  /// **'Terhubung ke {name}'**
+  String offlineModeConnectedTo(String name);
+
+  /// No description provided for @offlineModeMyCode.
+  ///
+  /// In id, this message translates to:
+  /// **'Kode perangkat saya'**
+  String get offlineModeMyCode;
+
+  /// No description provided for @offlineModeNoPath.
+  ///
+  /// In id, this message translates to:
+  /// **'Jalur pembayaran belum ada'**
+  String get offlineModeNoPath;
+
+  /// No description provided for @offlineModeReady.
+  ///
+  /// In id, this message translates to:
+  /// **'Jalur siap — bisa bayar tanpa internet'**
+  String get offlineModeReady;
+
+  /// No description provided for @offlineModeEndSession.
+  ///
+  /// In id, this message translates to:
+  /// **'Akhiri Sesi'**
+  String get offlineModeEndSession;
+
+  /// No description provided for @offlineModeStartFailed.
+  ///
+  /// In id, this message translates to:
+  /// **'Mode Offline gagal dimulai. Coba lagi.'**
+  String get offlineModeStartFailed;
+
   /// No description provided for @offlineIntro.
   ///
   /// In id, this message translates to:
