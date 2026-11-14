@@ -507,6 +507,15 @@ class AppLocalizationsId extends AppLocalizations {
       'Terima kiriman terlebih dahulu supaya saldomu melewati cadangan — sesudah itu kamu bisa mengirim lagi.';
 
   @override
+  String sendOfflinePeerLimit(String amount) {
+    return 'Jumlah ini melebihi yang bisa dikirim ke perangkat yang tertaut. Batasnya sekarang $amount.';
+  }
+
+  @override
+  String get sendOfflineRouteFailed =>
+      'Jalur ke perangkat yang tertaut tidak bisa membawa jumlah ini. Coba jumlah yang lebih kecil.';
+
+  @override
   String get backToHome => 'Kembali ke Beranda';
 
   @override
@@ -2000,6 +2009,11 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get offlineModeReady => 'Jalur siap — bisa bayar tanpa internet';
+
+  @override
+  String offlineModeCanSendUpTo(String amount) {
+    return 'Bisa kirim sampai $amount';
+  }
 
   @override
   String get offlineModeEndSession => 'Akhiri Sesi';
