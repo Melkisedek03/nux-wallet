@@ -992,6 +992,18 @@ abstract class AppLocalizations {
   /// **'Terima kiriman terlebih dahulu supaya saldomu melewati cadangan — sesudah itu kamu bisa mengirim lagi.'**
   String get sendZeroSendableHint;
 
+  /// No description provided for @sendOfflinePeerLimit.
+  ///
+  /// In id, this message translates to:
+  /// **'Jumlah ini melebihi yang bisa dikirim ke perangkat yang tertaut. Batasnya sekarang {amount}.'**
+  String sendOfflinePeerLimit(String amount);
+
+  /// No description provided for @sendOfflineRouteFailed.
+  ///
+  /// In id, this message translates to:
+  /// **'Jalur ke perangkat yang tertaut tidak bisa membawa jumlah ini. Coba jumlah yang lebih kecil.'**
+  String get sendOfflineRouteFailed;
+
   /// No description provided for @backToHome.
   ///
   /// In id, this message translates to:
@@ -3655,6 +3667,12 @@ abstract class AppLocalizations {
   /// In id, this message translates to:
   /// **'Jalur siap — bisa bayar tanpa internet'**
   String get offlineModeReady;
+
+  /// No description provided for @offlineModeCanSendUpTo.
+  ///
+  /// In id, this message translates to:
+  /// **'Bisa kirim sampai {amount}'**
+  String offlineModeCanSendUpTo(String amount);
 
   /// No description provided for @offlineModeEndSession.
   ///

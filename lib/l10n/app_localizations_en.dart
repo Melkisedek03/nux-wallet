@@ -508,6 +508,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'Receive a payment first so your balance rises above the reserve — after that you can send again.';
 
   @override
+  String sendOfflinePeerLimit(String amount) {
+    return 'This amount exceeds what can be sent to the linked device. The limit right now is $amount.';
+  }
+
+  @override
+  String get sendOfflineRouteFailed =>
+      'The path to the linked device cannot carry this amount. Try a smaller amount.';
+
+  @override
   String get backToHome => 'Back to Home';
 
   @override
@@ -1996,6 +2005,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get offlineModeReady => 'Path ready — you can pay without internet';
+
+  @override
+  String offlineModeCanSendUpTo(String amount) {
+    return 'Can send up to $amount';
+  }
 
   @override
   String get offlineModeEndSession => 'End Session';

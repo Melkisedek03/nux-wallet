@@ -60,6 +60,14 @@ String normalizeInvoice(String raw) {
 /// dibiarkan gagal di node sesudah dicoba (keputusan NUX
 /// 31 Okt 2026, turunan temuan RouteNotFound: saldo 995 yang
 /// batas kirimnya 0 gagal berulang tanpa penjelasan).
+///
+/// Saat sesi jembatan offline aktif dan peer tertaut adalah
+/// satu-satunya peer yang tersambung, angka "bisa dikirim" dan
+/// pemeriksaan pra-bayar invoice Bolt11 dibatasi ke channel
+/// peer itu saja — channel LSP yang tidak terjangkau tidak lagi
+/// ikut menjanjikan saldo yang tidak bisa bergerak (temuan
+/// lapangan 13 Nov 2026). Offer Bolt12 memakai angka gabungan
+/// seperti sebelumnya.
 class SendScreen extends StatefulWidget {
   final LspService lspService;
 
@@ -125,10 +133,27 @@ class _SendScreenState extends State<SendScreen> {
   /// dengan yang tampil di Beranda. Null selama belum terbaca.
   BigInt? _balanceMsat;
 
-  /// Kapasitas kirim (msat) dari channel yang usable — batas
-  /// kirim sesungguhnya sesudah cadangan pengaman dikeluarkan
-  /// node. Null selama belum terbaca.
+  /// Kapasitas kirim EFEKTIF (msat) yang tampil di baris "Bisa
+  /// dikirim": angka lingkup peer saat pembatasan offline aktif
+  /// ([_linkedSendableMsat] tidak null), angka gabungan bila
+  /// tidak. Null selama belum terbaca.
   BigInt? _sendableMsat;
+
+  /// Kapasitas kirim gabungan (msat) dari SEMUA channel usable —
+  /// angka yang dinilai pemeriksaan pra-bayar sebagai batas
+  /// cadangan, dan bahan keadaan nol-bisa-kirim. Disimpan
+  /// terpisah dari [_sendableMsat] supaya penilaian cadangan
+  /// tidak tertukar dengan angka lingkup peer.
+  BigInt? _meltedSendableMsat;
+
+  /// Kapasitas kirim (msat) hanya dari channel usable ke peer
+  /// yang tertaut dalam sesi jembatan offline — null bila
+  /// pembatasan tidak aktif (tidak ada sesi, tidak tertaut, peer
+  /// tertaut belum tersambung di node, atau ada peer lain yang
+  /// tersambung sehingga jalur LSP tetap bisa dipakai). Bila
+  /// tidak null, inilah batas yang dipakai pemeriksaan pra-bayar
+  /// invoice Bolt11 dan yang tampil di baris "Bisa dikirim".
+  BigInt? _linkedSendableMsat;
 
   /// True bila ada channel usable; tanpa itu kapasitas kirim
   /// tidak bisa dinilai (bisa jadi sebabnya koneksi, bukan
@@ -145,6 +170,11 @@ class _SendScreenState extends State<SendScreen> {
   /// ditangkap bersama supaya kotaknya konsisten walau angka
   /// layar disegarkan sesudahnya.
   BigInt? _reserveSendableMsat;
+
+  /// Kapasitas kirim lingkup peer (msat) pada saat sebuah
+  /// percobaan bayar tertahan batas peer; mengisi kotak
+  /// penjelasan batas peer. Null = kotak tidak tampil.
+  BigInt? _peerLimitSendableMsat;
 
   @override
   void initState() {
@@ -216,10 +246,14 @@ class _SendScreenState extends State<SendScreen> {
     try {
       final channels = await widget.lspService.listChannels();
       final balance = await widget.lspService.getLightningBalance();
+      final linkedSendable = await _linkedPeerSendable(channels);
       if (!mounted) return;
+      final melted = totalUsableOutboundCapacityMsat(channels);
       setState(() {
         _balanceMsat = balance;
-        _sendableMsat = totalUsableOutboundCapacityMsat(channels);
+        _meltedSendableMsat = melted;
+        _linkedSendableMsat = linkedSendable;
+        _sendableMsat = linkedSendable ?? melted;
         _hasUsableChannel = channels.any((c) => c.isUsable);
       });
     } catch (_) {
@@ -227,15 +261,86 @@ class _SendScreenState extends State<SendScreen> {
     }
   }
 
+  /// Kapasitas kirim lingkup peer untuk [channels]: jumlah
+  /// kapasitas keluar channel usable ke peer yang tertaut dalam
+  /// sesi jembatan offline — ATAU null bila pembatasan tidak
+  /// berlaku, dan pemanggil memakai angka gabungan seperti biasa.
+  ///
+  /// Pembatasan berlaku bila sesi jembatan aktif, perangkat
+  /// tertaut, DAN peer tertaut itu satu-satunya peer yang
+  /// tersambung ke node. Syarat terakhir inilah yang menjaga
+  /// perilaku online: selama peer LSP (atau peer lain) masih
+  /// tersambung, pembayaran bisa menempuh jalur itu, jadi angka
+  /// gabungan tetap benar. Saat offline hanya peer tertaut yang
+  /// tersambung, sehingga channel ke dialah satu-satunya jalur
+  /// yang bisa dipakai — angka gabungan yang ikut menghitung
+  /// channel LSP menjadi janji kosong (temuan lapangan 13 Nov
+  /// 2026: saldo kirim tampil besar, pembayaran gagal tanpa rute
+  /// karena channel langsung tinggal 679.000 nusan yang bisa
+  /// dikirim).
+  ///
+  /// Kegagalan membaca daftar peer mematikan pembatasan
+  /// (fail-open): node tetap penentu akhir seperti sebelumnya.
+  Future<BigInt?> _linkedPeerSendable(List<ChannelDetails> channels) async {
+    final bridge = widget.bridge;
+    final linkedId = bridge?.peerNodeId;
+    if (bridge == null ||
+        !bridge.sessionActive ||
+        !bridge.isLinked ||
+        linkedId == null) {
+      return null;
+    }
+    List<PeerDetails> peers;
+    try {
+      peers = await widget.lspService.listPeerDetails();
+    } catch (_) {
+      return null;
+    }
+    final peer = linkedId.toLowerCase();
+    var linkedConnected = false;
+    var othersConnected = false;
+    for (final p in peers) {
+      if (!p.isConnected) continue;
+      if (p.nodeId.hex.toLowerCase() == peer) {
+        linkedConnected = true;
+      } else {
+        othersConnected = true;
+      }
+    }
+    if (!linkedConnected || othersConnected) return null;
+    return usableOutboundCapacityToPeer(channels, linkedId);
+  }
+
+  /// Sesi jembatan offline sedang aktif DAN perangkat tertaut —
+  /// konteks tempat pesan kegagalan tanpa-rute berlaku dan tempat
+  /// pemeriksaan pra-bayar bisa dibatasi ke peer tertaut. Tanpa
+  /// tautan, tidak ada "perangkat ini" yang bisa disebut di
+  /// pesan mana pun.
+  bool get _offlineLinked =>
+      widget.bridge?.sessionActive == true && widget.bridge?.isLinked == true;
+
   /// Keadaan "saldo ada tetapi yang bisa dikirim nol karena
   /// cadangan" — satu-satunya keadaan yang selalu menampilkan
   /// penjelasan cadangan tanpa menunggu percobaan bayar.
+  /// Dinilai dari angka GABUNGAN: cadangan adalah soal saldo
+  /// menyeluruh, bukan soal peer.
   bool get _zeroSendable =>
       _hasUsableChannel &&
-      _sendableMsat != null &&
-      _sendableMsat == BigInt.zero &&
+      _meltedSendableMsat != null &&
+      _meltedSendableMsat == BigInt.zero &&
       _balanceMsat != null &&
       _balanceMsat! > BigInt.zero;
+
+  /// Keadaan "saldo kirim gabungan ada, tetapi yang bisa dikirim
+  /// ke perangkat tertaut nol": channel langsung sudah habis
+  /// terpakai (atau belum ada jalurnya) sementara channel lain
+  /// masih bersaldo — formulir jalan buntu tanpa penjelasan,
+  /// sama seperti keadaan nol-bisa-kirim karena cadangan.
+  bool get _zeroLinkedSendable =>
+      _linkedSendableMsat != null &&
+      _linkedSendableMsat == BigInt.zero &&
+      _meltedSendableMsat != null &&
+      _meltedSendableMsat! > BigInt.zero;
 
   /// Getar singkat saat dialog konfirmasi muncul — penanda fisik
   /// bahwa ketukan Bayar belum mengirim apa-apa, masih bisa dibatalkan.
@@ -287,7 +392,14 @@ class _SendScreenState extends State<SendScreen> {
     // sebelumnya; node tetap penentu akhirnya.
     final amountMsat = parseBolt11AmountMsat(invoice);
     if (amountMsat != null) {
-      if (!await _checkSendable(amountMsat)) return;
+      // Invoice Bolt11 dinilai dengan pembatasan lingkup peer
+      // bila berlaku (sesi offline, hanya peer tertaut yang
+      // tersambung): nominal yang muat di angka gabungan tetapi
+      // melewati kapasitas channel ke perangkat itu ditolak di
+      // sini, bukan dibiarkan gagal tanpa rute di node.
+      if (!await _checkSendable(amountMsat, scopeToLinkedPeer: true)) {
+        return;
+      }
     }
     // Deskripsi/catatan invoice (tag 'd') — ditampilkan di dialog
     // konfirmasi dan disimpan sebagai judul pembayaran ini di
@@ -355,6 +467,13 @@ class _SendScreenState extends State<SendScreen> {
     if (confirmed == true && mounted) {
       await _pay(
         () => widget.lspService.payInvoice(invoice),
+        // Konteks pesan tanpa-rute: sesi offline tertaut DAN
+        // invoice belum kedaluwarsa — invoice kedaluwarsa gagal
+        // karena waktunya, bukan karena rutenya, jadi pesannya
+        // tidak boleh menyalahkan jalur.
+        offlineRouteContext:
+            _offlineLinked &&
+            !(bolt11Info?.isExpiredAt(DateTime.now()) ?? false),
         onSent: () async {
           // Pembayaran sudah diterima node: tautkan deskripsi
           // invoice ke hash-nya supaya riwayat berjudul catatan
@@ -387,40 +506,65 @@ class _SendScreenState extends State<SendScreen> {
   /// offer Bolt12: nilai [amountMsat] terhadap saldo & kapasitas
   /// kirim terbaru. Mengembalikan true bila pembayaran boleh
   /// lanjut ke dialog konfirmasi; false berarti layar sudah
-  /// menyatakan alasannya (saldo tidak cukup / tertahan cadangan)
-  /// atau layar sudah tidak aktif. Bila angka saldo/kapasitas
-  /// belum terbaca, pemeriksaan tidak bisa dinilai — pembayaran
-  /// dilanjutkan dan node menjadi penentu, seperti perilaku lama.
-  Future<bool> _checkSendable(BigInt amountMsat) async {
+  /// menyatakan alasannya (saldo tidak cukup / tertahan cadangan
+  /// / melewati batas peer) atau layar sudah tidak aktif. Bila
+  /// angka saldo/kapasitas belum terbaca, pemeriksaan tidak bisa
+  /// dinilai — pembayaran dilanjutkan dan node menjadi penentu,
+  /// seperti perilaku lama.
+  ///
+  /// [scopeToLinkedPeer] (hanya jalur Bolt11) mengaktifkan
+  /// penilaian tambahan terhadap kapasitas kirim lingkup peer
+  /// bila pembatasan offline berlaku: nominal yang muat di angka
+  /// gabungan tetapi melewati angka lingkup ditolak sebagai
+  /// batas peer, bukan dibiarkan gagal tanpa rute di node.
+  /// Offer Bolt12 memakai perilaku lama (angka gabungan) —
+  /// penerima offline sudah dipaksa Bolt11 oleh layar Terima,
+  /// jadi kasus bayar-ke-peer-tertaut praktis selalu Bolt11.
+  Future<bool> _checkSendable(
+    BigInt amountMsat, {
+    bool scopeToLinkedPeer = false,
+  }) async {
     await _refreshSendable();
     if (!mounted) return false;
     final balance = _balanceMsat;
-    final sendable = _sendableMsat;
+    final sendable = _meltedSendableMsat;
     if (balance == null || sendable == null) return true;
     final check = evaluateSend(
       amountMsat: amountMsat,
       balanceMsat: balance,
       usableOutboundMsat: sendable,
       hasUsableChannel: _hasUsableChannel,
+      scopedUsableOutboundMsat: scopeToLinkedPeer ? _linkedSendableMsat : null,
     );
     if (check == SendCheck.insufficientBalance) {
       setState(() {
         _error = context.l10n.sendInsufficientBalance;
         _reserveHeldMsat = null;
         _reserveSendableMsat = null;
+        _peerLimitSendableMsat = null;
       });
       return false;
     }
     if (check == SendCheck.reserveHeld) {
       // Bila kotak nol-bisa-kirim sudah tampil, penjelasan
       // yang sama sudah ada di layar — cukup jangan lanjut.
-      if (!_zeroSendable) {
-        setState(() {
+      setState(() {
+        _peerLimitSendableMsat = null;
+        if (!_zeroSendable) {
           _error = null;
           _reserveHeldMsat = balance - sendable;
           _reserveSendableMsat = sendable;
-        });
-      }
+        }
+      });
+      return false;
+    }
+    if (check == SendCheck.peerLimit) {
+      setState(() {
+        _error = null;
+        _reserveHeldMsat = null;
+        _reserveSendableMsat = null;
+        _peerLimitSendableMsat = _linkedSendableMsat;
+      });
       return false;
     }
     return true;
@@ -552,8 +696,16 @@ class _SendScreenState extends State<SendScreen> {
   /// diterima node, sebelum hasil akhir ditunggu — tempat pemanggil
   /// menautkan catatan pembayaran. Kegagalannya ditelan: catatan
   /// tidak boleh menggagalkan pembayaran yang sudah berjalan.
-  Future<void> _pay(Future<PaymentId> Function() sendPayment,
-      {Future<void> Function()? onSent}) async {
+  ///
+  /// [offlineRouteContext] (hanya jalur Bolt11) menandai bahwa
+  /// kegagalan kirim boleh dijelaskan sebagai kegagalan
+  /// tanpa-rute ke perangkat tertaut: pemanggil sudah memastikan
+  /// sesi offline tertaut dan invoice belum kedaluwarsa.
+  Future<void> _pay(
+    Future<PaymentId> Function() sendPayment, {
+    Future<void> Function()? onSent,
+    bool offlineRouteContext = false,
+  }) async {
     setState(() {
       _loading = true;
       _error = null;
@@ -562,10 +714,29 @@ class _SendScreenState extends State<SendScreen> {
       _waitingOutcome = false;
       _reserveHeldMsat = null;
       _reserveSendableMsat = null;
+      _peerLimitSendableMsat = null;
     });
 
     try {
-      final paymentId = await sendPayment();
+      PaymentId paymentId;
+      try {
+        paymentId = await sendPayment();
+      } catch (e) {
+        // Gagal kirim sinkron (node menolak perintah sebelum
+        // pembayaran tercatat — di lapangan selalu tanpa rute
+        // bila nominal melewati channel langsung). Error binding
+        // tidak membawa alasan (semua kegagalan kirim diringkas
+        // ke satu varian), jadi pesannya dipilih dari konteks
+        // yang sudah dipastikan pemanggil, bukan dari teks
+        // error. Di luar konteks itu, lempar lagi ke penanganan
+        // umum di bawah.
+        if (!mounted) return;
+        if (offlineRouteContext) {
+          setState(() => _error = context.l10n.sendOfflineRouteFailed);
+          return;
+        }
+        rethrow;
+      }
       if (onSent != null) {
         try {
           await onSent();
@@ -589,6 +760,12 @@ class _SendScreenState extends State<SendScreen> {
         setState(() => _paid = true);
         _scrollToSuccess();
       } else if (outcome == PaymentStatus.failed) {
+        // Hasil akhir gagal sesudah perintah diterima: alasannya
+        // hanya hidup di antrean event node (Event.paymentFailed),
+        // dan layar ini tidak boleh merebut event yang dibutuhkan
+        // layar Terima — jadi pesannya tetap umum. Pesan
+        // tanpa-rute hanya untuk gagal sinkron di atas, yang
+        // alasannya dipastikan dari konteks.
         setState(() => _error = context.l10n.payFailedFinal);
       } else {
         // Lewat batas tunggu dan masih pending: nyatakan apa
@@ -659,6 +836,30 @@ class _SendScreenState extends State<SendScreen> {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  /// Kotak penjelasan batas kirim ke perangkat tertaut (amber,
+  /// pola yang sama dengan kotak cadangan): nominal yang diminta
+  /// melewati kapasitas kirim channel ke perangkat itu — bukan
+  /// soal cadangan, melainkan soal jangkauan saat offline.
+  Widget _peerLimitBox({required BigInt sendableMsat}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
+        ),
+      ),
+      child: Text(
+        context.l10n.sendOfflinePeerLimit(
+          context.formatWalletAmount(sendableMsat),
+        ),
+        style: TextStyle(fontSize: 13, color: context.palette.label),
+        textAlign: TextAlign.center,
       ),
     );
   }
@@ -741,12 +942,14 @@ class _SendScreenState extends State<SendScreen> {
               // hapus (x) di ujung field (suffixIcon di bawah).
               readOnly: true,
               onChanged: (_) {
-                // Kotak cadangan menunjuk invoice sebelumnya —
-                // invoice berubah, kotaknya gugur.
-                if (_reserveHeldMsat != null) {
+                // Kotak cadangan / batas peer menunjuk invoice
+                // sebelumnya — invoice berubah, kotaknya gugur.
+                if (_reserveHeldMsat != null ||
+                    _peerLimitSendableMsat != null) {
                   setState(() {
                     _reserveHeldMsat = null;
                     _reserveSendableMsat = null;
+                    _peerLimitSendableMsat = null;
                   });
                 }
               },
@@ -789,6 +992,7 @@ class _SendScreenState extends State<SendScreen> {
                           _error = null;
                           _reserveHeldMsat = null;
                           _reserveSendableMsat = null;
+                          _peerLimitSendableMsat = null;
                         });
                       },
                     );
@@ -841,6 +1045,7 @@ class _SendScreenState extends State<SendScreen> {
                           _error = null;
                           _reserveHeldMsat = null;
                           _reserveSendableMsat = null;
+                          _peerLimitSendableMsat = null;
                         });
                       }
                     },
@@ -1038,6 +1243,17 @@ class _SendScreenState extends State<SendScreen> {
                 reserveMsat: _reserveHeldMsat!,
                 sendableMsat: _reserveSendableMsat!,
               ),
+            ],
+            // Batas kirim ke perangkat tertaut: kotak sesudah
+            // percobaan bayar yang tertahan, atau kotak tetap bila
+            // yang bisa dikirim ke perangkat itu nol sementara
+            // saldo kirim gabungan masih ada.
+            if (_peerLimitSendableMsat != null) ...[
+              const SizedBox(height: 20),
+              _peerLimitBox(sendableMsat: _peerLimitSendableMsat!),
+            ] else if (_zeroLinkedSendable) ...[
+              const SizedBox(height: 20),
+              _peerLimitBox(sendableMsat: BigInt.zero),
             ],
             if (_paid) ...[
               const SizedBox(height: 20),

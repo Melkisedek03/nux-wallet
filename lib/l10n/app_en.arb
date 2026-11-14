@@ -228,6 +228,15 @@
     }
   },
   "sendZeroSendableHint": "Receive a payment first so your balance rises above the reserve — after that you can send again.",
+  "sendOfflinePeerLimit": "This amount exceeds what can be sent to the linked device. The limit right now is {amount}.",
+  "@sendOfflinePeerLimit": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "sendOfflineRouteFailed": "The path to the linked device cannot carry this amount. Try a smaller amount.",
   "backToHome": "Back to Home",
   "paste": "Paste",
   "scanQr": "Scan QR",
@@ -985,6 +994,14 @@
   "offlineModeMyCode": "My device code",
   "offlineModeNoPath": "No payment path yet",
   "offlineModeReady": "Path ready — you can pay without internet",
+  "offlineModeCanSendUpTo": "Can send up to {amount}",
+  "@offlineModeCanSendUpTo": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "offlineModeEndSession": "End Session",
   "offlineModeStartFailed": "Offline Mode failed to start. Try again.",
   "offlineIntro": "Stage 2 test: two ELNUX nodes connect as peers over a Bluetooth bridge, open a direct channel, then pay over Lightning while both phones are offline. Open the channel while the phones are side by side and the funder (the opening phone) is online; offline payments use a channel that is already ready. Turn on Bluetooth and Location services on both phones before starting.",

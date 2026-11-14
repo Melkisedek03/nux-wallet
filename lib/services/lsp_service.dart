@@ -777,6 +777,33 @@ BigInt totalUsableOutboundCapacityMsat(List<ChannelDetails> channels) {
   return total;
 }
 
+/// Kapasitas kirim (msat) hanya dari channel usable yang pihak
+/// seberangnya adalah [peerNodeIdHex] — varian
+/// [totalUsableOutboundCapacityMsat] yang dibatasi satu peer.
+/// Semantiknya persis sama (kapasitas keluar node sudah bersih
+/// dari cadangan pengaman channel, jadi TIDAK ada pengurangan
+/// cadangan lagi di sini), hanya cakupannya yang dipersempit.
+/// Dipakai plafon kirim Mode Offline dan pemeriksaan pra-bayar
+/// sadar-konteks layar Kirim: saat offline, hanya channel ke
+/// perangkat tertaut yang bisa dipakai, jadi angka gabungan yang
+/// ikut menghitung channel LSP menjadi janji kosong (temuan
+/// lapangan 13 Nov 2026). Perbandingan ID tidak peka huruf
+/// besar/kecil; peer null berarti tidak ada yang cocok (nol).
+BigInt usableOutboundCapacityToPeer(
+  List<ChannelDetails> channels,
+  String? peerNodeIdHex,
+) {
+  if (peerNodeIdHex == null) return BigInt.zero;
+  final peer = peerNodeIdHex.toLowerCase();
+  var total = BigInt.zero;
+  for (final c in channels) {
+    if (c.isUsable && c.counterpartyNodeId.hex.toLowerCase() == peer) {
+      total += c.outboundCapacityMsat;
+    }
+  }
+  return total;
+}
+
 /// Hasil pemeriksaan pra-bayar layar Kirim.
 enum SendCheck {
   /// Nominal bisa dicoba dibayar — keputusan akhir tetap di node.
@@ -788,6 +815,14 @@ enum SendCheck {
   /// Saldo terlihat cukup tetapi nominal melewati kapasitas kirim:
   /// selisihnya tertahan sebagai cadangan pengaman channel.
   reserveHeld,
+
+  /// Nominal muat di saldo dan kapasitas kirim gabungan, tetapi
+  /// melewati kapasitas kirim ke peer yang sedang tertaut dalam
+  /// sesi offline ([evaluateSend] dipanggil dengan
+  /// [scopedUsableOutboundMsat]) — satu-satunya jalur yang bisa
+  /// dipakai saat itu. Bukan soal cadangan (cadangan sudah
+  /// dikeluarkan dari kedua angka), melainkan soal jangkauan.
+  peerLimit,
 }
 
 /// Periksa nominal invoice terhadap saldo & kapasitas kirim
@@ -806,15 +841,31 @@ enum SendCheck {
 /// Tanpa channel usable, kapasitas kirim tidak bisa dinilai
 /// (penyebabnya bisa koneksi, bukan cadangan) → pemeriksaan
 /// cadangan dilewati dan node yang memutuskan seperti sebelumnya.
+///
+/// [scopedUsableOutboundMsat] (opsional) adalah kapasitas kirim
+/// yang dipersempit ke satu peer — dipakai layar Kirim saat sesi
+/// offline aktif dan peer tertaut adalah satu-satunya peer yang
+/// tersambung. Bila diisi, nominal yang muat di angka gabungan
+/// tetapi melewati angka lingkup ini menghasilkan
+/// [SendCheck.peerLimit]. Urutannya penting: saldo dulu, lalu
+/// cadangan (angka gabungan), lalu batas peer — angka lingkup
+/// selalu lebih kecil atau sama dengan angka gabungan, jadi
+/// cadangan didahulukan bila keduanya terlampaui. Null berarti
+/// tidak ada pembatasan (perilaku lama).
 SendCheck evaluateSend({
   required BigInt amountMsat,
   required BigInt balanceMsat,
   required BigInt usableOutboundMsat,
   required bool hasUsableChannel,
+  BigInt? scopedUsableOutboundMsat,
 }) {
   if (amountMsat > balanceMsat) return SendCheck.insufficientBalance;
   if (hasUsableChannel && amountMsat > usableOutboundMsat) {
     return SendCheck.reserveHeld;
+  }
+  if (scopedUsableOutboundMsat != null &&
+      amountMsat > scopedUsableOutboundMsat) {
+    return SendCheck.peerLimit;
   }
   return SendCheck.ok;
 }

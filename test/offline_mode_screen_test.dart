@@ -16,7 +16,11 @@ const _ownId =
 const _peerId =
     '035d4490410d765e327bd33bcaaa0db8bc1b0ea7ca0f8df7e9db8d9279b16683b0';
 
-ChannelDetails _channel(String counterpartyHex, {bool usable = true}) {
+ChannelDetails _channel(
+  String counterpartyHex, {
+  bool usable = true,
+  int outboundMsat = 24000000,
+}) {
   return ChannelDetails(
     channelId: ChannelId(
       data: U8Array32(Uint8List.fromList(List.filled(32, 1))),
@@ -25,7 +29,7 @@ ChannelDetails _channel(String counterpartyHex, {bool usable = true}) {
     channelValueSats: BigInt.from(25000),
     userChannelId: UserChannelId(data: Uint8List.fromList(List.filled(16, 0))),
     feerateSatPer1000Weight: 1000,
-    outboundCapacityMsat: BigInt.from(24000000),
+    outboundCapacityMsat: BigInt.from(outboundMsat),
     inboundCapacityMsat: BigInt.from(1000000),
     isOutbound: true,
     isChannelReady: usable,
@@ -218,6 +222,61 @@ void main() {
       await _pumpManual(tester);
       expect(tester.takeException(), isNull);
       expect(find.text('Jalur pembayaran belum ada'), findsOneWidget);
+    });
+
+    testWidgets('jalur siap: plafon kirim ke peer tampil di kartu', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _app(
+          OfflineModeScreen(
+            lspService: _FakeLspService(channels: [_channel(_peerId)]),
+            bridge: _linkedBridge(),
+          ),
+        ),
+      );
+      await _pumpManual(tester);
+      expect(tester.takeException(), isNull);
+      expect(find.text('Bisa kirim sampai 24.000 nusan'), findsOneWidget);
+    });
+
+    testWidgets('plafon hanya menghitung channel ke peer tertaut', (
+      tester,
+    ) async {
+      const lspId =
+          '02b69d63f7f07765257d729b4141426abff80a91088eb439ec6f2e9669b6423549';
+      await tester.pumpWidget(
+        _app(
+          OfflineModeScreen(
+            lspService: _FakeLspService(
+              channels: [
+                _channel(_peerId, outboundMsat: 679000000),
+                _channel(lspId, outboundMsat: 5000000000),
+              ],
+            ),
+            bridge: _linkedBridge(),
+          ),
+        ),
+      );
+      await _pumpManual(tester);
+      expect(tester.takeException(), isNull);
+      // 679.000 nusan (channel langsung), BUKAN 5.679.000
+      // (gabungan dengan channel LSP).
+      expect(find.text('Bisa kirim sampai 679.000 nusan'), findsOneWidget);
+    });
+
+    testWidgets('jalur belum ada: tanpa plafon kirim', (tester) async {
+      await tester.pumpWidget(
+        _app(
+          OfflineModeScreen(
+            lspService: _FakeLspService(),
+            bridge: _linkedBridge(),
+          ),
+        ),
+      );
+      await _pumpManual(tester);
+      expect(tester.takeException(), isNull);
+      expect(find.textContaining('Bisa kirim sampai'), findsNothing);
     });
   });
 

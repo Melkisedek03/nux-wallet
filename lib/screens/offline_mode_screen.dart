@@ -8,6 +8,7 @@ import '../services/lsp_service.dart';
 import '../services/offline_bridge.dart';
 import '../services/offline_mode_utils.dart';
 import '../theme.dart';
+import '../unit_controller.dart';
 
 /// Layar Mode Offline produksi — tuas di Profil yang menyalakan
 /// sesi jembatan mode gabung (mengiklankan + menemukan serentak)
@@ -39,6 +40,11 @@ class _OfflineModeScreenState extends State<OfflineModeScreen> {
   bool _loadFailed = false;
   bool _busy = false;
   bool _pathReady = false;
+  // Kapasitas kirim (msat) ke peer tertaut — plafon yang tampil
+  // di kartu jalur saat jalur siap. Angka yang sama dipakai
+  // pemeriksaan pra-bayar layar Kirim, supaya plafon yang
+  // dilihat pengguna dan batas yang ditegakkan selalu cocok.
+  BigInt? _pathSendableMsat;
   bool _wasLinked = false;
   Timer? _pathTimer;
 
@@ -102,19 +108,32 @@ class _OfflineModeScreenState extends State<OfflineModeScreen> {
   }
 
   /// Muat ulang keadaan jalur dari daftar channel node: siap bila
-  /// ada channel usable dengan peer yang dikenal dari HELLO.
-  /// Kegagalan baca membiarkan nilai terakhir tampil.
+  /// ada channel usable dengan peer yang dikenal dari HELLO,
+  /// beserta plafon kirim ke peer itu (kapasitas keluar channel
+  /// usable-nya, sudah bersih dari cadangan). Kegagalan baca
+  /// membiarkan nilai terakhir tampil.
   Future<void> _refreshPath() async {
     final peerId = _bridge.peerNodeId;
     if (!_bridge.isLinked || peerId == null) {
-      if (_pathReady && mounted) setState(() => _pathReady = false);
+      if ((_pathReady || _pathSendableMsat != null) && mounted) {
+        setState(() {
+          _pathReady = false;
+          _pathSendableMsat = null;
+        });
+      }
       return;
     }
     try {
       final channels = await widget.lspService.listChannels();
       if (!mounted) return;
       final ready = hasReadyPath(channels, peerId);
-      if (ready != _pathReady) setState(() => _pathReady = ready);
+      final sendable = usableOutboundCapacityToPeer(channels, peerId);
+      if (ready != _pathReady || sendable != _pathSendableMsat) {
+        setState(() {
+          _pathReady = ready;
+          _pathSendableMsat = sendable;
+        });
+      }
     } catch (_) {
       // Nilai terakhir tetap tampil.
     }
@@ -507,7 +526,10 @@ class _OfflineModeScreenState extends State<OfflineModeScreen> {
 
   /// Kartu keadaan jalur — TAMPILAN SAJA (PR B): siap bila ada
   /// channel usable dengan peer tertaut, belum bila tidak ada.
-  /// Tidak ada tombol di sini; pembukaan jalur adalah PR C.
+  /// Saat siap, plafon kirim ke peer itu tampil di bawahnya
+  /// ("Bisa kirim sampai X") — angka yang sama dengan batas
+  /// pemeriksaan pra-bayar layar Kirim. Tidak ada tombol di
+  /// sini; pembukaan jalur adalah PR C.
   Widget _pathCard(BuildContext context) {
     final l10n = context.l10n;
     return Container(
@@ -529,9 +551,26 @@ class _OfflineModeScreenState extends State<OfflineModeScreen> {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              _pathReady ? l10n.offlineModeReady : l10n.offlineModeNoPath,
-              style: TextStyle(fontSize: 14, color: context.palette.label),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _pathReady ? l10n.offlineModeReady : l10n.offlineModeNoPath,
+                  style: TextStyle(fontSize: 14, color: context.palette.label),
+                ),
+                if (_pathReady && _pathSendableMsat != null) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    l10n.offlineModeCanSendUpTo(
+                      context.formatWalletAmount(_pathSendableMsat!),
+                    ),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: context.palette.muted,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],
