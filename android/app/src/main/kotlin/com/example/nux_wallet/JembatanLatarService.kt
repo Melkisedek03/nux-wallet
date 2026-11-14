@@ -8,6 +8,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
@@ -49,8 +50,21 @@ class JembatanLatarService : Service() {
                 .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
+        // Ikon kecil HARUS siluet putih-transparan (aturan Android
+        // sejak v5: sistem hanya membaca bentuk alpha-nya lalu
+        // mewarnainya; gambar berwarna berlatar solid digambar
+        // sebagai kotak penuh — di Android 12 tampil kotak hitam).
+        // Bentuk lama memakai applicationInfo.icon (launcher icon
+        // berwarna) sehingga logonya tidak pernah tampil — padahal
+        // siluet N+petir putihnya sudah disiapkan 27 Okt 2026 di
+        // res/drawable-*/ic_notification.png dan tidak pernah
+        // dipakai. Ikon besar menampilkan logo ELNUX berwarna di
+        // sisi kanan notifikasi (ikon kecil tidak bisa berwarna).
         val notifikasi: Notification = NotificationCompat.Builder(this, KANAL_ID)
-            .setSmallIcon(applicationInfo.icon)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setLargeIcon(
+                BitmapFactory.decodeResource(resources, R.mipmap.ic_launcher),
+            )
             .setContentTitle("Mode Offline ELNUX aktif")
             .setContentText("Jembatan offline berjalan di latar belakang.")
             .setOngoing(true)
