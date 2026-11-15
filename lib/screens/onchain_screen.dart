@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../locale_controller.dart';
 import '../services/lsp_service.dart';
+import '../services/onchain_address_store.dart';
 import '../theme.dart';
 import '../unit_controller.dart';
 import '../utils/format.dart';
@@ -26,9 +27,11 @@ class OnchainScreen extends StatefulWidget {
 }
 
 class _OnchainScreenState extends State<OnchainScreen> {
+  final _addressStore = OnchainAddressStore();
   OnchainOverview? _overview;
   String? _address;
   bool _loading = true;
+  bool _refreshingAddress = false;
 
   @override
   void initState() {
@@ -37,11 +40,13 @@ class _OnchainScreenState extends State<OnchainScreen> {
   }
 
   /// Muat ringkasan saldo + alamat deposit sekali per kunjungan
-  /// layar.
+  /// layar. Alamatnya dari simpanan (lihat
+  /// [_alamatTersimpanAtauBaru]) — TIDAK dibuat baru di tiap
+  /// kunjungan.
   Future<void> _muat() async {
     try {
       final overview = await widget.lspService.getOnchainOverview();
-      final address = await widget.lspService.onchainAddress();
+      final address = await _alamatTersimpanAtauBaru();
       if (!mounted) return;
       setState(() {
         _overview = overview;
@@ -51,6 +56,53 @@ class _OnchainScreenState extends State<OnchainScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _loading = false);
+    }
+  }
+
+  /// Alamat yang ditampilkan: simpanan untuk dompet ini bila ada;
+  /// bila belum ada, buat SEKALI lewat node lalu simpan. Setiap
+  /// panggilan onchainAddress menurunkan alamat BARU dari dompet,
+  /// jadi memanggilnya di tiap kunjungan layar membakar alamat
+  /// yang belum sempat dipakai — itu yang dihentikan keputusan
+  /// NUX 15 Nov 2026. Alamat baru sesudah ini hanya dari tombol
+  /// Refresh manual ([_segarkanAlamat]).
+  Future<String> _alamatTersimpanAtauBaru() async {
+    try {
+      final nodeId = await widget.lspService.ownNodeId();
+      final stored = await _addressStore.load(nodeId: nodeId);
+      if (stored != null) return stored;
+      final fresh = await widget.lspService.onchainAddress();
+      await _addressStore.save(address: fresh, nodeId: nodeId);
+      return fresh;
+    } catch (_) {
+      // ID node tidak terbaca (node belum jalan dsb.): buat alamat
+      // segar untuk tampilan ini tanpa menyimpan — kunjungan
+      // berikutnya mengulang dari simpanan lama / baru lagi.
+      return widget.lspService.onchainAddress();
+    }
+  }
+
+  /// Tombol Refresh manual di kartu alamat: buat alamat BARU atas
+  /// permintaan user, simpan sebagai alamat tampil, dan tampilkan.
+  /// Alamat lama tetap milik dompet yang sama (dana yang telanjur
+  /// dikirim ke sana tetap masuk) — yang berganti hanya alamat
+  /// yang ditampilkan.
+  Future<void> _segarkanAlamat() async {
+    if (_refreshingAddress) return;
+    setState(() => _refreshingAddress = true);
+    try {
+      final nodeId = await widget.lspService.ownNodeId();
+      final address = await widget.lspService.onchainAddress();
+      await _addressStore.save(address: address, nodeId: nodeId);
+      if (!mounted) return;
+      setState(() => _address = address);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.onchainLoadFailed)),
+      );
+    } finally {
+      if (mounted) setState(() => _refreshingAddress = false);
     }
   }
 
@@ -197,6 +249,18 @@ class _OnchainScreenState extends State<OnchainScreen> {
                       style: TextStyle(
                           fontSize: 12, color: context.palette.label),
                     ),
+                  ),
+                  // Refresh manual: satu-satunya jalan membuat alamat
+                  // baru — keputusan di tangan user, bukan otomatis
+                  // tiap buka menu (keputusan NUX 15 Nov 2026).
+                  // Tombol refresh di AppBar hanya memuat ulang
+                  // SALDO dan sengaja tidak menyentuh alamat.
+                  IconButton(
+                    tooltip: l10n.onchainNewAddress,
+                    icon: const Icon(Icons.refresh_rounded,
+                        color: Color(0xFF34D399)),
+                    onPressed:
+                        _refreshingAddress ? null : _segarkanAlamat,
                   ),
                   IconButton(
                     icon: const Icon(Icons.copy, color: Color(0xFF34D399)),

@@ -136,13 +136,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onchainAddressHint =>
-      'Send NUX to this address to fund the on-chain wallet.';
+      'Send NUX to this address to fund the on-chain wallet. The address stays the same until you ask for a new one.';
 
   @override
   String get onchainCopied => 'Address copied';
 
   @override
   String get onchainLoadFailed => 'Could not load the on-chain wallet';
+
+  @override
+  String get onchainNewAddress => 'New address';
 
   @override
   String get networkTestnet => 'Lightning Network • Testnet';

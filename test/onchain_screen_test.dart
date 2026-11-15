@@ -3,7 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nux_wallet/l10n/app_localizations.dart';
 import 'package:nux_wallet/screens/onchain_screen.dart';
 import 'package:nux_wallet/services/lsp_service.dart';
+import 'package:nux_wallet/services/onchain_address_store.dart';
 import 'package:nux_wallet/theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Layanan palsu: saldo dengan KEDUA baris turunan tampil
 /// (spendable < total, timelock > 0 dengan tinggi buka) supaya
@@ -26,6 +28,8 @@ Future<void> _pumpScreen(
   WidgetTester tester, {
   required double width,
   double textScale = 1.0,
+  LspService? service,
+  int open = 0,
 }) async {
   tester.view.physicalSize = Size(width, 800);
   tester.view.devicePixelRatio = 1.0;
@@ -40,11 +44,42 @@ Future<void> _pumpScreen(
       home: MediaQuery(
         data: MediaQueryData(
             textScaler: TextScaler.linear(textScale)),
-        child: OnchainScreen(lspService: _FakeLspService()),
+        // Kunci berbeda per "buka": tanpa ini pumpWidget memakai
+        // ulang State lama (initState tidak jalan lagi) sehingga
+        // "buka lagi" tidak pernah teruji.
+        child: OnchainScreen(
+          key: ValueKey('buka-$open'),
+          lspService: service ?? _FakeLspService(),
+        ),
       ),
     ),
   );
   await tester.pumpAndSettle();
+}
+
+/// Layanan palsu penghitung: tiap panggilan onchainAddress
+/// menurunkan alamat BERBEDA (seperti node asli) supaya tes bisa
+/// membuktikan layar tidak meminta alamat baru tanpa perintah.
+class _CountingFakeLspService extends LspService {
+  int addressCalls = 0;
+  String nodeId = '02${'a' * 64}';
+
+  @override
+  Future<OnchainOverview> getOnchainOverview() async => (
+        totalSats: BigInt.from(100000),
+        spendableSats: BigInt.from(90000),
+        timelockSats: BigInt.from(10000),
+        timelockHeight: 73683,
+      );
+
+  @override
+  Future<String> ownNodeId() async => nodeId;
+
+  @override
+  Future<String> onchainAddress() async {
+    addressCalls++;
+    return 'nu1qtestalamat$addressCalls';
+  }
 }
 
 void main() {
@@ -85,5 +120,51 @@ void main() {
     final valueRect =
         tester.getRect(find.textContaining('terbuka ~blok 73683'));
     expect(valueRect.height, lessThan(90));
+  });
+
+  testWidgets('buka dua kali: alamat sama, node tidak diminta alamat baru',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final fake = _CountingFakeLspService();
+    await _pumpScreen(tester, width: 360, service: fake);
+    expect(find.text('nu1qtestalamat1'), findsOneWidget);
+    expect(fake.addressCalls, 1);
+    // Buka lagi (instance layar baru, simpanan yang sama).
+    await _pumpScreen(tester, width: 360, service: fake, open: 1);
+    expect(find.text('nu1qtestalamat1'), findsOneWidget);
+    expect(fake.addressCalls, 1);
+  });
+
+  testWidgets('tombol Refresh: alamat baru, tersimpan, buka lagi tetap itu',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final fake = _CountingFakeLspService();
+    await _pumpScreen(tester, width: 360, service: fake);
+    expect(find.text('nu1qtestalamat1'), findsOneWidget);
+    await tester.tap(find.byTooltip('Alamat baru'));
+    await tester.pumpAndSettle();
+    expect(find.text('nu1qtestalamat2'), findsOneWidget);
+    expect(fake.addressCalls, 2);
+    final prefs = await SharedPreferences.getInstance();
+    expect(
+      prefs.getString(OnchainAddressStore.addressKey),
+      'nu1qtestalamat2',
+    );
+    // Buka lagi: tetap alamat baru, tanpa generate lagi.
+    await _pumpScreen(tester, width: 360, service: fake, open: 1);
+    expect(find.text('nu1qtestalamat2'), findsOneWidget);
+    expect(fake.addressCalls, 2);
+  });
+
+  testWidgets('dompet berganti (ID node berubah): simpanan lama tak berlaku',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final fake = _CountingFakeLspService();
+    await _pumpScreen(tester, width: 360, service: fake);
+    expect(fake.addressCalls, 1);
+    fake.nodeId = '02${'b' * 64}';
+    await _pumpScreen(tester, width: 360, service: fake, open: 1);
+    expect(find.text('nu1qtestalamat2'), findsOneWidget);
+    expect(fake.addressCalls, 2);
   });
 }

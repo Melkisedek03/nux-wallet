@@ -135,13 +135,16 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get onchainAddressHint =>
-      'Kirim NUX ke alamat ini untuk mengisi dompet on-chain.';
+      'Kirim NUX ke alamat ini untuk mengisi dompet on-chain. Alamat tetap sama sampai kamu minta yang baru.';
 
   @override
   String get onchainCopied => 'Alamat disalin';
 
   @override
   String get onchainLoadFailed => 'Gagal memuat dompet on-chain';
+
+  @override
+  String get onchainNewAddress => 'Alamat baru';
 
   @override
   String get networkTestnet => 'Lightning Network • Testnet';

@@ -335,7 +335,7 @@ abstract class AppLocalizations {
   /// No description provided for @onchainAddressHint.
   ///
   /// In id, this message translates to:
-  /// **'Kirim NUX ke alamat ini untuk mengisi dompet on-chain.'**
+  /// **'Kirim NUX ke alamat ini untuk mengisi dompet on-chain. Alamat tetap sama sampai kamu minta yang baru.'**
   String get onchainAddressHint;
 
   /// No description provided for @onchainCopied.
@@ -349,6 +349,12 @@ abstract class AppLocalizations {
   /// In id, this message translates to:
   /// **'Gagal memuat dompet on-chain'**
   String get onchainLoadFailed;
+
+  /// No description provided for @onchainNewAddress.
+  ///
+  /// In id, this message translates to:
+  /// **'Alamat baru'**
+  String get onchainNewAddress;
 
   /// No description provided for @networkTestnet.
   ///
