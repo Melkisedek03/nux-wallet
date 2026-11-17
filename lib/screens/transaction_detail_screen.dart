@@ -55,12 +55,20 @@ class TransactionDetailScreen extends StatelessWidget {
   /// pembayaran berjalan lewat channel langsung antar-HP.
   final String? routeTag;
 
+  /// Label kustom offer Bolt12 statis node ini (lihat
+  /// Bolt12OfferStore); null bila user tidak memasang label.
+  /// Diterapkan dengan syarat yang sama persis seperti baris
+  /// riwayat — hanya untuk pembayaran Bolt12 MASUK — supaya
+  /// jenis yang tampil di sini sama dengan tag barisnya.
+  final String? bolt12Label;
+
   const TransactionDetailScreen({
     super.key,
     required this.payment,
     this.savedInvoice,
     this.note,
     this.routeTag,
+    this.bolt12Label,
   });
 
   String _hex(Iterable<int> bytes) =>
@@ -178,13 +186,19 @@ class TransactionDetailScreen extends StatelessWidget {
     final amountText = payment.amountMsat == null
         ? '—'
         : '${isIn ? '+' : '−'}${context.formatWalletAmount(payment.amountMsat!)}';
-    final typeText = _isJit
-        ? '⚡ JIT'
-        : _isOnchain
-            ? '⛓ on-chain'
-            : routeTag == paymentTagDirect
-                ? '⚡ direct'
-                : '⚡ Lightning';
+    // Jenis tampil dihitung helper yang SAMA dengan tag baris
+    // riwayat, supaya kedua permukaan tidak bisa berbeda
+    // urutan maupun pangkasannya. Satu-satunya penyesuaian:
+    // permukaan detail yang lapang menulis 'Lightning' di
+    // belakang petir polos, bukan '⚡' saja seperti baris sempit.
+    final tag = historyRowTag(
+      isJit: _isJit,
+      isOnchain: _isOnchain,
+      routeTag: routeTag,
+      isBolt12Inbound: isIn && payment.kind is PaymentKind_Bolt12Offer,
+      bolt12Label: bolt12Label,
+    );
+    final typeText = tag == historyRowTagBare ? '⚡ Lightning' : tag;
     final hashHex = _paymentHashHex;
     final txid = _txid;
 

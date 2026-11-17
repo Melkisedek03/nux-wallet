@@ -117,22 +117,60 @@ class PaymentNoteStore {
 /// berjalan lewat channel langsung antar-HP, bukan lewat LSP.
 const String paymentTagDirect = 'direct';
 
-/// Tag baris riwayat dari jenis pembayaran + tag rute tercatat.
+/// Panjang maksimum label offer Bolt12 yang tampil sebagai tag
+/// baris riwayat (dalam rune, aman untuk emoji). Label lebih
+/// panjang dipangkas dengan '…' — baris ke-2 TransactionRow
+/// memang dilindungi FittedBox scaleDown sehingga tidak bisa
+/// meluap, tapi tanpa pangkasan satu label panjang akan
+/// menyusutkan seluruh baris ke ukuran tak terbaca.
+const int maxOfferLabelTagRunes = 20;
+
+/// Tag baris riwayat untuk pembayaran Lightning biasa tanpa
+/// penanda khusus: petir polos.
+const String historyRowTagBare = '⚡';
+
+/// Tag baris riwayat untuk pembayaran Bolt12 MASUK lewat offer
+/// statis berlabel kustom: '⚡ ' + label (dipangkas bila perlu).
+/// Label adalah teks pilihan user sendiri, ditampilkan apa adanya.
+String bolt12OfferLabelTag(String label) {
+  final trimmed = label.trim();
+  final runes = trimmed.runes.toList();
+  if (runes.length <= maxOfferLabelTagRunes) return '⚡ $trimmed';
+  return '⚡ ${String.fromCharCodes(runes.take(maxOfferLabelTagRunes))}…';
+}
+
+/// Tag baris riwayat dari jenis pembayaran + tag rute tercatat
+/// + label offer Bolt12.
 ///
 /// JIT dan on-chain dibaca dari jenis pembayaran node (persis);
+/// label offer dibaca dari simpanan lokal (catatan pembayaran
+/// node tidak membawa deskripsi — lihat Bolt12OfferStore);
 /// tag rute lokal hanya mengisi sisanya — pembayaran Lightning
-/// biasa yang tercatat berjalan lewat channel langsung. Urutan
-/// ini penting: pembayaran JIT menurut definisinya lahir dari
-/// LSP, tidak pernah langsung; on-chain bukan Lightning.
+/// biasa yang tercatat berjalan lewat channel langsung.
+///
+/// Urutan penting: pembayaran JIT menurut definisinya lahir
+/// dari LSP, tidak pernah langsung; on-chain bukan Lightning;
+/// keduanya tidak pernah berjenis Bolt12Offer, jadi tidak
+/// pernah berebut dengan label. Label menang atas tag direct:
+/// pembayaran Bolt12 masuk lewat channel langsung tetap
+/// pembayaran lewat offer berlabel itu — label itulah yang
+/// dikenali user. Tanpa label, Bolt12 masuk tetap '⚡' polos
+/// seperti sebelum fitur ini ada (tidak ada tag 'Bolt12':
+/// permukaan awam tidak butuh jargon baru).
 String historyRowTag({
   required bool isJit,
   required bool isOnchain,
   required String? routeTag,
+  bool isBolt12Inbound = false,
+  String? bolt12Label,
 }) {
   if (isJit) return '⚡ JIT';
   if (isOnchain) return '⛓ on-chain';
+  if (isBolt12Inbound && bolt12Label != null && bolt12Label.trim().isNotEmpty) {
+    return bolt12OfferLabelTag(bolt12Label);
+  }
   if (routeTag == paymentTagDirect) return '⚡ direct';
-  return '⚡';
+  return historyRowTagBare;
 }
 
 /// Penyimpanan tag rute pembayaran di SharedPreferences

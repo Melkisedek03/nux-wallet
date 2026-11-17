@@ -79,6 +79,117 @@ void main() {
         '⚡',
       );
     });
+
+    test('Bolt12 masuk berlabel → tag labelnya', () {
+      expect(
+        historyRowTag(
+          isJit: false,
+          isOnchain: false,
+          routeTag: null,
+          isBolt12Inbound: true,
+          bolt12Label: 'Warung Bu Tini',
+        ),
+        '⚡ Warung Bu Tini',
+      );
+    });
+
+    test('Bolt12 masuk tanpa label → ⚡ polos (tidak berubah)', () {
+      expect(
+        historyRowTag(
+          isJit: false,
+          isOnchain: false,
+          routeTag: null,
+          isBolt12Inbound: true,
+        ),
+        '⚡',
+      );
+      expect(
+        historyRowTag(
+          isJit: false,
+          isOnchain: false,
+          routeTag: null,
+          isBolt12Inbound: true,
+          bolt12Label: '   ',
+        ),
+        '⚡',
+      );
+    });
+
+    test('label diabaikan bila bukan Bolt12 masuk', () {
+      expect(
+        historyRowTag(
+          isJit: false,
+          isOnchain: false,
+          routeTag: null,
+          bolt12Label: 'Warung Bu Tini',
+        ),
+        '⚡',
+      );
+    });
+
+    test('label menang atas tag direct', () {
+      expect(
+        historyRowTag(
+          isJit: false,
+          isOnchain: false,
+          routeTag: 'direct',
+          isBolt12Inbound: true,
+          bolt12Label: 'Warung Bu Tini',
+        ),
+        '⚡ Warung Bu Tini',
+      );
+    });
+
+    test('JIT dan on-chain tetap menang atas label', () {
+      expect(
+        historyRowTag(
+          isJit: true,
+          isOnchain: false,
+          routeTag: null,
+          isBolt12Inbound: true,
+          bolt12Label: 'Warung Bu Tini',
+        ),
+        '⚡ JIT',
+      );
+      expect(
+        historyRowTag(
+          isJit: false,
+          isOnchain: true,
+          routeTag: null,
+          isBolt12Inbound: true,
+          bolt12Label: 'Warung Bu Tini',
+        ),
+        '⛓ on-chain',
+      );
+    });
+  });
+
+  group('bolt12OfferLabelTag', () {
+    test('label pendek tampil utuh dengan awalan ⚡', () {
+      expect(bolt12OfferLabelTag('Warung Bu Tini'), '⚡ Warung Bu Tini');
+    });
+
+    test('label tepat 20 rune tidak dipangkas', () {
+      expect(
+        bolt12OfferLabelTag('ABCDEFGHIJKLMNOPQRST'),
+        '⚡ ABCDEFGHIJKLMNOPQRST',
+      );
+    });
+
+    test('label panjang dipangkas di 20 rune + …', () {
+      expect(
+        bolt12OfferLabelTag('ABCDEFGHIJKLMNOPQRSTUVWXY'),
+        '⚡ ABCDEFGHIJKLMNOPQRST…',
+      );
+    });
+
+    test('pangkasan per rune, aman untuk emoji', () {
+      expect(bolt12OfferLabelTag('🏪' * 25), '⚡ ${'🏪' * 20}…');
+    });
+
+    test('spasi tepi dipangkas sebelum dihitung', () {
+      expect(bolt12OfferLabelTag('  Warung Bu Tini  '), '⚡ Warung Bu Tini');
+    });
   });
 
   group('CSV type label', () {

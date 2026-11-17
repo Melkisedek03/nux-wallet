@@ -28,6 +28,7 @@ import 'screens/offline_mode_screen.dart';
 import 'screens/printer_settings_screen.dart';
 import 'screens/store_mode_screen.dart';
 import 'screens/transaction_detail_screen.dart';
+import 'services/bolt12_service.dart';
 import 'services/lsp_profile.dart';
 import 'services/payment_notes.dart';
 import 'services/saved_invoices.dart';
@@ -175,6 +176,16 @@ class _HomeScreenState extends State<HomeScreen>
   /// terjadi dalam konteks offline (lihat PaymentTagStore).
   Map<String, String> _paymentTags = const {};
 
+  /// Label kustom offer Bolt12 statis node ini (lihat
+  /// Bolt12OfferStore), dimuat sekali per penyegaran riwayat
+  /// bersama catatan/tag — tidak pernah dibaca per baris. Null
+  /// berarti user tidak memasang label: tag Bolt12 masuk tetap
+  /// '⚡' polos seperti sebelumnya. Node hanya punya SATU offer
+  /// statis, jadi semua pembayaran Bolt12 masuk lewat offer ini
+  /// dan labelnya berlaku untuk semuanya tanpa pencarian
+  /// per pembayaran.
+  String? _bolt12OfferLabel;
+
   /// Deteksi koin masuk: true setelah muat riwayat pertama selesai —
   /// riwayat lama tidak memicu bunyi/getar, hanya kedatangan baru.
   bool _paymentsPrimed = false;
@@ -320,11 +331,13 @@ class _HomeScreenState extends State<HomeScreen>
       _paymentsPrimed = true;
       final notes = await PaymentNoteStore().loadAll();
       final tags = await PaymentTagStore().loadAll();
+      final offerLabel = await Bolt12OfferStore().loadCustomDescription();
       if (mounted) {
         setState(() {
           _payments = payments;
           _paymentNotes = notes;
           _paymentTags = tags;
+          _bolt12OfferLabel = offerLabel;
         });
       }
     } catch (_) {
@@ -1459,6 +1472,12 @@ class _HomeScreenState extends State<HomeScreen>
       isJit: kind is PaymentKind_Bolt11Jit,
       isOnchain: kind is PaymentKind_Onchain,
       routeTag: hashHex == null ? null : _paymentTags[hashHex],
+      // Bolt12 MASUK lewat offer statis berlabel: label tampil
+      // sebagai tag baris. Bolt12 KELUAR tidak disentuh — layar
+      // Kirim sudah menyimpan deskripsi offer sebagai judul
+      // catatan pembayaran keluar.
+      isBolt12Inbound: isIn && kind is PaymentKind_Bolt12Offer,
+      bolt12Label: _bolt12OfferLabel,
     );
     final amount = payment.amountMsat == null
         ? '\u2014'
@@ -1529,6 +1548,10 @@ class _HomeScreenState extends State<HomeScreen>
           savedInvoice: saved,
           note: hashHex == null ? null : _paymentNotes[hashHex],
           routeTag: tagHashHex == null ? null : _paymentTags[tagHashHex],
+          // Label offer diteruskan apa adanya; layar detail
+          // menerapkannya dengan syarat yang sama persis seperti
+          // baris (Bolt12 masuk) supaya kedua permukaan sepakat.
+          bolt12Label: _bolt12OfferLabel,
         ),
       ),
     );
