@@ -10,6 +10,7 @@ Future<void> _pumpRow(
   bool statusBad = false,
   bool isIn = true,
   ThemeData? theme,
+  String tag = '⚡ JIT',
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -27,7 +28,7 @@ Future<void> _pumpRow(
                   size: 22),
               title: isIn ? 'Diterima' : 'Terkirim',
               addr: '31ea7…d8b1',
-              tag: '⚡ JIT',
+              tag: tag,
               isIn: isIn,
               amount: isIn ? '+1.000' : '-1.000',
               time: '20.48',
@@ -108,5 +109,24 @@ void main() {
     expect(tester.takeException(), isNull);
     final amount = tester.widget<Text>(find.text('+1.000'));
     expect(amount.style?.color, const Color(0xFF34D399));
+  });
+
+  // Tag label offer Bolt12 (bentuk a): label kustom tampil sebagai
+  // chip jenis baris, menggantikan '⚡' polos.
+  testWidgets('tag label offer tampil sebagai chip jenis', (tester) async {
+    await _pumpRow(tester, width: 320, tag: '⚡ Warung Bu Tini');
+    expect(tester.takeException(), isNull);
+    expect(find.text('⚡ Warung Bu Tini'), findsOneWidget);
+  });
+
+  testWidgets('tag label panjang (terpangkas) tidak meluap di 320', (
+    tester,
+  ) async {
+    await _pumpRow(tester, width: 320, tag: '⚡ ABCDEFGHIJKLMNOPQRST…');
+    expect(tester.takeException(), isNull);
+    expect(find.text('⚡ ABCDEFGHIJKLMNOPQRST…'), findsOneWidget);
+    final tagRect = tester.getRect(find.text('⚡ ABCDEFGHIJKLMNOPQRST…'));
+    final timeRect = tester.getRect(find.text('20.48'));
+    expect(tagRect.overlaps(timeRect), isFalse);
   });
 }
