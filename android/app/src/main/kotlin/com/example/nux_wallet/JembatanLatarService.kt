@@ -66,7 +66,9 @@ class JembatanLatarService : Service() {
                 BitmapFactory.decodeResource(resources, R.mipmap.ic_launcher),
             )
             .setContentTitle("Mode Offline ELNUX aktif")
-            .setContentText("Jembatan offline berjalan di latar belakang.")
+            .setContentText(
+                "Mode Offline aktif — tetap terhubung dengan perangkat di dekatmu.",
+            )
             .setOngoing(true)
             .setContentIntent(ketukBuka)
             .build()
@@ -114,6 +116,14 @@ class JembatanLatarService : Service() {
         private const val KANAL_ID = "jembatan_offline"
         private const val ID_NOTIFIKASI = 19735
 
+        // Kanal notifikasi sekali-pakai "jalur sudah siap" (PR C):
+        // IMPORTANCE_DEFAULT supaya bersuara/bergetar sekali, bukan
+        // menetap seperti notifikasi layanan latar. ID kanalnya
+        // tidak pernah diubah sesudah dibuat (nama kanal tidak bisa
+        // diubah tanpa ID baru).
+        private const val KANAL_JALUR_SIAP_ID = "jalur_siap"
+        private const val ID_NOTIFIKASI_JALUR_SIAP = 19737
+
         fun mulai(context: Context) {
             ContextCompat.startForegroundService(
                 context,
@@ -123,6 +133,49 @@ class JembatanLatarService : Service() {
 
         fun berhenti(context: Context) {
             context.stopService(Intent(context, JembatanLatarService::class.java))
+        }
+
+        // Notifikasi sekali-pakai saat sebuah jalur langsung menjadi
+        // usable (PR C): judul + isi sudah dilokalisasi di sisi
+        // Dart. Ikon dan PendingIntent sama dengan notifikasi
+        // layanan latar — ketukannya membuka kembali aplikasi.
+        // Dipanggil dari sisi Dart lewat saluran MethodChannel
+        // "nux_wallet/jembatan" (method "notifJalurSiap").
+        fun notifJalurSiap(context: Context, judul: String, isi: String) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val kanal = NotificationChannel(
+                    KANAL_JALUR_SIAP_ID,
+                    "Jalur Siap",
+                    NotificationManager.IMPORTANCE_DEFAULT,
+                )
+                val manajer =
+                    context.getSystemService(NotificationManager::class.java)
+                manajer.createNotificationChannel(kanal)
+            }
+            val ketukBuka = PendingIntent.getActivity(
+                context,
+                0,
+                Intent(context, MainActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+            val notifikasi: Notification =
+                NotificationCompat.Builder(context, KANAL_JALUR_SIAP_ID)
+                    .setSmallIcon(R.drawable.ic_notification)
+                    .setLargeIcon(
+                        BitmapFactory.decodeResource(
+                            context.resources,
+                            R.mipmap.ic_launcher,
+                        ),
+                    )
+                    .setContentTitle(judul)
+                    .setContentText(isi)
+                    .setAutoCancel(true)
+                    .setContentIntent(ketukBuka)
+                    .build()
+            val manajer =
+                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manajer.notify(ID_NOTIFIKASI_JALUR_SIAP, notifikasi)
         }
     }
 }

@@ -3692,6 +3692,228 @@ abstract class AppLocalizations {
   /// **'Mode Offline gagal dimulai. Coba lagi.'**
   String get offlineModeStartFailed;
 
+  /// No description provided for @offlineModeMakePath.
+  ///
+  /// In id, this message translates to:
+  /// **'Buat Jalur Pembayaran'**
+  String get offlineModeMakePath;
+
+  /// No description provided for @offlineModePreparing.
+  ///
+  /// In id, this message translates to:
+  /// **'Jalur sedang disiapkan…'**
+  String get offlineModePreparing;
+
+  /// No description provided for @offlineModePreparingConfirmations.
+  ///
+  /// In id, this message translates to:
+  /// **'Konfirmasi {done}/{required}'**
+  String offlineModePreparingConfirmations(int done, int required);
+
+  /// No description provided for @offlineModePreparingValue.
+  ///
+  /// In id, this message translates to:
+  /// **'Nilai jalur: {amount}'**
+  String offlineModePreparingValue(String amount);
+
+  /// No description provided for @offlineModePreparingFee.
+  ///
+  /// In id, this message translates to:
+  /// **'Biaya jaringan: {amount}'**
+  String offlineModePreparingFee(String amount);
+
+  /// No description provided for @offlineModeWaitingFirst.
+  ///
+  /// In id, this message translates to:
+  /// **'Menunggu konfirmasi pertama…'**
+  String get offlineModeWaitingFirst;
+
+  /// No description provided for @offlineModeWaitingConfirmations.
+  ///
+  /// In id, this message translates to:
+  /// **'Menunggu konfirmasi…'**
+  String get offlineModeWaitingConfirmations;
+
+  /// No description provided for @offlineModeWaitingFirstNote.
+  ///
+  /// In id, this message translates to:
+  /// **'Blok baru muncul sesuai jadwal jaringan — mohon tunggu.'**
+  String get offlineModeWaitingFirstNote;
+
+  /// No description provided for @offlineModeReadyUnlinked.
+  ///
+  /// In id, this message translates to:
+  /// **'Jalur siap — sambungkan lagi ke {name} untuk membayar'**
+  String offlineModeReadyUnlinked(String name);
+
+  /// No description provided for @offlineModePathNeedsInternet.
+  ///
+  /// In id, this message translates to:
+  /// **'Jalur baru butuh internet sekali saat disiapkan — pembayaran lewat jalur yang sudah siap tetap bisa'**
+  String get offlineModePathNeedsInternet;
+
+  /// No description provided for @offlineModeAmountTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Buat Jalur Pembayaran'**
+  String get offlineModeAmountTitle;
+
+  /// No description provided for @offlineModeAmountDefaultNote.
+  ///
+  /// In id, this message translates to:
+  /// **'Nominal bawaan'**
+  String get offlineModeAmountDefaultNote;
+
+  /// No description provided for @offlineModeAmountOther.
+  ///
+  /// In id, this message translates to:
+  /// **'Nominal lain'**
+  String get offlineModeAmountOther;
+
+  /// No description provided for @offlineModeAmountHint.
+  ///
+  /// In id, this message translates to:
+  /// **'Minimal 10.000 nusan, tanpa pecahan'**
+  String get offlineModeAmountHint;
+
+  /// No description provided for @offlineModeOnchainBalance.
+  ///
+  /// In id, this message translates to:
+  /// **'Saldo on-chain-mu: {amount}'**
+  String offlineModeOnchainBalance(String amount);
+
+  /// No description provided for @offlineModeAmountTooSmall.
+  ///
+  /// In id, this message translates to:
+  /// **'Minimal 10.000 nusan untuk satu jalur.'**
+  String get offlineModeAmountTooSmall;
+
+  /// No description provided for @offlineModeAmountInvalid.
+  ///
+  /// In id, this message translates to:
+  /// **'Tulis jumlah nusan bulat, tanpa pecahan.'**
+  String get offlineModeAmountInvalid;
+
+  /// No description provided for @offlineModeAmountContinue.
+  ///
+  /// In id, this message translates to:
+  /// **'Lanjut'**
+  String get offlineModeAmountContinue;
+
+  /// No description provided for @offlineModeConfirmTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Buat jalur ke {name}?'**
+  String offlineModeConfirmTitle(String name);
+
+  /// No description provided for @offlineModeConfirmAmount.
+  ///
+  /// In id, this message translates to:
+  /// **'Jumlah jalur'**
+  String get offlineModeConfirmAmount;
+
+  /// No description provided for @offlineModeConfirmFeeEstimate.
+  ///
+  /// In id, this message translates to:
+  /// **'Biaya jaringan (perkiraan)'**
+  String get offlineModeConfirmFeeEstimate;
+
+  /// No description provided for @offlineModeConfirmFeeUnknown.
+  ///
+  /// In id, this message translates to:
+  /// **'dihitung saat pengiriman'**
+  String get offlineModeConfirmFeeUnknown;
+
+  /// No description provided for @offlineModeConfirmFeeWord.
+  ///
+  /// In id, this message translates to:
+  /// **'biaya jaringan'**
+  String get offlineModeConfirmFeeWord;
+
+  /// No description provided for @offlineModeConfirmTotal.
+  ///
+  /// In id, this message translates to:
+  /// **'Total dari dompet on-chain'**
+  String get offlineModeConfirmTotal;
+
+  /// No description provided for @offlineModeConfirmDirection.
+  ///
+  /// In id, this message translates to:
+  /// **'{amount} dari dompet on-chain-mu pindah ke jalur ini — kamulah yang bisa mengirim lewat jalur ini.'**
+  String offlineModeConfirmDirection(String amount);
+
+  /// No description provided for @offlineModeConfirmWait.
+  ///
+  /// In id, this message translates to:
+  /// **'Jalur siap dipakai setelah 6 konfirmasi jaringan. Kamu akan diberi tahu saat sudah siap.'**
+  String get offlineModeConfirmWait;
+
+  /// No description provided for @offlineModeConfirmCreate.
+  ///
+  /// In id, this message translates to:
+  /// **'Buat Jalur'**
+  String get offlineModeConfirmCreate;
+
+  /// No description provided for @offlineModeNoBalanceTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Saldo on-chain belum cukup'**
+  String get offlineModeNoBalanceTitle;
+
+  /// No description provided for @offlineModeNoBalanceBody.
+  ///
+  /// In id, this message translates to:
+  /// **'Membuat jalur {amount} butuh saldo on-chain sebesar itu, ditambah sedikit biaya jaringan. Saldo on-chain-mu sekarang {balance}. Isi dulu dompet on-chain-mu, lalu kembali ke sini untuk membuat jalur.'**
+  String offlineModeNoBalanceBody(String amount, String balance);
+
+  /// No description provided for @offlineModeNoBalanceDeposit.
+  ///
+  /// In id, this message translates to:
+  /// **'Isi Dompet On-chain'**
+  String get offlineModeNoBalanceDeposit;
+
+  /// No description provided for @offlineModeNoBalanceLater.
+  ///
+  /// In id, this message translates to:
+  /// **'Nanti saja'**
+  String get offlineModeNoBalanceLater;
+
+  /// No description provided for @offlineModeOpenFailedPeer.
+  ///
+  /// In id, this message translates to:
+  /// **'Perangkat terputus saat membuat jalur. Dekatkan kedua HP, sambungkan lagi, lalu coba lagi.'**
+  String get offlineModeOpenFailedPeer;
+
+  /// No description provided for @offlineModeOpenFailedGeneric.
+  ///
+  /// In id, this message translates to:
+  /// **'Membuat jalur gagal. Coba lagi.'**
+  String get offlineModeOpenFailedGeneric;
+
+  /// No description provided for @offlineModeOpenFailedNotReady.
+  ///
+  /// In id, this message translates to:
+  /// **'Dompet belum siap. Coba lagi sebentar.'**
+  String get offlineModeOpenFailedNotReady;
+
+  /// No description provided for @offlineModePathReadyTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Jalur ke {name} sudah siap'**
+  String offlineModePathReadyTitle(String name);
+
+  /// No description provided for @offlineModePathReadyBody.
+  ///
+  /// In id, this message translates to:
+  /// **'Kamu bisa membayar tanpa internet sekarang.'**
+  String get offlineModePathReadyBody;
+
+  /// No description provided for @offlineModeNotifyPermissionNote.
+  ///
+  /// In id, this message translates to:
+  /// **'Nyalakan izin notifikasi supaya kamu diberi tahu saat jalur siap.'**
+  String get offlineModeNotifyPermissionNote;
+
   /// No description provided for @offlineIntro.
   ///
   /// In id, this message translates to:

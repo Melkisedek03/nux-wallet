@@ -1005,6 +1005,112 @@
   },
   "offlineModeEndSession": "Akhiri Sesi",
   "offlineModeStartFailed": "Mode Offline gagal dimulai. Coba lagi.",
+  "offlineModeMakePath": "Buat Jalur Pembayaran",
+  "offlineModePreparing": "Jalur sedang disiapkan…",
+  "offlineModePreparingConfirmations": "Konfirmasi {done}/{required}",
+  "@offlineModePreparingConfirmations": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "required": {
+        "type": "int"
+      }
+    }
+  },
+  "offlineModePreparingValue": "Nilai jalur: {amount}",
+  "@offlineModePreparingValue": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineModePreparingFee": "Biaya jaringan: {amount}",
+  "@offlineModePreparingFee": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineModeWaitingFirst": "Menunggu konfirmasi pertama…",
+  "offlineModeWaitingConfirmations": "Menunggu konfirmasi…",
+  "offlineModeWaitingFirstNote": "Blok baru muncul sesuai jadwal jaringan — mohon tunggu.",
+  "offlineModeReadyUnlinked": "Jalur siap — sambungkan lagi ke {name} untuk membayar",
+  "@offlineModeReadyUnlinked": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineModePathNeedsInternet": "Jalur baru butuh internet sekali saat disiapkan — pembayaran lewat jalur yang sudah siap tetap bisa",
+  "offlineModeAmountTitle": "Buat Jalur Pembayaran",
+  "offlineModeAmountDefaultNote": "Nominal bawaan",
+  "offlineModeAmountOther": "Nominal lain",
+  "offlineModeAmountHint": "Minimal 10.000 nusan, tanpa pecahan",
+  "offlineModeOnchainBalance": "Saldo on-chain-mu: {amount}",
+  "@offlineModeOnchainBalance": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineModeAmountTooSmall": "Minimal 10.000 nusan untuk satu jalur.",
+  "offlineModeAmountInvalid": "Tulis jumlah nusan bulat, tanpa pecahan.",
+  "offlineModeAmountContinue": "Lanjut",
+  "offlineModeConfirmTitle": "Buat jalur ke {name}?",
+  "@offlineModeConfirmTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineModeConfirmAmount": "Jumlah jalur",
+  "offlineModeConfirmFeeEstimate": "Biaya jaringan (perkiraan)",
+  "offlineModeConfirmFeeUnknown": "dihitung saat pengiriman",
+  "offlineModeConfirmFeeWord": "biaya jaringan",
+  "offlineModeConfirmTotal": "Total dari dompet on-chain",
+  "offlineModeConfirmDirection": "{amount} dari dompet on-chain-mu pindah ke jalur ini — kamulah yang bisa mengirim lewat jalur ini.",
+  "@offlineModeConfirmDirection": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineModeConfirmWait": "Jalur siap dipakai setelah 6 konfirmasi jaringan. Kamu akan diberi tahu saat sudah siap.",
+  "offlineModeConfirmCreate": "Buat Jalur",
+  "offlineModeNoBalanceTitle": "Saldo on-chain belum cukup",
+  "offlineModeNoBalanceBody": "Membuat jalur {amount} butuh saldo on-chain sebesar itu, ditambah sedikit biaya jaringan. Saldo on-chain-mu sekarang {balance}. Isi dulu dompet on-chain-mu, lalu kembali ke sini untuk membuat jalur.",
+  "@offlineModeNoBalanceBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "balance": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineModeNoBalanceDeposit": "Isi Dompet On-chain",
+  "offlineModeNoBalanceLater": "Nanti saja",
+  "offlineModeOpenFailedPeer": "Perangkat terputus saat membuat jalur. Dekatkan kedua HP, sambungkan lagi, lalu coba lagi.",
+  "offlineModeOpenFailedGeneric": "Membuat jalur gagal. Coba lagi.",
+  "offlineModeOpenFailedNotReady": "Dompet belum siap. Coba lagi sebentar.",
+  "offlineModePathReadyTitle": "Jalur ke {name} sudah siap",
+  "@offlineModePathReadyTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineModePathReadyBody": "Kamu bisa membayar tanpa internet sekarang.",
+  "offlineModeNotifyPermissionNote": "Nyalakan izin notifikasi supaya kamu diberi tahu saat jalur siap.",
   "offlineIntro": "Uji tahap 2: dua node ELNUX tersambung sebagai peer lewat jembatan Bluetooth, membuka channel langsung, lalu membayar Lightning saat kedua HP offline. Buka channel-nya saat kedua HP berdampingan dan pendana (HP yang membuka) sedang online; pembayaran offline memakai channel yang sudah siap. Nyalakan Bluetooth dan layanan Lokasi di kedua HP sebelum mulai.",
   "offlineOwnNodeId": "ID Node HP Ini",
   "offlineNodeNotRunning": "Node belum berjalan",

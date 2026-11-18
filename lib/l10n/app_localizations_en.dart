@@ -2022,6 +2022,143 @@ class AppLocalizationsEn extends AppLocalizations {
       'Offline Mode failed to start. Try again.';
 
   @override
+  String get offlineModeMakePath => 'Create Payment Path';
+
+  @override
+  String get offlineModePreparing => 'Preparing the payment path…';
+
+  @override
+  String offlineModePreparingConfirmations(int done, int required) {
+    return 'Confirmation $done/$required';
+  }
+
+  @override
+  String offlineModePreparingValue(String amount) {
+    return 'Path value: $amount';
+  }
+
+  @override
+  String offlineModePreparingFee(String amount) {
+    return 'Network fee: $amount';
+  }
+
+  @override
+  String get offlineModeWaitingFirst => 'Waiting for the first confirmation…';
+
+  @override
+  String get offlineModeWaitingConfirmations => 'Waiting for confirmation…';
+
+  @override
+  String get offlineModeWaitingFirstNote =>
+      'New blocks appear on the network\'s schedule — please wait.';
+
+  @override
+  String offlineModeReadyUnlinked(String name) {
+    return 'Path ready — reconnect to $name to pay';
+  }
+
+  @override
+  String get offlineModePathNeedsInternet =>
+      'A new path needs internet once while it is prepared — payments over a ready path still work';
+
+  @override
+  String get offlineModeAmountTitle => 'Create Payment Path';
+
+  @override
+  String get offlineModeAmountDefaultNote => 'Default amount';
+
+  @override
+  String get offlineModeAmountOther => 'Another amount';
+
+  @override
+  String get offlineModeAmountHint => 'At least 10,000 nusan, no fractions';
+
+  @override
+  String offlineModeOnchainBalance(String amount) {
+    return 'Your on-chain balance: $amount';
+  }
+
+  @override
+  String get offlineModeAmountTooSmall => 'At least 10,000 nusan for one path.';
+
+  @override
+  String get offlineModeAmountInvalid =>
+      'Enter a whole number of nusan, no fractions.';
+
+  @override
+  String get offlineModeAmountContinue => 'Continue';
+
+  @override
+  String offlineModeConfirmTitle(String name) {
+    return 'Create a path to $name?';
+  }
+
+  @override
+  String get offlineModeConfirmAmount => 'Path amount';
+
+  @override
+  String get offlineModeConfirmFeeEstimate => 'Network fee (estimate)';
+
+  @override
+  String get offlineModeConfirmFeeUnknown => 'calculated when sending';
+
+  @override
+  String get offlineModeConfirmFeeWord => 'network fee';
+
+  @override
+  String get offlineModeConfirmTotal => 'Total from your on-chain wallet';
+
+  @override
+  String offlineModeConfirmDirection(String amount) {
+    return '$amount moves from your on-chain wallet into this path — you will be the one who can send through it.';
+  }
+
+  @override
+  String get offlineModeConfirmWait =>
+      'The path is ready to use after 6 network confirmations. You will be notified when it is ready.';
+
+  @override
+  String get offlineModeConfirmCreate => 'Create Path';
+
+  @override
+  String get offlineModeNoBalanceTitle => 'On-chain balance too low';
+
+  @override
+  String offlineModeNoBalanceBody(String amount, String balance) {
+    return 'Creating a $amount path needs that much on-chain balance, plus a small network fee. Your on-chain balance is now $balance. Top up your on-chain wallet first, then come back here to create the path.';
+  }
+
+  @override
+  String get offlineModeNoBalanceDeposit => 'Top Up On-chain Wallet';
+
+  @override
+  String get offlineModeNoBalanceLater => 'Not now';
+
+  @override
+  String get offlineModeOpenFailedPeer =>
+      'The device disconnected while creating the path. Bring both phones close, reconnect, then try again.';
+
+  @override
+  String get offlineModeOpenFailedGeneric =>
+      'Creating the path failed. Try again.';
+
+  @override
+  String get offlineModeOpenFailedNotReady =>
+      'The wallet is not ready yet. Try again in a moment.';
+
+  @override
+  String offlineModePathReadyTitle(String name) {
+    return 'Your path to $name is ready';
+  }
+
+  @override
+  String get offlineModePathReadyBody => 'You can pay without internet now.';
+
+  @override
+  String get offlineModeNotifyPermissionNote =>
+      'Turn on notification permission so you are told when the path is ready.';
+
+  @override
   String get offlineIntro =>
       'Stage 2 test: two ELNUX nodes connect as peers over a Bluetooth bridge, open a direct channel, then pay over Lightning while both phones are offline. Open the channel while the phones are side by side and the funder (the opening phone) is online; offline payments use a channel that is already ready. Turn on Bluetooth and Location services on both phones before starting.';
 

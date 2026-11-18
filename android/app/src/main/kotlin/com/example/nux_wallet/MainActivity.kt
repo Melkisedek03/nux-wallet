@@ -63,6 +63,23 @@ class MainActivity : FlutterActivity() {
                         JembatanLatarService.berhenti(this)
                         hasil.success(true)
                     }
+                    // Notifikasi sekali-pakai "jalur sudah siap"
+                    // (PR C): judul + isi sudah dilokalisasi di
+                    // sisi Dart (lihat PathReadyWatcher).
+                    "notifJalurSiap" -> {
+                        val judul = panggilan.argument<String>("judul")
+                        val isi = panggilan.argument<String>("isi")
+                        if (judul.isNullOrEmpty() || isi.isNullOrEmpty()) {
+                            hasil.error(
+                                "ARGUMEN",
+                                "Judul/isi notifikasi jalur siap kosong",
+                                null,
+                            )
+                        } else {
+                            JembatanLatarService.notifJalurSiap(this, judul, isi)
+                            hasil.success(true)
+                        }
+                    }
                     else -> hasil.notImplemented()
                 }
             }

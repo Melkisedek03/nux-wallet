@@ -2025,6 +2025,144 @@ class AppLocalizationsId extends AppLocalizations {
   String get offlineModeStartFailed => 'Mode Offline gagal dimulai. Coba lagi.';
 
   @override
+  String get offlineModeMakePath => 'Buat Jalur Pembayaran';
+
+  @override
+  String get offlineModePreparing => 'Jalur sedang disiapkan…';
+
+  @override
+  String offlineModePreparingConfirmations(int done, int required) {
+    return 'Konfirmasi $done/$required';
+  }
+
+  @override
+  String offlineModePreparingValue(String amount) {
+    return 'Nilai jalur: $amount';
+  }
+
+  @override
+  String offlineModePreparingFee(String amount) {
+    return 'Biaya jaringan: $amount';
+  }
+
+  @override
+  String get offlineModeWaitingFirst => 'Menunggu konfirmasi pertama…';
+
+  @override
+  String get offlineModeWaitingConfirmations => 'Menunggu konfirmasi…';
+
+  @override
+  String get offlineModeWaitingFirstNote =>
+      'Blok baru muncul sesuai jadwal jaringan — mohon tunggu.';
+
+  @override
+  String offlineModeReadyUnlinked(String name) {
+    return 'Jalur siap — sambungkan lagi ke $name untuk membayar';
+  }
+
+  @override
+  String get offlineModePathNeedsInternet =>
+      'Jalur baru butuh internet sekali saat disiapkan — pembayaran lewat jalur yang sudah siap tetap bisa';
+
+  @override
+  String get offlineModeAmountTitle => 'Buat Jalur Pembayaran';
+
+  @override
+  String get offlineModeAmountDefaultNote => 'Nominal bawaan';
+
+  @override
+  String get offlineModeAmountOther => 'Nominal lain';
+
+  @override
+  String get offlineModeAmountHint => 'Minimal 10.000 nusan, tanpa pecahan';
+
+  @override
+  String offlineModeOnchainBalance(String amount) {
+    return 'Saldo on-chain-mu: $amount';
+  }
+
+  @override
+  String get offlineModeAmountTooSmall =>
+      'Minimal 10.000 nusan untuk satu jalur.';
+
+  @override
+  String get offlineModeAmountInvalid =>
+      'Tulis jumlah nusan bulat, tanpa pecahan.';
+
+  @override
+  String get offlineModeAmountContinue => 'Lanjut';
+
+  @override
+  String offlineModeConfirmTitle(String name) {
+    return 'Buat jalur ke $name?';
+  }
+
+  @override
+  String get offlineModeConfirmAmount => 'Jumlah jalur';
+
+  @override
+  String get offlineModeConfirmFeeEstimate => 'Biaya jaringan (perkiraan)';
+
+  @override
+  String get offlineModeConfirmFeeUnknown => 'dihitung saat pengiriman';
+
+  @override
+  String get offlineModeConfirmFeeWord => 'biaya jaringan';
+
+  @override
+  String get offlineModeConfirmTotal => 'Total dari dompet on-chain';
+
+  @override
+  String offlineModeConfirmDirection(String amount) {
+    return '$amount dari dompet on-chain-mu pindah ke jalur ini — kamulah yang bisa mengirim lewat jalur ini.';
+  }
+
+  @override
+  String get offlineModeConfirmWait =>
+      'Jalur siap dipakai setelah 6 konfirmasi jaringan. Kamu akan diberi tahu saat sudah siap.';
+
+  @override
+  String get offlineModeConfirmCreate => 'Buat Jalur';
+
+  @override
+  String get offlineModeNoBalanceTitle => 'Saldo on-chain belum cukup';
+
+  @override
+  String offlineModeNoBalanceBody(String amount, String balance) {
+    return 'Membuat jalur $amount butuh saldo on-chain sebesar itu, ditambah sedikit biaya jaringan. Saldo on-chain-mu sekarang $balance. Isi dulu dompet on-chain-mu, lalu kembali ke sini untuk membuat jalur.';
+  }
+
+  @override
+  String get offlineModeNoBalanceDeposit => 'Isi Dompet On-chain';
+
+  @override
+  String get offlineModeNoBalanceLater => 'Nanti saja';
+
+  @override
+  String get offlineModeOpenFailedPeer =>
+      'Perangkat terputus saat membuat jalur. Dekatkan kedua HP, sambungkan lagi, lalu coba lagi.';
+
+  @override
+  String get offlineModeOpenFailedGeneric => 'Membuat jalur gagal. Coba lagi.';
+
+  @override
+  String get offlineModeOpenFailedNotReady =>
+      'Dompet belum siap. Coba lagi sebentar.';
+
+  @override
+  String offlineModePathReadyTitle(String name) {
+    return 'Jalur ke $name sudah siap';
+  }
+
+  @override
+  String get offlineModePathReadyBody =>
+      'Kamu bisa membayar tanpa internet sekarang.';
+
+  @override
+  String get offlineModeNotifyPermissionNote =>
+      'Nyalakan izin notifikasi supaya kamu diberi tahu saat jalur siap.';
+
+  @override
   String get offlineIntro =>
       'Uji tahap 2: dua node ELNUX tersambung sebagai peer lewat jembatan Bluetooth, membuka channel langsung, lalu membayar Lightning saat kedua HP offline. Buka channel-nya saat kedua HP berdampingan dan pendana (HP yang membuka) sedang online; pembayaran offline memakai channel yang sudah siap. Nyalakan Bluetooth dan layanan Lokasi di kedua HP sebelum mulai.';
 
