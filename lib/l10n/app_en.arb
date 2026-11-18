@@ -1005,6 +1005,112 @@
   },
   "offlineModeEndSession": "End Session",
   "offlineModeStartFailed": "Offline Mode failed to start. Try again.",
+  "offlineModeMakePath": "Create Payment Path",
+  "offlineModePreparing": "Preparing the payment path…",
+  "offlineModePreparingConfirmations": "Confirmation {done}/{required}",
+  "@offlineModePreparingConfirmations": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "required": {
+        "type": "int"
+      }
+    }
+  },
+  "offlineModePreparingValue": "Path value: {amount}",
+  "@offlineModePreparingValue": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineModePreparingFee": "Network fee: {amount}",
+  "@offlineModePreparingFee": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineModeWaitingFirst": "Waiting for the first confirmation…",
+  "offlineModeWaitingConfirmations": "Waiting for confirmation…",
+  "offlineModeWaitingFirstNote": "New blocks appear on the network's schedule — please wait.",
+  "offlineModeReadyUnlinked": "Path ready — reconnect to {name} to pay",
+  "@offlineModeReadyUnlinked": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineModePathNeedsInternet": "A new path needs internet once while it is prepared — payments over a ready path still work",
+  "offlineModeAmountTitle": "Create Payment Path",
+  "offlineModeAmountDefaultNote": "Default amount",
+  "offlineModeAmountOther": "Another amount",
+  "offlineModeAmountHint": "At least 10,000 nusan, no fractions",
+  "offlineModeOnchainBalance": "Your on-chain balance: {amount}",
+  "@offlineModeOnchainBalance": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineModeAmountTooSmall": "At least 10,000 nusan for one path.",
+  "offlineModeAmountInvalid": "Enter a whole number of nusan, no fractions.",
+  "offlineModeAmountContinue": "Continue",
+  "offlineModeConfirmTitle": "Create a path to {name}?",
+  "@offlineModeConfirmTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineModeConfirmAmount": "Path amount",
+  "offlineModeConfirmFeeEstimate": "Network fee (estimate)",
+  "offlineModeConfirmFeeUnknown": "calculated when sending",
+  "offlineModeConfirmFeeWord": "network fee",
+  "offlineModeConfirmTotal": "Total from your on-chain wallet",
+  "offlineModeConfirmDirection": "{amount} moves from your on-chain wallet into this path — you will be the one who can send through it.",
+  "@offlineModeConfirmDirection": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineModeConfirmWait": "The path is ready to use after 6 network confirmations. You will be notified when it is ready.",
+  "offlineModeConfirmCreate": "Create Path",
+  "offlineModeNoBalanceTitle": "On-chain balance too low",
+  "offlineModeNoBalanceBody": "Creating a {amount} path needs that much on-chain balance, plus a small network fee. Your on-chain balance is now {balance}. Top up your on-chain wallet first, then come back here to create the path.",
+  "@offlineModeNoBalanceBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "balance": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineModeNoBalanceDeposit": "Top Up On-chain Wallet",
+  "offlineModeNoBalanceLater": "Not now",
+  "offlineModeOpenFailedPeer": "The device disconnected while creating the path. Bring both phones close, reconnect, then try again.",
+  "offlineModeOpenFailedGeneric": "Creating the path failed. Try again.",
+  "offlineModeOpenFailedNotReady": "The wallet is not ready yet. Try again in a moment.",
+  "offlineModePathReadyTitle": "Your path to {name} is ready",
+  "@offlineModePathReadyTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineModePathReadyBody": "You can pay without internet now.",
+  "offlineModeNotifyPermissionNote": "Turn on notification permission so you are told when the path is ready.",
   "offlineIntro": "Stage 2 test: two ELNUX nodes connect as peers over a Bluetooth bridge, open a direct channel, then pay over Lightning while both phones are offline. Open the channel while the phones are side by side and the funder (the opening phone) is online; offline payments use a channel that is already ready. Turn on Bluetooth and Location services on both phones before starting.",
   "offlineOwnNodeId": "This Phone's Node ID",
   "offlineNodeNotRunning": "Node is not running yet",
