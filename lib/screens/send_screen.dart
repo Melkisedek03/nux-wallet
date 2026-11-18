@@ -757,7 +757,23 @@ class _SendScreenState extends State<SendScreen> {
         // Getar sukses — penanda fisik hasil akhir, sama seperti
         // peringatan koin masuk di sisi penerima.
         CoinAlert.vibrateSuccess();
-        setState(() => _paid = true);
+        // Reset formulir: pembayaran sukses, layar kembali seperti
+        // baru dibuka — kolom kode + kolom jumlah dikosongkan dan
+        // keadaan turunan direset (meniru tombol hapus manual).
+        // Pendengar _syncOfferInfo mengkaskade reset _offerInfo /
+        // _bolt11AmountMsat saat teks kolom menjadi kosong.
+        // Gagal / masih pending TIDAK mereset — nilainya
+        // dipertahankan supaya bisa coba ulang tanpa menempel
+        // ulang invoice.
+        _invoiceController.clear();
+        _offerAmountController.clear();
+        setState(() {
+          _paid = true;
+          _error = null;
+          _reserveHeldMsat = null;
+          _reserveSendableMsat = null;
+          _peerLimitSendableMsat = null;
+        });
         _scrollToSuccess();
       } else if (outcome == PaymentStatus.failed) {
         // Hasil akhir gagal sesudah perintah diterima: alasannya

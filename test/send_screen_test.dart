@@ -24,6 +24,12 @@ const _lspId =
 const _invoice50u =
     'lntn50u1p4dtvwydqjw44xjgz2f92zqnj4tqpp56e07u6ce6ryn9q094a8mlj2nv4ycaxl4fevez4wy48dvh2t5cjpqsp5pu2ya79p07tltuvnkfn6wszvcs5aqjqw8ptsaz0896q722632lfq9qyysgqcqzpvxqrrssrzjq2mf6clh7pmk2ftaw2d5zs2zd2llsz53pz8tgw0vduhfv6dkgg65jqqqqyqq2xsqqcqqqqqqqqqqqqqqfqgczp89wecast6hl4eymf8hlrt2zpw6x52qc4hgt0vsf2yh2h5j3xjcth7k8csyyvpanydw8v6xwxgkm74qtcw3aumxm8gkvcfhwf2ggq24yfp8';
 
+// Offer Bolt12 variable-amount (tanpa nominal tetap) — salinan
+// dari test/bolt12_info_test.dart. Belum kedaluwarsa,
+// deskripsi "Spike Bolt12 ELNUX".
+const _offerVariable =
+    'lno1qgsxn3j3r9xwswu6tx4j0aw89gq3sgjskk97ts5mtzt0n43rwyqsqqq2zffhq6ttv5syymmvwscnygz9f3892kqsl5qhzq69kgvyfpa0zm5r0rf6ygt79jm838ttyckz6r56m8t5pp7h20hwkgpa4y0ykzqeml5zd3n5dhwdaxkq4df5mgrglu0wqw0hzemxrv3ahhqzqwqu2ncajzcmfvnpjuxzk97g6zmska74cxyvlagn47f36hy6n33scqr5q3jsd9kyea7qy0y59n4er3lyl5ex9qj9shwvsqu3hkzvj2tyvmeztlqmkygxhs7rypjj8yq5m6ch5rxk2nq205lvk50rjag22kln90zgskdqq7hzqfk4dm3s5fu24mrtymju4ehn4qkrfu6h2wnjt40kd2aprad2kp8r5nnnshgjeg23ztkmnv4hf5pe6k8z8e6etmhk075xj2a9pp4gpucruu5eluerhnsvmr8lqeh6tyqqw3uw7zrfhapsthaue0tgckx4v0v6l6qnk7gc6zjfgux8mpxlljgrjnyjs8curnjwlr8m6pxn29jz84vvf7qyh5tctxwh7krfz77t7duyr58098qrct0wl9d78rsldwr0xar2427qsefvwtynt4nyqmfj6njj4e6m6ssel98jrdgafjapu22waldef4u3vggzjuj920fkmwjwy0jqk38msmerthtyr5udalpwaz634g6hcyyht3gq';
+
 const _bech32Charset = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
 
 /// Kemas ulang [invoice] dengan timestamp sekarang (checksum
@@ -120,18 +126,22 @@ PeerDetails _peer(String nodeIdHex, {bool connected = true}) {
 
 /// Layanan palsu: saldo, channel, dan peer bisa diatur per tes;
 /// perintah kirim bisa dibuat gagal sinkron (meniru node yang
-/// menolak perintah karena tanpa rute).
+/// menolak perintah karena tanpa rute); hasil akhir pembayaran
+/// bisa diatur per tes (null = masih pending melewati batas
+/// tunggu).
 class _FakeLspService extends LspService {
   List<ChannelDetails> channels;
   List<PeerDetails> peers;
   BigInt? balanceMsat;
   bool throwOnPay;
+  PaymentStatus? outcome;
 
   _FakeLspService({
     this.channels = const [],
     this.peers = const [],
     this.balanceMsat,
     this.throwOnPay = false,
+    this.outcome = PaymentStatus.succeeded,
   });
 
   @override
@@ -147,7 +157,25 @@ class _FakeLspService extends LspService {
   Future<BigInt> getLightningBalance() async => balanceMsat ?? BigInt.zero;
 
   @override
+  Future<List<PaymentDetails>> listPayments() async => [];
+
+  @override
   Future<PaymentId> payInvoice(String invoiceStr) async {
+    if (throwOnPay) throw Exception('node menolak perintah kirim');
+    return PaymentId(data: Uint8List.fromList(List.filled(32, 7)));
+  }
+
+  @override
+  Future<PaymentId> payOffer(String offerStr) async {
+    if (throwOnPay) throw Exception('node menolak perintah kirim');
+    return PaymentId(data: Uint8List.fromList(List.filled(32, 7)));
+  }
+
+  @override
+  Future<PaymentId> payOfferUsingAmount(
+    String offerStr,
+    BigInt amountMsat,
+  ) async {
     if (throwOnPay) throw Exception('node menolak perintah kirim');
     return PaymentId(data: Uint8List.fromList(List.filled(32, 7)));
   }
@@ -157,7 +185,7 @@ class _FakeLspService extends LspService {
     PaymentId paymentId, {
     Duration timeout = const Duration(seconds: 60),
     Duration interval = const Duration(seconds: 2),
-  }) async => PaymentStatus.succeeded;
+  }) async => outcome;
 }
 
 Widget _app(Widget home) {
@@ -194,23 +222,20 @@ OfflineBridgeService _linkedBridge() {
   return bridge;
 }
 
-/// Tempel [invoice] lewat tombol Tempel (kolom kode readOnly —
-/// mengetik manual tidak mungkin, sesuai keputusan 10 Nov 2026)
-/// lalu tekan tombol Bayar di layar (bukan tombol dialog).
-/// Tombol-tombol ada di bawah kolom gulir, jadi dipastikan
-/// terlihat dulu.
+/// Tempel [code] lewat tombol Tempel (kolom kode readOnly —
+/// mengetik manual tidak mungkin, sesuai keputusan 10 Nov 2026).
 ///
 /// Clipboard dimock lewat kanal platform: `Clipboard.setData`
 /// tidak pernah kembali di lingkungan tes ini, jadi handler mock
-/// menjawab `Clipboard.getData` langsung dengan invoice.
+/// menjawab `Clipboard.getData` langsung dengan kode.
 /// Pembersihan mock tidak diperlukan — setiap tes memasang
 /// handler-nya sendiri sebelum menempel.
-Future<void> _enterInvoiceAndPay(WidgetTester tester, String invoice) async {
+Future<void> _pasteCode(WidgetTester tester, String code) async {
   tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
     SystemChannels.platform,
     (MethodCall call) async {
       if (call.method == 'Clipboard.getData') {
-        return <String, dynamic>{'text': invoice};
+        return <String, dynamic>{'text': code};
       }
       return null;
     },
@@ -219,11 +244,34 @@ Future<void> _enterInvoiceAndPay(WidgetTester tester, String invoice) async {
   await tester.ensureVisible(pasteButton);
   await tester.tap(pasteButton);
   await _pumpManual(tester);
+}
+
+/// Tekan tombol Bayar di layar (bukan tombol dialog). Tombol ada
+/// di bawah kolom gulir, jadi dipastikan terlihat dulu.
+Future<void> _tapPay(WidgetTester tester) async {
   final payButton = find.widgetWithText(ElevatedButton, 'Bayar').first;
   await tester.ensureVisible(payButton);
   await tester.tap(payButton);
   await _pumpManual(tester);
 }
+
+/// Tempel [invoice] lalu tekan tombol Bayar di layar.
+Future<void> _enterInvoiceAndPay(WidgetTester tester, String invoice) async {
+  await _pasteCode(tester, invoice);
+  await _tapPay(tester);
+}
+
+/// Kolom kode: satu-satunya TextField readOnly di layar.
+Finder _codeField() =>
+    find.byWidgetPredicate((w) => w is TextField && w.readOnly);
+
+/// Kolom jumlah offer: satu-satunya TextField yang bisa diketik.
+Finder _amountField() =>
+    find.byWidgetPredicate((w) => w is TextField && !w.readOnly);
+
+/// Isi teks pengontrol dari TextField yang ditemukan [finder].
+String _fieldText(WidgetTester tester, Finder finder) =>
+    tester.widget<TextField>(finder).controller!.text;
 
 /// Tekan tombol Bayar di dialog konfirmasi (tombol Bayar yang
 /// kedua di pohon widget — yang pertama milik layar di bawah
@@ -379,6 +427,126 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('Pembayaran gagal. Coba lagi.'), findsOneWidget);
       expect(find.textContaining('perangkat yang tertaut'), findsNothing);
+    });
+  });
+
+  group('SendScreen reset formulir sesudah sukses', () {
+    testWidgets('kirim Bolt11 sukses: kolom kode kosong, baris '
+        'nominal hilang, panel sukses tampil', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final fake = _FakeLspService(
+        channels: [_channel(_lspId, outboundMsat: 5000000000)],
+        peers: [_peer(_lspId)],
+        balanceMsat: BigInt.from(6000000000),
+      );
+      await tester.pumpWidget(_app(SendScreen(lspService: fake)));
+      await _pumpManual(tester);
+      final invoice = _freshInvoice(_invoice50u);
+      await _pasteCode(tester, invoice);
+      expect(_fieldText(tester, _codeField()), invoice);
+      // Keadaan turunan tampil sebelum bayar: baris nominal.
+      expect(find.text('Nominal: 5.000 nusan'), findsOneWidget);
+      await _tapPay(tester);
+      expect(find.text('Bayar invoice ini?'), findsOneWidget);
+      await _confirmDialog(tester);
+      expect(tester.takeException(), isNull);
+      expect(find.text('Pembayaran Berhasil!'), findsOneWidget);
+      // Formulir bersih seperti baru membuka layar.
+      expect(_fieldText(tester, _codeField()), isEmpty);
+      expect(find.text('Nominal: 5.000 nusan'), findsNothing);
+      expect(find.byIcon(Icons.close_rounded), findsNothing);
+    });
+
+    testWidgets('kirim offer Bolt12 variable sukses: kolom kode dan '
+        'kolom jumlah sama-sama kosong', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final fake = _FakeLspService(
+        channels: [_channel(_lspId, outboundMsat: 5000000000)],
+        peers: [_peer(_lspId)],
+        balanceMsat: BigInt.from(6000000000),
+      );
+      await tester.pumpWidget(_app(SendScreen(lspService: fake)));
+      await _pumpManual(tester);
+      await _pasteCode(tester, _offerVariable);
+      expect(_fieldText(tester, _codeField()), _offerVariable);
+      // Panel offer variable tampil dengan kolom jumlah.
+      expect(
+        find.text(
+          'Kode bayar ini tidak menetapkan nominal — tentukan '
+          'sendiri jumlah yang mau dibayar.',
+        ),
+        findsOneWidget,
+      );
+      await tester.enterText(_amountField(), '2000');
+      await _pumpManual(tester);
+      await _tapPay(tester);
+      expect(find.text('Bayar kode bayar ini?'), findsOneWidget);
+      await _confirmDialog(tester);
+      expect(tester.takeException(), isNull);
+      expect(find.text('Pembayaran Berhasil!'), findsOneWidget);
+      // Kedua kolom kosong, panel offer ikut hilang.
+      expect(_fieldText(tester, _codeField()), isEmpty);
+      expect(_amountField(), findsNothing);
+      expect(
+        find.text(
+          'Kode bayar ini tidak menetapkan nominal — tentukan '
+          'sendiri jumlah yang mau dibayar.',
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets('gagal kirim sinkron: nilai formulir dipertahankan '
+        'untuk coba ulang', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final fake = _FakeLspService(
+        channels: [_channel(_lspId, outboundMsat: 5000000000)],
+        peers: [_peer(_lspId)],
+        balanceMsat: BigInt.from(6000000000),
+        throwOnPay: true,
+      );
+      await tester.pumpWidget(_app(SendScreen(lspService: fake)));
+      await _pumpManual(tester);
+      final invoice = _freshInvoice(_invoice50u);
+      await _enterInvoiceAndPay(tester, invoice);
+      expect(find.text('Bayar invoice ini?'), findsOneWidget);
+      await _confirmDialog(tester);
+      expect(tester.takeException(), isNull);
+      expect(find.text('Pembayaran gagal. Coba lagi.'), findsOneWidget);
+      // Nilai dipertahankan — tidak perlu menempel ulang.
+      expect(_fieldText(tester, _codeField()), invoice);
+      expect(find.text('Nominal: 5.000 nusan'), findsOneWidget);
+    });
+
+    testWidgets('hasil masih pending: nilai formulir dipertahankan', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final fake = _FakeLspService(
+        channels: [_channel(_lspId, outboundMsat: 5000000000)],
+        peers: [_peer(_lspId)],
+        balanceMsat: BigInt.from(6000000000),
+        outcome: null,
+      );
+      await tester.pumpWidget(_app(SendScreen(lspService: fake)));
+      await _pumpManual(tester);
+      final invoice = _freshInvoice(_invoice50u);
+      await _enterInvoiceAndPay(tester, invoice);
+      expect(find.text('Bayar invoice ini?'), findsOneWidget);
+      await _confirmDialog(tester);
+      expect(tester.takeException(), isNull);
+      expect(
+        find.text(
+          'Pembayaran masih diproses melewati batas tunggu. '
+          'Hasil akhirnya akan tampil di Riwayat — jangan bayar '
+          'ulang invoice yang sama sebelum statusnya jelas.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Pembayaran Berhasil!'), findsNothing);
+      // Nilai dipertahankan — statusnya belum jelas.
+      expect(_fieldText(tester, _codeField()), invoice);
+      expect(find.text('Nominal: 5.000 nusan'), findsOneWidget);
     });
   });
 }
