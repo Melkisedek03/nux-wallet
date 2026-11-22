@@ -62,6 +62,14 @@ class TransactionDetailScreen extends StatelessWidget {
   /// jenis yang tampil di sini sama dengan tag barisnya.
   final String? bolt12Label;
 
+  /// Label pendanaan channel untuk kiriman on-chain ini (lihat
+  /// ChannelFundingLabelStore); null bila kiriman ini bukan
+  /// pendanaan channel. Hanya berlaku untuk kiriman KELUAR —
+  /// pendanaan tampil sebagai kiriman on-chain di sisi pendana
+  /// saja — dan hanya di layar detail ini, bukan di baris
+  /// riwayat (§4.4 rancangan Kelola Channel).
+  final String? fundingLabel;
+
   const TransactionDetailScreen({
     super.key,
     required this.payment,
@@ -69,6 +77,7 @@ class TransactionDetailScreen extends StatelessWidget {
     this.note,
     this.routeTag,
     this.bolt12Label,
+    this.fundingLabel,
   });
 
   String _hex(Iterable<int> bytes) =>
@@ -197,6 +206,10 @@ class TransactionDetailScreen extends StatelessWidget {
       routeTag: routeTag,
       isBolt12Inbound: isIn && payment.kind is PaymentKind_Bolt12Offer,
       bolt12Label: bolt12Label,
+      // Label pendanaan hanya untuk kiriman keluar — pertahanan
+      // kedua sesudah pemanggil (main.dart) yang memang hanya
+      // mengopernya untuk kiriman on-chain keluar.
+      fundingLabel: isIn ? null : fundingLabel,
     );
     final typeText = tag == historyRowTagBare ? '⚡ Lightning' : tag;
     final hashHex = _paymentHashHex;

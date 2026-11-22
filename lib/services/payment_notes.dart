@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:ldk_node/src/generated/api/types.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Catatan pembayaran ELNUX — teks deskripsi invoice yang ditautkan
@@ -157,14 +158,27 @@ String bolt12OfferLabelTag(String label) {
 /// dikenali user. Tanpa label, Bolt12 masuk tetap '⚡' polos
 /// seperti sebelum fitur ini ada (tidak ada tag 'Bolt12':
 /// permukaan awam tidak butuh jargon baru).
+///
+/// [fundingLabel] hanya dipakai layar DETAIL (bukan baris):
+/// kiriman on-chain yang mendanai channel membawa label
+/// jenisnya ("Pembukaan Channel …⚡") sebagai ganti '⛓
+/// on-chain' polos. Baris riwayat tidak mengopernya, jadi
+/// baris tidak berubah — label pendanaan memang dicakup
+/// rancangan hanya untuk detail Aktivitas. Label pendanaan
+/// tidak pernah berebut dengan JIT: pendanaan adalah on-chain,
+/// JIT adalah Bolt11.
 String historyRowTag({
   required bool isJit,
   required bool isOnchain,
   required String? routeTag,
   bool isBolt12Inbound = false,
   String? bolt12Label,
+  String? fundingLabel,
 }) {
   if (isJit) return '⚡ JIT';
+  if (isOnchain && fundingLabel != null && fundingLabel.trim().isNotEmpty) {
+    return fundingLabel;
+  }
   if (isOnchain) return '⛓ on-chain';
   if (isBolt12Inbound && bolt12Label != null && bolt12Label.trim().isNotEmpty) {
     return bolt12OfferLabelTag(bolt12Label);
@@ -222,4 +236,148 @@ class PaymentTagStore {
   /// Catat pembayaran ini berjalan lewat channel langsung.
   Future<void> saveDirect(String paymentHashHex) =>
       save(paymentHashHex, paymentTagDirect);
+}
+
+/// Label pendanaan channel (PR 2 rancangan Kelola Channel):
+/// kiriman on-chain yang sebenarnya pendanaan channel membawa
+/// keterangan jenisnya di detail Aktivitas, dibedakan dari
+/// lawan channel-nya (keputusan 4 rancangan).
+///
+/// Teksnya TETAP persis seperti diputuskan, termasuk ⚡, dan
+/// sama di kedua bahasa — ini label tetap, bukan kalimat yang
+/// diterjemahkan. Karena itu tidak ada kunci l10n untuknya.
+
+/// Jenis pendanaan yang disimpan [ChannelFundingLabelStore]:
+/// txid mendanai channel ke LSP atau channel langsung.
+const String fundingKindLsp = 'lsp';
+const String fundingKindDirect = 'direct';
+
+/// Label detail untuk pendanaan channel ke LSP.
+const String fundingLabelLsp = 'Pembukaan Channel ke LSP⚡';
+
+/// Label detail untuk pendanaan channel langsung.
+const String fundingLabelDirect = 'Pembukaan Channel Langsung⚡';
+
+/// Teks label detail dari jenis pendanaan tersimpan [kind];
+/// null bila jenisnya tidak dikenal (termasuk null) — pemanggil
+/// menampilkan jenis on-chain polos seperti sebelumnya.
+String? fundingLabelTextForKind(String? kind) {
+  if (kind == fundingKindLsp) return fundingLabelLsp;
+  if (kind == fundingKindDirect) return fundingLabelDirect;
+  return null;
+}
+
+/// Jenis pendanaan [txid] dari daftar channel [channels] yang
+/// masih dikenal node: [fundingKindLsp] bila txid adalah
+/// pendanaan channel ke LSP, [fundingKindDirect] bila channel
+/// langsung, null bila tidak ada channel yang txid
+/// pendanaannya cocok. Perbandingan ID node tidak peka huruf
+/// besar/kecil — hex node bisa berbeda kapitalisasi antar
+/// sumber.
+///
+/// Korelasi ini hidup hanya selama channel-nya masih dikenal
+/// node; pemanggil menyimpannya ke [ChannelFundingLabelStore]
+/// pada kecocokan pertama, supaya labelnya bertahan sesudah
+/// channel ditutup dan hilang dari daftar (§4.4 rancangan).
+String? matchChannelFundingKind({
+  required String txid,
+  required List<ChannelDetails> channels,
+  required String lspNodeIdHex,
+}) {
+  final lsp = lspNodeIdHex.toLowerCase();
+  for (final ch in channels) {
+    if (ch.fundingTxo?.txid.hash == txid) {
+      return ch.counterpartyNodeId.hex.toLowerCase() == lsp
+          ? fundingKindLsp
+          : fundingKindDirect;
+    }
+  }
+  return null;
+}
+
+/// Penyimpanan label pendanaan channel di SharedPreferences
+/// (txid hex → jenis pendanaan). Pola sama seperti
+/// [PaymentNoteStore]: fail-open, kegagalan tulis ditelan —
+/// label adalah lapisan tampilan detail, bukan data dana.
+///
+/// Mengapa dicatat, bukan dibaca dari node setiap kali:
+/// korelasi txid ↔ channel hanya bisa dibuktikan selama
+/// channel-nya masih terdaftar di node. Begitu channel ditutup
+/// dan hilang dari daftar, kiriman pendanaannya di riwayat
+/// tidak lagi bisa dicocokkan — kecuali pasangannya sudah
+/// disimpan saat pertama kali terlihat.
+class ChannelFundingLabelStore {
+  static const String storageKey = 'channel_funding_labels_v1';
+
+  /// Batas simpanan: label terlama terbuang lebih dulu (pola
+  /// sama seperti PaymentNoteStore.maxKeep). Satu entri per
+  /// channel yang pernah didanai node ini — 500 jauh di atas
+  /// pola pakai dompet pribadi.
+  static const int maxKeep = 500;
+
+  /// Muat seluruh label (peta txid hex → jenis pendanaan).
+  Future<Map<String, String>> loadAll() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return decodePaymentNotes(prefs.getString(storageKey));
+    } catch (_) {
+      return <String, String>{};
+    }
+  }
+
+  /// Simpan (atau perbarui) jenis pendanaan untuk [txid].
+  ///
+  /// Txid bukan 64 karakter atau jenis di luar yang dikenal
+  /// tidak disimpan. Entri yang diperbarui pindah ke posisi
+  /// terbaru supaya pemotongan [maxKeep] membuang yang
+  /// benar-benar paling lama tidak tersentuh.
+  Future<void> save(String txid, String kind) async {
+    if (txid.length != 64) return;
+    if (kind != fundingKindLsp && kind != fundingKindDirect) return;
+    try {
+      final labels = await loadAll();
+      labels.remove(txid);
+      labels[txid] = kind;
+      while (labels.length > maxKeep) {
+        labels.remove(labels.keys.first);
+      }
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(storageKey, encodePaymentNotes(labels));
+    } catch (_) {
+      // Gagal simpan = detail kiriman ini tampil on-chain
+      // polos, seperti sebelum fitur ini ada.
+    }
+  }
+
+  /// Simpan sekumpulan pasangan txid → jenis dalam satu kali
+  /// baca-tulis (dipakai penyegaran riwayat yang mencocokkan
+  /// banyak kiriman sekaligus). Entri yang tidak sah (txid
+  /// bukan 64 karakter / jenis tidak dikenal) dibuang satu per
+  /// satu, bukan menggagalkan sisanya.
+  Future<void> saveAll(Map<String, String> entries) async {
+    final valid = <String, String>{};
+    for (final entry in entries.entries) {
+      if (entry.key.length != 64) continue;
+      if (entry.value != fundingKindLsp && entry.value != fundingKindDirect) {
+        continue;
+      }
+      valid[entry.key] = entry.value;
+    }
+    if (valid.isEmpty) return;
+    try {
+      final labels = await loadAll();
+      for (final entry in valid.entries) {
+        labels.remove(entry.key);
+        labels[entry.key] = entry.value;
+      }
+      while (labels.length > maxKeep) {
+        labels.remove(labels.keys.first);
+      }
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(storageKey, encodePaymentNotes(labels));
+    } catch (_) {
+      // Sama seperti save: gagal simpan hanya menghilangkan
+      // label detail, bukan dana.
+    }
+  }
 }

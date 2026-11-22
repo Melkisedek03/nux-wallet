@@ -21,10 +21,25 @@ PaymentDetails _bolt12Payment({required PaymentDirection direction}) {
   );
 }
 
+PaymentDetails _onchainPayment({required PaymentDirection direction}) {
+  return PaymentDetails(
+    id: PaymentId(data: Uint8List.fromList([5])),
+    kind: PaymentKind_Onchain(
+      txid: Txid(hash: 'aa' * 32),
+      status: ConfirmationStatus.unconfirmed(),
+    ),
+    amountMsat: BigInt.from(25000000),
+    direction: direction,
+    status: PaymentStatus.succeeded,
+    latestUpdateTimestamp: BigInt.from(1762000000),
+  );
+}
+
 Future<void> _pumpDetail(
   WidgetTester tester, {
   required PaymentDetails payment,
   String? bolt12Label,
+  String? fundingLabel,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -32,7 +47,11 @@ Future<void> _pumpDetail(
       locale: const Locale('id'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: TransactionDetailScreen(payment: payment, bolt12Label: bolt12Label),
+      home: TransactionDetailScreen(
+        payment: payment,
+        bolt12Label: bolt12Label,
+        fundingLabel: fundingLabel,
+      ),
     ),
   );
   await tester.pumpAndSettle();
@@ -84,5 +103,56 @@ void main() {
     );
     expect(tester.takeException(), isNull);
     expect(find.text('⚡ ABCDEFGHIJKLMNOPQRST…'), findsOneWidget);
+  });
+
+  testWidgets('on-chain keluar pendanaan LSP: jenis tampil labelnya', (
+    tester,
+  ) async {
+    await _pumpDetail(
+      tester,
+      payment: _onchainPayment(direction: PaymentDirection.outbound),
+      fundingLabel: 'Pembukaan Channel ke LSP⚡',
+    );
+    expect(tester.takeException(), isNull);
+    expect(find.text('Pembukaan Channel ke LSP⚡'), findsOneWidget);
+    expect(find.text('⛓ on-chain'), findsNothing);
+  });
+
+  testWidgets('on-chain keluar pendanaan langsung: jenis tampil labelnya', (
+    tester,
+  ) async {
+    await _pumpDetail(
+      tester,
+      payment: _onchainPayment(direction: PaymentDirection.outbound),
+      fundingLabel: 'Pembukaan Channel Langsung⚡',
+    );
+    expect(tester.takeException(), isNull);
+    expect(find.text('Pembukaan Channel Langsung⚡'), findsOneWidget);
+    expect(find.text('⛓ on-chain'), findsNothing);
+  });
+
+  testWidgets('on-chain keluar tanpa label pendanaan: tetap on-chain', (
+    tester,
+  ) async {
+    await _pumpDetail(
+      tester,
+      payment: _onchainPayment(direction: PaymentDirection.outbound),
+    );
+    expect(tester.takeException(), isNull);
+    expect(find.text('⛓ on-chain'), findsOneWidget);
+  });
+
+  testWidgets('on-chain masuk: label pendanaan diabaikan', (tester) async {
+    // Pendanaan tampil sebagai kiriman di sisi pendana saja —
+    // pembayaran masuk tidak pernah membawa label ini, walau
+    // pemanggil keliru mengopernya.
+    await _pumpDetail(
+      tester,
+      payment: _onchainPayment(direction: PaymentDirection.inbound),
+      fundingLabel: 'Pembukaan Channel ke LSP⚡',
+    );
+    expect(tester.takeException(), isNull);
+    expect(find.text('⛓ on-chain'), findsOneWidget);
+    expect(find.text('Pembukaan Channel ke LSP⚡'), findsNothing);
   });
 }
