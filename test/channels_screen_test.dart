@@ -135,6 +135,33 @@ class _FakeLspService extends LspService {
     return userId;
   }
 
+  /// Tutup kerja sama gagal (untuk memicu dialog tutup paksa).
+  bool failClose = false;
+
+  /// Tutup paksa gagal.
+  bool failForceClose = false;
+
+  /// Channel yang tutup kerja sama / tutup paksa-nya diminta.
+  final List<ChannelDetails> closedChannels = [];
+  final List<ChannelDetails> forceClosedChannels = [];
+
+  /// Tutup tidak mengubah daftar channel: tes mengendalikan
+  /// keadaan daftar secara eksplisit (pola yang sama seperti
+  /// tes kemajuan disiapkan) — channel tetap terdaftar sesudah
+  /// tutup dimulai (jendela penutupan), lalu tes mengeluarkannya
+  /// untuk meniru handshake yang selesai.
+  @override
+  Future<void> closeChannel(ChannelDetails channel) async {
+    if (failClose) throw StateError('peer tidak terjangkau');
+    closedChannels.add(channel);
+  }
+
+  @override
+  Future<void> forceCloseChannel(ChannelDetails channel) async {
+    if (failForceClose) throw StateError('gagal siar');
+    forceClosedChannels.add(channel);
+  }
+
   @override
   Future<OnchainOverview> getOnchainOverview() async => (
     totalSats: spendableSats,
@@ -150,19 +177,28 @@ class _FakeLspService extends LspService {
 
 /// Perkiraan biaya palsu: tarif tetap 250 nusan, biaya pasti
 /// 250 nusan — cukup untuk membuktikan alur, tanpa HTTP.
+/// Tinggi ujung null bila tidak diisi (baris perkiraan buka
+/// kunci tidak tampil).
 class _FakeFeeEstimateService extends FeeEstimateService {
   final BigInt? estimate;
   final BigInt? fundingFee;
+  final int? tipHeight;
 
-  _FakeFeeEstimateService({BigInt? estimate, BigInt? fundingFee})
-    : estimate = estimate ?? BigInt.from(250),
-      fundingFee = fundingFee ?? BigInt.from(250);
+  _FakeFeeEstimateService({
+    BigInt? estimate,
+    BigInt? fundingFee,
+    this.tipHeight,
+  }) : estimate = estimate ?? BigInt.from(250),
+       fundingFee = fundingFee ?? BigInt.from(250);
 
   @override
   Future<BigInt?> estimateFundingFee() async => estimate;
 
   @override
   Future<BigInt?> fetchFundingFee(String fundingTxid) async => fundingFee;
+
+  @override
+  Future<int?> fetchTipHeight() async => tipHeight;
 }
 
 Widget _app(Widget home) {
@@ -735,6 +771,194 @@ void main() {
       final directSize = tester.getSize(find.text('Channel Langsung'));
       expect(directSize.width, greaterThan(50));
       expect(directSize.height, lessThan(30));
+    });
+  });
+
+  group('ChannelsScreen tutup paksa + cacat kartu (R3)', () {
+    testWidgets('tutup kerja sama: snackbar berlabel + kartu Menutup…', (
+      tester,
+    ) async {
+      final service = _FakeLspService(
+        channels: [_channel(_peerId, channelValueSats: 20000)],
+      );
+      await _pumpScreen(tester, service: service);
+      await tester.tap(find.text('Tutup Channel'));
+      await _pumpManual(tester);
+      expect(find.text('Tutup channel ini?'), findsOneWidget);
+      // Tombol konfirmasi dialog adalah "Tutup Channel" kedua
+      // (tombol kartu masih ada di belakang dialog).
+      await tester.tap(find.text('Tutup Channel').last);
+      await _pumpManual(tester);
+      expect(tester.takeException(), isNull);
+      expect(service.closedChannels, hasLength(1));
+      // Hasil tutup BERLABEL jenisnya (kerja sama, bukan
+      // "Penutupan dimulai" yang ambigu).
+      expect(
+        find.text(
+          'Penutupan kerja sama dimulai. Saldo akan masuk ke dompet on-chain setelah transaksi penutup terkonfirmasi.',
+        ),
+        findsOneWidget,
+      );
+      // Channel masih terdaftar (handshake belum selesai):
+      // kartunya "Menutup…", bukan "Menunggu konfirmasi".
+      expect(find.text('Menutup…'), findsOneWidget);
+      expect(find.textContaining('Menunggu konfirmasi'), findsNothing);
+
+      // Channel meninggalkan daftar: kartu hilang, tanpa error.
+      service.channels = [];
+      await tester.tap(find.byIcon(Icons.refresh_rounded));
+      await _pumpManual(tester);
+      expect(find.text('Menutup…'), findsNothing);
+      expect(find.text('Belum ada channel'), findsOneWidget);
+    });
+
+    testWidgets('tutup paksa: dialog menampilkan 144 blok + perkiraan '
+        'buka kunci', (tester) async {
+      final service = _FakeLspService(
+        channels: [_channel(_peerId, channelValueSats: 20000)],
+      )..failClose = true;
+      await _pumpScreen(
+        tester,
+        service: service,
+        feeEstimates: _FakeFeeEstimateService(tipHeight: 1500),
+      );
+      await tester.tap(find.text('Tutup Channel'));
+      await _pumpManual(tester);
+      await tester.tap(find.text('Tutup Channel').last);
+      await _pumpManual(tester);
+
+      expect(find.text('Tutup kerja sama tidak berhasil'), findsOneWidget);
+      expect(find.textContaining('jeda pengaman 144 blok'), findsOneWidget);
+      // Perkiraan buka kunci: ujung 1500 + 144 blok.
+      expect(
+        find.text('Perkiraan terbuka: sekitar blok 1644.'),
+        findsOneWidget,
+      );
+      // Catatan hari hanya di mainnet — di build testnet ini
+      // tidak tampil.
+      expect(find.textContaining('10 hari'), findsNothing);
+
+      await tester.tap(find.text('Tutup Paksa'));
+      await _pumpManual(tester);
+      expect(tester.takeException(), isNull);
+      expect(service.forceClosedChannels, hasLength(1));
+      expect(
+        find.text(
+          'Tutup paksa dimulai. Dana akan tersapu ke dompet on-chain sesudah jeda pengaman berakhir.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Menutup…'), findsOneWidget);
+    });
+
+    testWidgets('tutup paksa tanpa tinggi ujung: baris perkiraan tidak '
+        'tampil', (tester) async {
+      final service = _FakeLspService(
+        channels: [_channel(_peerId, channelValueSats: 20000)],
+      )..failClose = true;
+      await _pumpScreen(
+        tester,
+        service: service,
+        feeEstimates: _FakeFeeEstimateService(),
+      );
+      await tester.tap(find.text('Tutup Channel'));
+      await _pumpManual(tester);
+      await tester.tap(find.text('Tutup Channel').last);
+      await _pumpManual(tester);
+      expect(find.text('Tutup kerja sama tidak berhasil'), findsOneWidget);
+      expect(find.textContaining('jeda pengaman 144 blok'), findsOneWidget);
+      expect(find.textContaining('Perkiraan terbuka'), findsNothing);
+      // Batal — jangan tutup paksa di tes ini.
+      await tester.tap(find.text('Batal'));
+      await _pumpManual(tester);
+      expect(service.forceClosedChannels, isEmpty);
+    });
+
+    testWidgets('peringatan tutup channel langsung menyebut (penambangan)', (
+      tester,
+    ) async {
+      final service = _FakeLspService(
+        channels: [_channel(_peerId, channelValueSats: 20000)],
+      );
+      await _pumpScreen(tester, service: service);
+      await tester.tap(find.text('Tutup Channel'));
+      await _pumpManual(tester);
+      expect(find.text('Tutup channel ini?'), findsOneWidget);
+      expect(find.textContaining('(penambangan)'), findsOneWidget);
+      // Batal — tes ini hanya memeriksa salinan peringatan.
+      await tester.tap(find.text('Batal'));
+      await _pumpManual(tester);
+      expect(service.closedChannels, isEmpty);
+    });
+
+    testWidgets('hitungan konfirmasi tidak pernah melebihi wajib '
+        '(69/6 → 6/6)', (tester) async {
+      await _pumpScreen(
+        tester,
+        service: _FakeLspService(
+          channels: [
+            _channel(
+              _peerId,
+              usable: false,
+              channelValueSats: 20000,
+              fundingTxo: _fundingTxo('aa' * 32),
+              confirmations: 69,
+              confirmationsRequired: 6,
+            ),
+          ],
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.text('Menunggu konfirmasi • Konfirmasi 6/6'), findsOneWidget);
+      expect(find.textContaining('69/6'), findsNothing);
+    });
+
+    testWidgets('layar sempit + channel menunggu: label tidak melipat, '
+        'tanpa luber', (tester) async {
+      // Kasus luber 168 px dari PR #43: status panjang channel
+      // menunggu di layar 360 px. Sesudah R3, status ada di
+      // barisnya sendiri — label tetap satu baris, status
+      // terlipat di batas kata, tanpa overflow.
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await _pumpScreen(
+        tester,
+        service: _FakeLspService(
+          channels: [
+            _channel(
+              _peerId,
+              usable: false,
+              channelValueSats: 300000,
+              fundingTxo: _fundingTxo('ff' * 32),
+              confirmations: 0,
+              confirmationsRequired: 6,
+            ),
+          ],
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      final labelSize = tester.getSize(find.text('Channel langsung'));
+      expect(labelSize.width, greaterThan(50));
+      expect(labelSize.height, lessThan(30));
+      expect(find.text('Menunggu konfirmasi • Konfirmasi 0/6'), findsOneWidget);
+    });
+  });
+
+  group('R3 helpers murni', () {
+    test('forceCloseUnlockEstimate: ujung + 144 blok', () {
+      expect(forceCloseDelayBlocks, 144);
+      expect(forceCloseUnlockEstimate(1500), 1644);
+      expect(forceCloseUnlockEstimate(0), 144);
+    });
+
+    test('cappedConfirmations: tidak pernah melebihi wajib', () {
+      expect(cappedConfirmations(69, 6), 6);
+      expect(cappedConfirmations(6, 6), 6);
+      expect(cappedConfirmations(3, 6), 3);
+      expect(cappedConfirmations(0, 6), 0);
+      expect(cappedConfirmations(-1, 6), 0);
     });
   });
 }
