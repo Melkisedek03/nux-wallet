@@ -804,6 +804,36 @@ BigInt usableOutboundCapacityToPeer(
   return total;
 }
 
+/// Saldo + cadangan tertahan (msat) dari channel usable yang
+/// pihak seberangnya adalah [peerNodeIdHex] — pasangan angka
+/// kotak batas peer layar Kirim: saldo adalah jumlah
+/// [countedChannelBalanceMsat] per channel (kapasitas keluar +
+/// cadangan sebatas saldo channel), cadangan adalah selisih
+/// saldo dengan kapasitas keluar. Cadangan yang tampil dengan
+/// begitu HANYA yang benar-benar tertahan dari saldo milik
+/// sendiri: pada channel bersaldo nol (seluruhnya didanai pihak
+/// seberang) cadangan penuh TIDAK tampil sebagai uang yang
+/// ditahan — sama seperti batas kartu saldo. Peer null berarti
+/// tidak ada yang cocok (nol, nol).
+({BigInt balanceMsat, BigInt reserveMsat}) peerChannelBalanceAndReserve(
+  List<ChannelDetails> channels,
+  String? peerNodeIdHex,
+) {
+  if (peerNodeIdHex == null) {
+    return (balanceMsat: BigInt.zero, reserveMsat: BigInt.zero);
+  }
+  final peer = peerNodeIdHex.toLowerCase();
+  var balance = BigInt.zero;
+  var outbound = BigInt.zero;
+  for (final c in channels) {
+    if (c.isUsable && c.counterpartyNodeId.hex.toLowerCase() == peer) {
+      balance += countedChannelBalanceMsat(c);
+      outbound += c.outboundCapacityMsat;
+    }
+  }
+  return (balanceMsat: balance, reserveMsat: balance - outbound);
+}
+
 /// Hasil pemeriksaan pra-bayar layar Kirim.
 enum SendCheck {
   /// Nominal bisa dicoba dibayar — keputusan akhir tetap di node.

@@ -472,8 +472,11 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
               description: description,
             );
       setState(() => _invoice = invoice);
-      // Invoice baru lahir: gulir ke blok QR-nya supaya user
-      // langsung melihat kode yang harus dibagikan.
+      // Invoice baru lahir: sembunyikan keyboard supaya blok QR
+      // terlihat penuh tanpa tertutup keyboard, lalu gulir ke
+      // blok QR-nya supaya user langsung melihat kode yang harus
+      // dibagikan.
+      FocusScope.of(context).unfocus();
       _scrollToKey(_invoiceKey);
       // Simpan invoice di HP (string + hash + kedaluwarsa) supaya
       // tetap bisa dilihat/disalin kembali dari Riwayat atau saat

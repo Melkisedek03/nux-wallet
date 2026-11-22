@@ -82,6 +82,7 @@ ChannelDetails _channel(
   String counterpartyHex, {
   bool usable = true,
   int outboundMsat = 24000000,
+  BigInt? unspendablePunishmentReserve,
 }) {
   return ChannelDetails(
     channelId: ChannelId(
@@ -96,6 +97,7 @@ ChannelDetails _channel(
     isOutbound: true,
     isChannelReady: usable,
     isUsable: usable,
+    unspendablePunishmentReserve: unspendablePunishmentReserve,
     counterpartyUnspendablePunishmentReserve: BigInt.from(1000),
     nextOutboundHtlcLimitMsat: BigInt.zero,
     nextOutboundHtlcMinimumMsat: BigInt.zero,
@@ -302,8 +304,12 @@ void main() {
         _app(SendScreen(lspService: fake, bridge: _linkedBridge())),
       );
       await _pumpManual(tester);
-      // Baris "Bisa dikirim" menampilkan angka lingkup peer.
-      expect(find.text('Bisa dikirim: 4.000 nusan'), findsOneWidget);
+      // Baris "Bisa dikirim" menampilkan angka lingkup peer
+      // dengan label jalur langsung.
+      expect(
+        find.text('Bisa dikirim via jalur langsung: 4.000 nusan'),
+        findsOneWidget,
+      );
       await _enterInvoiceAndPay(tester, _invoice50u);
       expect(tester.takeException(), isNull);
       // Ditolak sebelum dialog konfirmasi, dengan kotak batas peer.
@@ -315,8 +321,46 @@ void main() {
         ),
         findsOneWidget,
       );
-      // Bukan kotak cadangan: nominal muat di angka gabungan.
+      // Bukan kotak cadangan: nominal muat di angka gabungan —
+      // dan channel uji ini tanpa reserve, jadi baris cadangan
+      // kotak batas peer tidak tampil.
       expect(find.textContaining('cadangan pengaman'), findsNothing);
+    });
+
+    testWidgets('kotak batas peer menyebut cadangan bila reserve '
+        'channel peer > 0', (tester) async {
+      // Lapangan 19 Nov 2026: channel langsung bersaldo 15.000
+      // nusan, reserve 3.000 — refund 15.000 ditolak batas peer
+      // tanpa penjelasan mengapa batasnya 12.000. Diskalakan ke
+      // invoice uji 50u: saldo 7.000, reserve 3.000, bisa kirim
+      // 4.000 < 5.000.
+      final fake = _FakeLspService(
+        channels: [
+          _channel(
+            _peerId,
+            outboundMsat: 4000000,
+            unspendablePunishmentReserve: BigInt.from(3000),
+          ),
+          _channel(_lspId, outboundMsat: 5000000000),
+        ],
+        peers: [_peer(_peerId)],
+        balanceMsat: BigInt.from(6000000000),
+      );
+      await tester.pumpWidget(
+        _app(SendScreen(lspService: fake, bridge: _linkedBridge())),
+      );
+      await _pumpManual(tester);
+      await _enterInvoiceAndPay(tester, _invoice50u);
+      expect(tester.takeException(), isNull);
+      expect(find.text('Bayar invoice ini?'), findsNothing);
+      expect(
+        find.text(
+          'Dari 7.000 nusan di jalur ini, 3.000 nusan disisakan '
+          'sebagai cadangan pengaman — tetap milikmu, kembali '
+          'bila jalur ditutup.',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('nominal muat di channel langsung: dialog tampil, '
@@ -376,6 +420,15 @@ void main() {
         _app(SendScreen(lspService: fake, bridge: _linkedBridge())),
       );
       await _pumpManual(tester);
+      // Tampilan memakai plafon peer walau LSP tersambung
+      // (temuan lapangan 19 Nov 2026: angka gabungan 0,197 NUX
+      // menyesatkan dalam konteks tatap muka) — tetapi
+      // pemeriksaan pra-bayar tidak membatasi: dialog tetap tampil
+      // karena node bisa merutekan via LSP.
+      expect(
+        find.text('Bisa dikirim via jalur langsung: 4.000 nusan'),
+        findsOneWidget,
+      );
       await _enterInvoiceAndPay(tester, _invoice50u);
       expect(tester.takeException(), isNull);
       // LSP masih tersambung → jalur itu bisa dipakai, angka

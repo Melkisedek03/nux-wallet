@@ -379,7 +379,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get receiveNoteLabel => 'Note (optional)';
 
   @override
-  String get receiveNoteHint => 'e.g. for November school fees';
+  String get receiveNoteHint => 'e.g. November fees';
 
   @override
   String get createInvoiceFailed => 'Failed to create invoice. Try again.';
@@ -498,6 +498,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String sendableLineDirect(String amount) {
+    return 'Available to send via the direct path: $amount';
+  }
+
+  @override
   String get sendInsufficientBalance =>
       'Your balance is not enough to pay this invoice.';
 
@@ -513,6 +518,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String sendOfflinePeerLimit(String amount) {
     return 'This amount exceeds what can be sent to the linked device. The limit right now is $amount.';
+  }
+
+  @override
+  String sendOfflinePeerLimitReserve(String balance, String reserve) {
+    return 'Of $balance on this path, $reserve is kept aside as a channel safety reserve — still yours, returned in full when the path is closed.';
   }
 
   @override
@@ -824,7 +834,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeFreeTitleLabel => 'Item Name (optional)';
 
   @override
-  String get storeSearchHint => 'Search by product name or code…';
+  String get storeSearchHint => 'Search products…';
 
   @override
   String get storeSearchNoResults => 'No products match your search.';
@@ -1788,14 +1798,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeTelegramTokenLabel => 'Telegram Bot Token';
 
   @override
-  String get storeTelegramTokenHint => 'From BotFather, e.g. 123456789:AA…';
+  String get storeTelegramTokenHint => '123456789:AA…';
 
   @override
   String get storeTelegramChatLabel => 'Destination Chat ID';
 
   @override
-  String get storeTelegramChatHint =>
-      'Numeric ID of the destination chat or group';
+  String get storeTelegramChatHint => 'e.g. -1001234567890';
+
+  @override
+  String get storeTelegramChatHelper =>
+      'Numeric ID of the destination chat or group.';
 
   @override
   String get storeTelegramSent => 'Shift report sent to Telegram.';
@@ -1848,7 +1861,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeSettingsFooterText => 'Receipt Footer Text';
 
   @override
-  String get storeSettingsFooterTextHint =>
+  String get storeSettingsFooterTextHint => 'e.g. See you again!';
+
+  @override
+  String get storeSettingsFooterTextHelper =>
       'Leave empty for the default text in the app language.';
 
   @override
@@ -2033,6 +2049,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String offlineModePreparingOfRequired(int required) {
+    return 'of $required confirmations needed';
+  }
+
+  @override
   String offlineModePreparingValue(String amount) {
     return 'Path value: $amount';
   }
@@ -2050,7 +2071,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get offlineModeWaitingFirstNote =>
-      'New blocks appear on the network\'s schedule — please wait.';
+      'New blocks appear on the network\'s mining schedule — please wait, or start mining on the Nusacoin network yourself.';
 
   @override
   String offlineModeReadyUnlinked(String name) {
@@ -2071,7 +2092,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get offlineModeAmountOther => 'Another amount';
 
   @override
-  String get offlineModeAmountHint => 'At least 10,000 nusan, no fractions';
+  String offlineModeAmountHint(String example) {
+    return 'e.g. $example';
+  }
+
+  @override
+  String offlineModeAmountHelper(String amount) {
+    return 'At least $amount, worth a whole number of nusan.';
+  }
 
   @override
   String offlineModeOnchainBalance(String amount) {
@@ -2079,11 +2107,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get offlineModeAmountTooSmall => 'At least 10,000 nusan for one path.';
+  String offlineModeAmountTooSmall(String amount) {
+    return 'At least $amount for one path.';
+  }
 
   @override
-  String get offlineModeAmountInvalid =>
-      'Enter a whole number of nusan, no fractions.';
+  String offlineModeAmountInvalid(String unit) {
+    return 'Enter a valid amount in $unit.';
+  }
 
   @override
   String get offlineModeAmountContinue => 'Continue';

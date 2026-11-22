@@ -154,7 +154,7 @@
   "invalidAmount": "Enter a valid amount",
   "receiveInvoiceDesc": "Receive {amount}",
   "receiveNoteLabel": "Note (optional)",
-  "receiveNoteHint": "e.g. for November school fees",
+  "receiveNoteHint": "e.g. November fees",
   "@receiveInvoiceDesc": {
     "placeholders": {
       "amount": {
@@ -216,6 +216,14 @@
       }
     }
   },
+  "sendableLineDirect": "Available to send via the direct path: {amount}",
+  "@sendableLineDirect": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "sendInsufficientBalance": "Your balance is not enough to pay this invoice.",
   "sendReserveNote": "This amount can't be sent yet. Of your balance, {reserve} is always kept aside as a safety reserve for your payment channel — it stays yours, it is not a fee, and it returns in full if the channel is closed. You can currently send: {sendable}.",
   "@sendReserveNote": {
@@ -233,6 +241,17 @@
   "@sendOfflinePeerLimit": {
     "placeholders": {
       "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "sendOfflinePeerLimitReserve": "Of {balance} on this path, {reserve} is kept aside as a channel safety reserve — still yours, returned in full when the path is closed.",
+  "@sendOfflinePeerLimitReserve": {
+    "placeholders": {
+      "balance": {
+        "type": "String"
+      },
+      "reserve": {
         "type": "String"
       }
     }
@@ -359,7 +378,7 @@
   "storeAddFreeItem": "Add Custom Item",
   "storeFreeItem": "Custom Item",
   "storeFreeTitleLabel": "Item Name (optional)",
-  "storeSearchHint": "Search by product name or code…",
+  "storeSearchHint": "Search products…",
   "storeSearchNoResults": "No products match your search.",
   "storeRemoveLineTitle": "Remove from Order?",
   "storeRemoveLineMessage": "Remove {name} from the order?",
@@ -898,9 +917,10 @@
   "storeTelegramTitle": "Send Report via Telegram",
   "storeTelegramHint": "The shift report is sent to Telegram automatically when a shift is closed — straight from the app, no middleman server. Create a bot via @BotFather, then fill in its token and the destination chat ID below.",
   "storeTelegramTokenLabel": "Telegram Bot Token",
-  "storeTelegramTokenHint": "From BotFather, e.g. 123456789:AA…",
+  "storeTelegramTokenHint": "123456789:AA…",
   "storeTelegramChatLabel": "Destination Chat ID",
-  "storeTelegramChatHint": "Numeric ID of the destination chat or group",
+  "storeTelegramChatHint": "e.g. -1001234567890",
+  "storeTelegramChatHelper": "Numeric ID of the destination chat or group.",
   "storeTelegramSent": "Shift report sent to Telegram.",
   "storeTelegramFailed": "Telegram report failed to send — check the connection & settings.",
   "staticCodeLabelTitle": "Payment Code Label",
@@ -924,7 +944,8 @@
   "storeSettingsShowToken": "Show Token Number on Receipt",
   "storeSettingsShowTokenHint": "Daily queue number on the receipt; restarts from 1 each day.",
   "storeSettingsFooterText": "Receipt Footer Text",
-  "storeSettingsFooterTextHint": "Leave empty for the default text in the app language.",
+  "storeSettingsFooterTextHint": "e.g. See you again!",
+  "storeSettingsFooterTextHelper": "Leave empty for the default text in the app language.",
   "storeSettingsTitle": "Settings",
   "storeSettingsStoreName": "Store Name",
   "storeSettingsPointsEnabled": "Nusan Points Program On",
@@ -1018,6 +1039,14 @@
       }
     }
   },
+  "offlineModePreparingOfRequired": "of {required} confirmations needed",
+  "@offlineModePreparingOfRequired": {
+    "placeholders": {
+      "required": {
+        "type": "int"
+      }
+    }
+  },
   "offlineModePreparingValue": "Path value: {amount}",
   "@offlineModePreparingValue": {
     "placeholders": {
@@ -1036,7 +1065,7 @@
   },
   "offlineModeWaitingFirst": "Waiting for the first confirmation…",
   "offlineModeWaitingConfirmations": "Waiting for confirmation…",
-  "offlineModeWaitingFirstNote": "New blocks appear on the network's schedule — please wait.",
+  "offlineModeWaitingFirstNote": "New blocks appear on the network's mining schedule — please wait, or start mining on the Nusacoin network yourself.",
   "offlineModeReadyUnlinked": "Path ready — reconnect to {name} to pay",
   "@offlineModeReadyUnlinked": {
     "placeholders": {
@@ -1049,7 +1078,22 @@
   "offlineModeAmountTitle": "Create Payment Path",
   "offlineModeAmountDefaultNote": "Default amount",
   "offlineModeAmountOther": "Another amount",
-  "offlineModeAmountHint": "At least 10,000 nusan, no fractions",
+  "offlineModeAmountHint": "e.g. {example}",
+  "@offlineModeAmountHint": {
+    "placeholders": {
+      "example": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineModeAmountHelper": "At least {amount}, worth a whole number of nusan.",
+  "@offlineModeAmountHelper": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "offlineModeOnchainBalance": "Your on-chain balance: {amount}",
   "@offlineModeOnchainBalance": {
     "placeholders": {
@@ -1058,8 +1102,22 @@
       }
     }
   },
-  "offlineModeAmountTooSmall": "At least 10,000 nusan for one path.",
-  "offlineModeAmountInvalid": "Enter a whole number of nusan, no fractions.",
+  "offlineModeAmountTooSmall": "At least {amount} for one path.",
+  "@offlineModeAmountTooSmall": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineModeAmountInvalid": "Enter a valid amount in {unit}.",
+  "@offlineModeAmountInvalid": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
   "offlineModeAmountContinue": "Continue",
   "offlineModeConfirmTitle": "Create a path to {name}?",
   "@offlineModeConfirmTitle": {

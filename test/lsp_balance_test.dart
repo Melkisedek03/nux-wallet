@@ -84,6 +84,56 @@ void main() {
     });
   });
 
+  group('peerChannelBalanceAndReserve', () {
+    test('saldo + cadangan hanya dari channel ke peer itu', () {
+      // Lapangan 19 Nov 2026: channel langsung bersaldo 15.000
+      // nusan dengan reserve 3.000; channel LSP tidak ikut.
+      final channels = [
+        _channel(
+          outboundMsat: BigInt.from(12000000),
+          reserveSats: BigInt.from(3000),
+          counterpartyHex: _peerId,
+        ),
+        _channel(
+          outboundMsat: BigInt.from(5000000000),
+          reserveSats: BigInt.from(100000),
+        ),
+      ];
+      final result = peerChannelBalanceAndReserve(channels, _peerId);
+      expect(result.balanceMsat, BigInt.from(15000000));
+      expect(result.reserveMsat, BigInt.from(3000000));
+    });
+
+    test('channel saldo nol: cadangan tidak tampil sebagai tertahan', () {
+      final channels = [
+        _channel(
+          outboundMsat: BigInt.zero,
+          reserveSats: BigInt.from(3000),
+          counterpartyHex: _peerId,
+        ),
+      ];
+      final result = peerChannelBalanceAndReserve(channels, _peerId);
+      expect(result.balanceMsat, BigInt.zero);
+      expect(result.reserveMsat, BigInt.zero);
+    });
+
+    test('peer null atau tanpa channel: nol, nol', () {
+      final channels = [
+        _channel(
+          outboundMsat: BigInt.from(12000000),
+          reserveSats: BigInt.from(3000),
+          counterpartyHex: _peerId,
+        ),
+      ];
+      final noPeer = peerChannelBalanceAndReserve(channels, null);
+      expect(noPeer.balanceMsat, BigInt.zero);
+      expect(noPeer.reserveMsat, BigInt.zero);
+      final other = peerChannelBalanceAndReserve(channels, _lspId);
+      expect(other.balanceMsat, BigInt.zero);
+      expect(other.reserveMsat, BigInt.zero);
+    });
+  });
+
   group('splitBalanceBySource', () {
     test('memisahkan JIT, Self, dan channel langsung', () {
       final channels = [
