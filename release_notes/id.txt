@@ -1,9 +1,6 @@
-Perbaikan Buat Jalur (8 temuan uji perangkat):
-- Nominal jalur mengikuti satuan tampil (NUX/nusan) - 0,001 NUX tidak lagi ditolak
-- Petunjuk kolom nominal dipendek; aturan minimum tampil di bawah kolom
-- Angka terkelompok otomatis saat mengetik nominal jalur
-- Kartu persiapan jalur menampilkan syarat 6 konfirmasi dan catatan jadwal mining
-- Jembatan offline menyambung ulang sendiri bila tautan putus
-- Keyboard tertutup otomatis sesudah QR Terima tampil
-- Kotak batas kirim menjelaskan cadangan channel yang disimpan
-- Layar Kirim menampilkan batas via jalur langsung saat tertaut
+Perbaikan Kelola Channel dan Terima:
+- Tombol Buka Channel ke LSP di Kelola Channel: buka channel langsung dari layar produksi, lengkap dengan estimasi fee dan kartu persiapan
+- Kartu channel menampilkan txid funding (ketuk untuk salin) dan label jenis channel (Via LSP — JIT / Self-Funded / Channel Langsung)
+- Detail Aktivitas kini menjelaskan pembayaran yang membuka channel
+- Tombol refresh Kelola Channel kini menampilkan putaran saat memuat ulang
+- Kode statis Terima kini terikat ke jaringannya, supaya tidak tertukar antar jaringan

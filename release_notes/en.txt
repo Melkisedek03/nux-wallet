@@ -1,9 +1,6 @@
-Buat Jalur fixes (8 device-test findings):
-- Channel amount follows the display unit (NUX/nusan) - 0.001 NUX is no longer rejected
-- Shorter amount-field hints; the minimum rule shows below the field
-- Digits group automatically while typing a channel amount
-- The preparing card shows the 6-confirmation requirement and the mining-schedule note
-- The offline bridge reconnects on its own when the link drops
-- The keyboard dismisses automatically once the Receive QR appears
-- The send-limit box explains the channel reserve kept aside
-- The Send screen shows the direct-path limit while linked
+Channel management and Receive fixes:
+- Open Channel to LSP button in Channel Management: open a channel from the production screen, with a fee estimate and a preparing card
+- Channel cards show the funding txid (tap to copy) and the channel kind (Via LSP — JIT / Self-Funded / Direct Channel)
+- Activity detail now explains payments that opened a channel
+- The Channel Management refresh button now shows a spinner while reloading
+- The static Receive code is now bound to its network, so it cannot be mixed up between networks
