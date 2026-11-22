@@ -9,6 +9,8 @@ import 'package:nux_wallet/services/fee_estimate.dart';
 import 'package:nux_wallet/services/lsp_service.dart';
 import 'package:nux_wallet/services/offline_bridge.dart';
 import 'package:nux_wallet/theme.dart';
+import 'package:nux_wallet/unit_controller.dart';
+import 'package:nux_wallet/utils/format.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _ownId =
@@ -485,6 +487,12 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('Jalur sedang disiapkan…'), findsNWidgets(2));
       expect(find.text('Menunggu konfirmasi pertama…'), findsOneWidget);
+      expect(
+        find.text(
+          'Blok baru muncul sesuai jadwal penambangan jaringan — mohon tunggu/mulailah menambang di jaringan Nusacoin secara mandiri.',
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Nilai jalur: 100.000 nusan'), findsOneWidget);
       // Biaya pasti baru diambil sesudah konfirmasi pertama.
       expect(find.textContaining('Biaya jaringan:'), findsNothing);
@@ -515,6 +523,13 @@ void main() {
       await _pumpManual(tester);
       expect(tester.takeException(), isNull);
       expect(find.text('Konfirmasi 3/6'), findsOneWidget);
+      expect(find.text('dari 6 konfirmasi dibutuhkan'), findsOneWidget);
+      expect(
+        find.text(
+          'Blok baru muncul sesuai jadwal penambangan jaringan — mohon tunggu/mulailah menambang di jaringan Nusacoin secara mandiri.',
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Nilai jalur: 100.000 nusan'), findsOneWidget);
       expect(find.text('Biaya jaringan: 250 nusan'), findsOneWidget);
     });
@@ -643,6 +658,13 @@ void main() {
 
       await tester.tap(find.text('Nominal lain'));
       await _pumpManual(tester);
+      // Hint hanya contoh nilai (pendek, tidak terpotong);
+      // aturan minimum pindah ke helperText di bawah kolom.
+      expect(find.text('cth. 25.000 nusan'), findsOneWidget);
+      expect(
+        find.text('Minimal 10.000 nusan, bernilai nusan bulat.'),
+        findsOneWidget,
+      );
       await tester.enterText(find.byType(TextField), '5.000');
       await tester.tap(find.text('Lanjut'));
       await _pumpManual(tester);
@@ -657,6 +679,47 @@ void main() {
       // Validasi lolos: lembar tertutup, dialog konfirmasi tampil.
       expect(find.text('Buat jalur ke ELNUX-035d4490?'), findsOneWidget);
       expect(find.text('50.000 nusan'), findsOneWidget);
+    });
+
+    testWidgets('lembar nominal satuan NUX: parse, hint, dan error '
+        'memakai satuan aktif', (tester) async {
+      // Temuan lapangan 19 Nov 2026: pengguna satuan NUX mengetik
+      // "0,001" lalu ditolak karena parser meng-hardcode nusan.
+      // Saklar satuan adalah state statis — kembalikan ke nusan
+      // sesudah tes supaya tes lain tidak terpengaruh.
+      UnitController.unit.value = DisplayUnit.nux;
+      addTearDown(() {
+        UnitController.unit.value = DisplayUnit.nusan;
+      });
+      await pumpLinked(tester);
+      await tapMakePathButton(tester);
+      expect(find.text('0,001 NUX'), findsOneWidget);
+
+      await tester.tap(find.text('Nominal lain'));
+      await _pumpManual(tester);
+      expect(find.text('cth. 0,00025 NUX'), findsOneWidget);
+      expect(
+        find.text('Minimal 0,0001 NUX, bernilai nusan bulat.'),
+        findsOneWidget,
+      );
+
+      await tester.enterText(find.byType(TextField), '0,00005');
+      await tester.tap(find.text('Lanjut'));
+      await _pumpManual(tester);
+      expect(
+        find.text('Minimal 0,0001 NUX untuk satu jalur.'),
+        findsOneWidget,
+      );
+
+      // Nominal valid yang BERBEDA dari bawaan (0,001 NUX):
+      // lembar yang masih menganimasikan keluar tetap memuat judul
+      // bawaan, jadi nominal yang sama akan terhitung ganda.
+      await tester.enterText(find.byType(TextField), '0,0005');
+      await tester.tap(find.text('Lanjut'));
+      await _pumpManual(tester);
+      // Validasi lolos: dialog konfirmasi tampil dengan nominal NUX.
+      expect(find.text('Buat jalur ke ELNUX-035d4490?'), findsOneWidget);
+      expect(find.text('0,0005 NUX'), findsOneWidget);
     });
 
     testWidgets('alir penuh: lembar → konfirmasi → jalur disiapkan', (

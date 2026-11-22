@@ -295,6 +295,10 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
                   decoration: InputDecoration(
                     labelText: l10n.storeSettingsFooterText,
                     hintText: l10n.storeSettingsFooterTextHint,
+                    // Instruksi "kosongkan…" pindah ke helperText
+                    // yang membungkus — sebagai hint ia terpotong
+                    // (44 karakter).
+                    helperText: l10n.storeSettingsFooterTextHelper,
                     filled: true,
                     fillColor: context.palette.cardAlt,
                     border: OutlineInputBorder(
@@ -445,6 +449,10 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
                   decoration: InputDecoration(
                     labelText: l10n.storeTelegramChatLabel,
                     hintText: l10n.storeTelegramChatHint,
+                    // Penjelasan "ID numerik…" pindah ke helperText
+                    // yang membungkus — sebagai hint ia terpotong
+                    // (40 karakter).
+                    helperText: l10n.storeTelegramChatHelper,
                     filled: true,
                     fillColor: context.palette.cardAlt,
                     border: OutlineInputBorder(

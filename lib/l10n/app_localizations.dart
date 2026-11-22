@@ -779,7 +779,7 @@ abstract class AppLocalizations {
   /// No description provided for @receiveNoteHint.
   ///
   /// In id, this message translates to:
-  /// **'cth. untuk SPP bulan November'**
+  /// **'cth. SPP November'**
   String get receiveNoteHint;
 
   /// No description provided for @createInvoiceFailed.
@@ -980,6 +980,12 @@ abstract class AppLocalizations {
   /// **'Bisa dikirim: {amount}'**
   String sendableLine(String amount);
 
+  /// No description provided for @sendableLineDirect.
+  ///
+  /// In id, this message translates to:
+  /// **'Bisa dikirim via jalur langsung: {amount}'**
+  String sendableLineDirect(String amount);
+
   /// No description provided for @sendInsufficientBalance.
   ///
   /// In id, this message translates to:
@@ -1003,6 +1009,12 @@ abstract class AppLocalizations {
   /// In id, this message translates to:
   /// **'Jumlah ini melebihi yang bisa dikirim ke perangkat yang tertaut. Batasnya sekarang {amount}.'**
   String sendOfflinePeerLimit(String amount);
+
+  /// No description provided for @sendOfflinePeerLimitReserve.
+  ///
+  /// In id, this message translates to:
+  /// **'Dari {balance} di jalur ini, {reserve} disisakan sebagai cadangan pengaman — tetap milikmu, kembali bila jalur ditutup.'**
+  String sendOfflinePeerLimitReserve(String balance, String reserve);
 
   /// No description provided for @sendOfflineRouteFailed.
   ///
@@ -1571,7 +1583,7 @@ abstract class AppLocalizations {
   /// No description provided for @storeSearchHint.
   ///
   /// In id, this message translates to:
-  /// **'Cari nama atau kode produk…'**
+  /// **'Cari produk…'**
   String get storeSearchHint;
 
   /// No description provided for @storeSearchNoResults.
@@ -3287,7 +3299,7 @@ abstract class AppLocalizations {
   /// No description provided for @storeTelegramTokenHint.
   ///
   /// In id, this message translates to:
-  /// **'Dari BotFather, contoh: 123456789:AA…'**
+  /// **'123456789:AA…'**
   String get storeTelegramTokenHint;
 
   /// No description provided for @storeTelegramChatLabel.
@@ -3299,8 +3311,14 @@ abstract class AppLocalizations {
   /// No description provided for @storeTelegramChatHint.
   ///
   /// In id, this message translates to:
-  /// **'ID numerik chat atau grup tujuan laporan'**
+  /// **'cth. -1001234567890'**
   String get storeTelegramChatHint;
+
+  /// No description provided for @storeTelegramChatHelper.
+  ///
+  /// In id, this message translates to:
+  /// **'ID numerik chat atau grup tujuan laporan.'**
+  String get storeTelegramChatHelper;
 
   /// No description provided for @storeTelegramSent.
   ///
@@ -3395,8 +3413,14 @@ abstract class AppLocalizations {
   /// No description provided for @storeSettingsFooterTextHint.
   ///
   /// In id, this message translates to:
-  /// **'Kosongkan untuk teks bawaan bahasa aplikasi.'**
+  /// **'cth. Sampai jumpa lagi!'**
   String get storeSettingsFooterTextHint;
+
+  /// No description provided for @storeSettingsFooterTextHelper.
+  ///
+  /// In id, this message translates to:
+  /// **'Kosongkan untuk teks bawaan bahasa aplikasi.'**
+  String get storeSettingsFooterTextHelper;
 
   /// No description provided for @storeSettingsTitle.
   ///
@@ -3710,6 +3734,12 @@ abstract class AppLocalizations {
   /// **'Konfirmasi {done}/{required}'**
   String offlineModePreparingConfirmations(int done, int required);
 
+  /// No description provided for @offlineModePreparingOfRequired.
+  ///
+  /// In id, this message translates to:
+  /// **'dari {required} konfirmasi dibutuhkan'**
+  String offlineModePreparingOfRequired(int required);
+
   /// No description provided for @offlineModePreparingValue.
   ///
   /// In id, this message translates to:
@@ -3737,7 +3767,7 @@ abstract class AppLocalizations {
   /// No description provided for @offlineModeWaitingFirstNote.
   ///
   /// In id, this message translates to:
-  /// **'Blok baru muncul sesuai jadwal jaringan — mohon tunggu.'**
+  /// **'Blok baru muncul sesuai jadwal penambangan jaringan — mohon tunggu/mulailah menambang di jaringan Nusacoin secara mandiri.'**
   String get offlineModeWaitingFirstNote;
 
   /// No description provided for @offlineModeReadyUnlinked.
@@ -3773,8 +3803,14 @@ abstract class AppLocalizations {
   /// No description provided for @offlineModeAmountHint.
   ///
   /// In id, this message translates to:
-  /// **'Minimal 10.000 nusan, tanpa pecahan'**
-  String get offlineModeAmountHint;
+  /// **'cth. {example}'**
+  String offlineModeAmountHint(String example);
+
+  /// No description provided for @offlineModeAmountHelper.
+  ///
+  /// In id, this message translates to:
+  /// **'Minimal {amount}, bernilai nusan bulat.'**
+  String offlineModeAmountHelper(String amount);
 
   /// No description provided for @offlineModeOnchainBalance.
   ///
@@ -3785,14 +3821,14 @@ abstract class AppLocalizations {
   /// No description provided for @offlineModeAmountTooSmall.
   ///
   /// In id, this message translates to:
-  /// **'Minimal 10.000 nusan untuk satu jalur.'**
-  String get offlineModeAmountTooSmall;
+  /// **'Minimal {amount} untuk satu jalur.'**
+  String offlineModeAmountTooSmall(String amount);
 
   /// No description provided for @offlineModeAmountInvalid.
   ///
   /// In id, this message translates to:
-  /// **'Tulis jumlah nusan bulat, tanpa pecahan.'**
-  String get offlineModeAmountInvalid;
+  /// **'Tulis jumlah {unit} yang sah.'**
+  String offlineModeAmountInvalid(String unit);
 
   /// No description provided for @offlineModeAmountContinue.
   ///

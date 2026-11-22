@@ -16,6 +16,24 @@ Duration offlineResumeBackoff(int attempt) {
   return Duration(seconds: seconds > 30 ? 30 : seconds);
 }
 
+/// Peer yang diingat ([rememberedHostName]) dari daftar
+/// penemuan [discovered] — atau null bila tidak ada / tidak ada
+/// yang diingat. Dipakai sambung-ulang proaktif mode gabung:
+/// peer yang tidak pernah hilang dari penemuan tidak memicu
+/// event onEndpointFound baru, jadi satu-satunya cara
+/// menemukannya lagi adalah memindai daftar yang sudah ada.
+/// Murni supaya bisa diuji satuan.
+DiscoveredHost? rememberedDiscoveredHost(
+  List<DiscoveredHost> discovered,
+  String? rememberedHostName,
+) {
+  if (rememberedHostName == null) return null;
+  for (final host in discovered) {
+    if (host.name == rememberedHostName) return host;
+  }
+  return null;
+}
+
 /// Awalan ajaib muatan kendali HELLO mode gabung: begitu tautan
 /// Nearby terbentuk, kedua sisi saling mengirim muatan ini —
 /// di luar aliran berbingkai node — untuk bertukar ID node
@@ -899,9 +917,36 @@ class OfflineBridgeService {
         _log('Memulai ulang iklan + pencarian gabung…');
         await _advertiseAndDiscover();
       } else if (phase == OfflineBridgePhase.discovering) {
-        // Pencarian masih hidup; penemuan peer yang diingat
-        // menyambung sendiri. Periksa lagi nanti selama belum
-        // tertaut.
+        // Peer yang diingat mungkin sudah ada di daftar penemuan
+        // (tidak pernah hilang, jadi tidak ada event
+        // onEndpointFound baru yang memicu sambung otomatis) —
+        // sambung proaktif ke sana, dengan pengaman yang sama
+        // seperti jalur onEndpointFound (temuan lapangan 19 Nov
+        // 2026: peer duduk di "Sambungkan" sampai diketuk
+        // manual). Percobaan gagal tidak menghentikan jadwal:
+        // timer di bawah mencoba lagi dengan jeda mundur.
+        if (_resumeArmed &&
+            _survivorEndpointId == null &&
+            _rememberedHostName != null) {
+          final host = rememberedDiscoveredHost(
+            discovered,
+            _rememberedHostName,
+          );
+          if (host != null) {
+            _log('Peer yang diingat sudah ditemukan; menyambung otomatis…');
+            connectCombined(host).catchError((Object e) {
+              _log('Sambung otomatis gabung gagal: $e');
+            });
+          }
+        }
+        _scheduleResume();
+      } else if (phase == OfflineBridgePhase.connecting) {
+        // Percobaan sambung sedang berjalan (ketukan manual atau
+        // proaktif di atas): jangan ganggu, tapi jaga rantai
+        // timer tetap hidup — bila percobaan gagal, fase kembali
+        // ke discovering dan timer inilah yang mencoba lagi.
+        // Tanpa ini, timer yang terpicu saat connecting
+        // memutuskan rantai dan sambung-ulang berhenti diam-diam.
         _scheduleResume();
       }
       return;

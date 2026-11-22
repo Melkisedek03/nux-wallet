@@ -15,6 +15,8 @@ import '../services/opening_paths_store.dart';
 import '../services/path_ready_watcher.dart';
 import '../theme.dart';
 import '../unit_controller.dart';
+import '../utils/amount_input.dart';
+import '../utils/format.dart';
 import '../utils/friendly_error.dart';
 import 'onchain_screen.dart';
 
@@ -411,6 +413,16 @@ class _OfflineModeScreenState extends State<OfflineModeScreen> {
   /// tanpa memilih.
   Future<BigInt?> _showAmountSheet(BigInt spendableSats) async {
     final l10n = context.l10n;
+    // Satuan & locale dibaca sekali di sini: kolom nominal, hint,
+    // helper, parser, dan pesan error semuanya memakai satuan
+    // tampilan aktif yang sama — bukan nusan yang di-hardcode
+    // (temuan lapangan 19 Nov 2026: pengguna satuan NUX mengetik
+    // "0,001" lalu ditolak membingungkan).
+    final unit = UnitController.unit.value;
+    final locale = LocaleController.locale.value.languageCode;
+    final minAmountText = context.formatWalletAmount(
+      minPathAmountSats * BigInt.from(1000),
+    );
     _customAmountController.clear();
     var useCustom = false;
     String? error;
@@ -464,9 +476,31 @@ class _OfflineModeScreenState extends State<OfflineModeScreen> {
                     const SizedBox(height: 12),
                     TextField(
                       controller: _customAmountController,
-                      keyboardType: TextInputType.number,
+                      // Pemformat nominal bersama (sama seperti
+                      // kolom nominal Kirim & Terima): ribuan
+                      // dikelompokkan on-the-fly mengikuti locale.
+                      // Keyboard desimal wajib: satuan NUX mengetik
+                      // pecahan ("0,001").
+                      inputFormatters: [
+                        AmountInputFormatter(
+                          thousandsSep: locale == 'en' ? ',' : '.',
+                          decimalSep: locale == 'en' ? '.' : ',',
+                        ),
+                      ],
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       decoration: InputDecoration(
-                        hintText: l10n.offlineModeAmountHint,
+                        // Hint hanya contoh nilai (pendek, tidak
+                        // terpotong); aturan minimum pindah ke
+                        // helperText di bawah yang membungkus dan
+                        // selalu terlihat.
+                        hintText: l10n.offlineModeAmountHint(
+                          context.formatWalletAmount(
+                            BigInt.from(25000) * BigInt.from(1000),
+                          ),
+                        ),
+                        helperText: l10n.offlineModeAmountHelper(minAmountText),
                         errorText: error,
                         border: const OutlineInputBorder(),
                       ),
@@ -500,17 +534,23 @@ class _OfflineModeScreenState extends State<OfflineModeScreen> {
                         }
                         final msat = parseChannelAmountToMsat(
                           _customAmountController.text,
+                          unit,
+                          locale: locale,
                         );
                         if (msat == null || msat <= BigInt.zero) {
                           setSheetState(
-                            () => error = l10n.offlineModeAmountInvalid,
+                            () => error = l10n.offlineModeAmountInvalid(
+                              unit.label,
+                            ),
                           );
                           return;
                         }
                         final sats = msat ~/ BigInt.from(1000);
                         if (sats < minPathAmountSats) {
                           setSheetState(
-                            () => error = l10n.offlineModeAmountTooSmall,
+                            () => error = l10n.offlineModeAmountTooSmall(
+                              minAmountText,
+                            ),
                           );
                           return;
                         }
@@ -1351,6 +1391,25 @@ class _OfflineModeScreenState extends State<OfflineModeScreen> {
           lines.add(
             Text(
               l10n.offlineModePreparingConfirmations(done, required),
+              style: TextStyle(fontSize: 12, color: context.palette.muted),
+            ),
+          );
+          // Baris penjelas jumlah wajib + catatan jadwal
+          // penambangan (sebelumnya hanya ada di cabang 0
+          // konfirmasi): di mainnet jeda antar-blok bisa
+          // berjam-jam, jadi pengguna perlu tahu bahwa menunggu
+          // itu normal — dan bahwa mereka bisa menambang sendiri.
+          lines.add(const SizedBox(height: 3));
+          lines.add(
+            Text(
+              l10n.offlineModePreparingOfRequired(required),
+              style: TextStyle(fontSize: 12, color: context.palette.muted),
+            ),
+          );
+          lines.add(const SizedBox(height: 3));
+          lines.add(
+            Text(
+              l10n.offlineModeWaitingFirstNote,
               style: TextStyle(fontSize: 12, color: context.palette.muted),
             ),
           );

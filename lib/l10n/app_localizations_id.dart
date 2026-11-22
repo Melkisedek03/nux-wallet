@@ -379,7 +379,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get receiveNoteLabel => 'Catatan (opsional)';
 
   @override
-  String get receiveNoteHint => 'cth. untuk SPP bulan November';
+  String get receiveNoteHint => 'cth. SPP November';
 
   @override
   String get createInvoiceFailed => 'Gagal membuat invoice. Coba lagi.';
@@ -497,6 +497,11 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String sendableLineDirect(String amount) {
+    return 'Bisa dikirim via jalur langsung: $amount';
+  }
+
+  @override
   String get sendInsufficientBalance =>
       'Saldo tidak cukup untuk membayar invoice ini.';
 
@@ -512,6 +517,11 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String sendOfflinePeerLimit(String amount) {
     return 'Jumlah ini melebihi yang bisa dikirim ke perangkat yang tertaut. Batasnya sekarang $amount.';
+  }
+
+  @override
+  String sendOfflinePeerLimitReserve(String balance, String reserve) {
+    return 'Dari $balance di jalur ini, $reserve disisakan sebagai cadangan pengaman — tetap milikmu, kembali bila jalur ditutup.';
   }
 
   @override
@@ -824,7 +834,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeFreeTitleLabel => 'Nama Item (opsional)';
 
   @override
-  String get storeSearchHint => 'Cari nama atau kode produk…';
+  String get storeSearchHint => 'Cari produk…';
 
   @override
   String get storeSearchNoResults =>
@@ -1789,14 +1799,17 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeTelegramTokenLabel => 'Token Bot Telegram';
 
   @override
-  String get storeTelegramTokenHint => 'Dari BotFather, contoh: 123456789:AA…';
+  String get storeTelegramTokenHint => '123456789:AA…';
 
   @override
   String get storeTelegramChatLabel => 'ID Chat Tujuan';
 
   @override
-  String get storeTelegramChatHint =>
-      'ID numerik chat atau grup tujuan laporan';
+  String get storeTelegramChatHint => 'cth. -1001234567890';
+
+  @override
+  String get storeTelegramChatHelper =>
+      'ID numerik chat atau grup tujuan laporan.';
 
   @override
   String get storeTelegramSent => 'Laporan shift terkirim ke Telegram.';
@@ -1850,7 +1863,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get storeSettingsFooterText => 'Teks Penutup Struk';
 
   @override
-  String get storeSettingsFooterTextHint =>
+  String get storeSettingsFooterTextHint => 'cth. Sampai jumpa lagi!';
+
+  @override
+  String get storeSettingsFooterTextHelper =>
       'Kosongkan untuk teks bawaan bahasa aplikasi.';
 
   @override
@@ -2036,6 +2052,11 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String offlineModePreparingOfRequired(int required) {
+    return 'dari $required konfirmasi dibutuhkan';
+  }
+
+  @override
   String offlineModePreparingValue(String amount) {
     return 'Nilai jalur: $amount';
   }
@@ -2053,7 +2074,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get offlineModeWaitingFirstNote =>
-      'Blok baru muncul sesuai jadwal jaringan — mohon tunggu.';
+      'Blok baru muncul sesuai jadwal penambangan jaringan — mohon tunggu/mulailah menambang di jaringan Nusacoin secara mandiri.';
 
   @override
   String offlineModeReadyUnlinked(String name) {
@@ -2074,7 +2095,14 @@ class AppLocalizationsId extends AppLocalizations {
   String get offlineModeAmountOther => 'Nominal lain';
 
   @override
-  String get offlineModeAmountHint => 'Minimal 10.000 nusan, tanpa pecahan';
+  String offlineModeAmountHint(String example) {
+    return 'cth. $example';
+  }
+
+  @override
+  String offlineModeAmountHelper(String amount) {
+    return 'Minimal $amount, bernilai nusan bulat.';
+  }
 
   @override
   String offlineModeOnchainBalance(String amount) {
@@ -2082,12 +2110,14 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
-  String get offlineModeAmountTooSmall =>
-      'Minimal 10.000 nusan untuk satu jalur.';
+  String offlineModeAmountTooSmall(String amount) {
+    return 'Minimal $amount untuk satu jalur.';
+  }
 
   @override
-  String get offlineModeAmountInvalid =>
-      'Tulis jumlah nusan bulat, tanpa pecahan.';
+  String offlineModeAmountInvalid(String unit) {
+    return 'Tulis jumlah $unit yang sah.';
+  }
 
   @override
   String get offlineModeAmountContinue => 'Lanjut';

@@ -161,7 +161,7 @@
     }
   },
   "receiveNoteLabel": "Catatan (opsional)",
-  "receiveNoteHint": "cth. untuk SPP bulan November",
+  "receiveNoteHint": "cth. SPP November",
   "createInvoiceFailed": "Gagal membuat invoice. Coba lagi.",
   "receiveJitMinimumNote": "Untuk penerimaan pertama (sekaligus membuatkan jalur penerimaanmu), jumlah terkecilnya 1.000 nusan. Setelah jalurmu jadi, kamu bisa menerima berapa pun, termasuk di bawah 1.000 nusan.",
   "receiveTitle": "Terima NUX",
@@ -216,6 +216,14 @@
       }
     }
   },
+  "sendableLineDirect": "Bisa dikirim via jalur langsung: {amount}",
+  "@sendableLineDirect": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "sendInsufficientBalance": "Saldo tidak cukup untuk membayar invoice ini.",
   "sendReserveNote": "Jumlah ini belum bisa dikirim. Dari saldomu, {reserve} selalu disisakan sebagai cadangan pengaman jalur — tetap milikmu, bukan potongan, dan kembali utuh bila jalur ditutup. Yang bisa dikirim saat ini: {sendable}.",
   "@sendReserveNote": {
@@ -233,6 +241,17 @@
   "@sendOfflinePeerLimit": {
     "placeholders": {
       "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "sendOfflinePeerLimitReserve": "Dari {balance} di jalur ini, {reserve} disisakan sebagai cadangan pengaman — tetap milikmu, kembali bila jalur ditutup.",
+  "@sendOfflinePeerLimitReserve": {
+    "placeholders": {
+      "balance": {
+        "type": "String"
+      },
+      "reserve": {
         "type": "String"
       }
     }
@@ -359,7 +378,7 @@
   "storeAddFreeItem": "Tambah Item Bebas",
   "storeFreeItem": "Item Bebas",
   "storeFreeTitleLabel": "Nama Item (opsional)",
-  "storeSearchHint": "Cari nama atau kode produk…",
+  "storeSearchHint": "Cari produk…",
   "storeSearchNoResults": "Tidak ada produk yang cocok dengan pencarian.",
   "storeRemoveLineTitle": "Hapus dari Pesanan?",
   "storeRemoveLineMessage": "Hapus {name} dari pesanan?",
@@ -898,9 +917,10 @@
   "storeTelegramTitle": "Kirim Laporan via Telegram",
   "storeTelegramHint": "Laporan shift terkirim otomatis ke Telegram saat shift ditutup — langsung dari aplikasi, tanpa server perantara. Buat bot lewat @BotFather, isi token botnya dan ID chat tujuan di bawah.",
   "storeTelegramTokenLabel": "Token Bot Telegram",
-  "storeTelegramTokenHint": "Dari BotFather, contoh: 123456789:AA…",
+  "storeTelegramTokenHint": "123456789:AA…",
   "storeTelegramChatLabel": "ID Chat Tujuan",
-  "storeTelegramChatHint": "ID numerik chat atau grup tujuan laporan",
+  "storeTelegramChatHint": "cth. -1001234567890",
+  "storeTelegramChatHelper": "ID numerik chat atau grup tujuan laporan.",
   "storeTelegramSent": "Laporan shift terkirim ke Telegram.",
   "storeTelegramFailed": "Laporan Telegram gagal terkirim — periksa koneksi & pengaturannya.",
   "staticCodeLabelTitle": "Label Kode Bayar",
@@ -924,7 +944,8 @@
   "storeSettingsShowToken": "Tampilkan Nomor Token di Struk",
   "storeSettingsShowTokenHint": "Nomor antrean harian pada struk; mulai dari 1 setiap hari.",
   "storeSettingsFooterText": "Teks Penutup Struk",
-  "storeSettingsFooterTextHint": "Kosongkan untuk teks bawaan bahasa aplikasi.",
+  "storeSettingsFooterTextHint": "cth. Sampai jumpa lagi!",
+  "storeSettingsFooterTextHelper": "Kosongkan untuk teks bawaan bahasa aplikasi.",
   "storeSettingsTitle": "Pengaturan",
   "storeSettingsStoreName": "Nama Toko",
   "storeSettingsPointsEnabled": "Program Poin Nusan Aktif",
@@ -1018,6 +1039,14 @@
       }
     }
   },
+  "offlineModePreparingOfRequired": "dari {required} konfirmasi dibutuhkan",
+  "@offlineModePreparingOfRequired": {
+    "placeholders": {
+      "required": {
+        "type": "int"
+      }
+    }
+  },
   "offlineModePreparingValue": "Nilai jalur: {amount}",
   "@offlineModePreparingValue": {
     "placeholders": {
@@ -1036,7 +1065,7 @@
   },
   "offlineModeWaitingFirst": "Menunggu konfirmasi pertama…",
   "offlineModeWaitingConfirmations": "Menunggu konfirmasi…",
-  "offlineModeWaitingFirstNote": "Blok baru muncul sesuai jadwal jaringan — mohon tunggu.",
+  "offlineModeWaitingFirstNote": "Blok baru muncul sesuai jadwal penambangan jaringan — mohon tunggu/mulailah menambang di jaringan Nusacoin secara mandiri.",
   "offlineModeReadyUnlinked": "Jalur siap — sambungkan lagi ke {name} untuk membayar",
   "@offlineModeReadyUnlinked": {
     "placeholders": {
@@ -1049,7 +1078,22 @@
   "offlineModeAmountTitle": "Buat Jalur Pembayaran",
   "offlineModeAmountDefaultNote": "Nominal bawaan",
   "offlineModeAmountOther": "Nominal lain",
-  "offlineModeAmountHint": "Minimal 10.000 nusan, tanpa pecahan",
+  "offlineModeAmountHint": "cth. {example}",
+  "@offlineModeAmountHint": {
+    "placeholders": {
+      "example": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineModeAmountHelper": "Minimal {amount}, bernilai nusan bulat.",
+  "@offlineModeAmountHelper": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "offlineModeOnchainBalance": "Saldo on-chain-mu: {amount}",
   "@offlineModeOnchainBalance": {
     "placeholders": {
@@ -1058,8 +1102,22 @@
       }
     }
   },
-  "offlineModeAmountTooSmall": "Minimal 10.000 nusan untuk satu jalur.",
-  "offlineModeAmountInvalid": "Tulis jumlah nusan bulat, tanpa pecahan.",
+  "offlineModeAmountTooSmall": "Minimal {amount} untuk satu jalur.",
+  "@offlineModeAmountTooSmall": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineModeAmountInvalid": "Tulis jumlah {unit} yang sah.",
+  "@offlineModeAmountInvalid": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
   "offlineModeAmountContinue": "Lanjut",
   "offlineModeConfirmTitle": "Buat jalur ke {name}?",
   "@offlineModeConfirmTitle": {

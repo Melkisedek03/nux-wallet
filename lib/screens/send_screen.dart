@@ -176,6 +176,35 @@ class _SendScreenState extends State<SendScreen> {
   /// penjelasan batas peer. Null = kotak tidak tampil.
   BigInt? _peerLimitSendableMsat;
 
+  /// Kapasitas kirim (msat) hanya dari channel usable ke peer
+  /// yang tertaut — TANPA syarat satu-satunya-peer: nilai
+  /// TAMPILAN baris "Bisa dikirim via jalur langsung" saat sesi
+  /// tertaut, apa pun konektivitas peer lain. Berbeda dari
+  /// [_linkedSendableMsat] (yang menjaga pemeriksaan pra-bayar
+  /// dan hanya aktif bila peer tertaut satu-satunya peer yang
+  /// tersambung): angka gabungan yang tampil saat online
+  /// menyesatkan pengguna awam — dibaca sebagai "yang bisa
+  /// dikirim ke orang di depan saya" (temuan lapangan 19 Nov
+  /// 2026: tampil 0,197 NUX padahal jalur langsung hanya
+  /// membawa 0,00012 NUX). Null bila tidak tertaut — tampilan
+  /// kembali ke baris gabungan seperti biasa. Offline angka ini
+  /// adalah plafon sejati; online ia lantai (node bisa merutekan
+  /// lebih via LSP) — label "via jalur langsung" jujur di kedua
+  /// keadaan.
+  BigInt? _linkedDisplaySendableMsat;
+
+  /// Saldo (msat) dan cadangan tertahan (msat) dari channel
+  /// usable ke peer yang tertaut — pasangan angka baris cadangan
+  /// di kotak batas peer. Dihitung ulang bersama
+  /// [_refreshSendable] (bukan ditangkap saat pemeriksaan
+  /// seperti [_peerLimitSendableMsat]): layar ini tidak punya
+  /// penyegaran berkala — satu-satunya penyegaran lain selain
+  /// initState adalah pemeriksaan itu sendiri, yang selalu
+  /// menangkap ulang / menggugurkan kotaknya — jadi angka hidup
+  /// ini tidak pernah lebih tua dari kotak yang menampilkannya.
+  BigInt _linkedPeerBalanceMsat = BigInt.zero;
+  BigInt _linkedPeerReserveMsat = BigInt.zero;
+
   @override
   void initState() {
     super.initState();
@@ -249,11 +278,25 @@ class _SendScreenState extends State<SendScreen> {
       final linkedSendable = await _linkedPeerSendable(channels);
       if (!mounted) return;
       final melted = totalUsableOutboundCapacityMsat(channels);
+      // Angka tampilan lingkup peer + pasangan saldo/cadangan:
+      // dihitung kapan pun sesi tertaut, tanpa syarat
+      // satu-satunya-peer (lihat [_linkedDisplaySendableMsat]).
+      // ID peer diambil dari jembatan hanya saat tertaut —
+      // peerNodeId sendiri adalah ingatan yang bertahan walau
+      // sudah tidak tertaut.
+      final linkedId = _offlineLinked ? widget.bridge?.peerNodeId : null;
+      final linkedDisplay = linkedId == null
+          ? null
+          : usableOutboundCapacityToPeer(channels, linkedId);
+      final peerBalance = peerChannelBalanceAndReserve(channels, linkedId);
       setState(() {
         _balanceMsat = balance;
         _meltedSendableMsat = melted;
         _linkedSendableMsat = linkedSendable;
         _sendableMsat = linkedSendable ?? melted;
+        _linkedDisplaySendableMsat = linkedDisplay;
+        _linkedPeerBalanceMsat = peerBalance.balanceMsat;
+        _linkedPeerReserveMsat = peerBalance.reserveMsat;
         _hasUsableChannel = channels.any((c) => c.isUsable);
       });
     } catch (_) {
@@ -858,9 +901,21 @@ class _SendScreenState extends State<SendScreen> {
 
   /// Kotak penjelasan batas kirim ke perangkat tertaut (amber,
   /// pola yang sama dengan kotak cadangan): nominal yang diminta
-  /// melewati kapasitas kirim channel ke perangkat itu — bukan
-  /// soal cadangan, melainkan soal jangkauan saat offline.
-  Widget _peerLimitBox({required BigInt sendableMsat}) {
+  /// melewati kapasitas kirim channel ke perangkat itu.
+  /// Bila cadangan channel peer itu > 0, ditambah satu baris
+  /// yang menyebut ALASAN batasnya (cadangan pengaman) —
+  /// sebelumnya kotak hanya menyebut batasnya, sementara kotak
+  /// cadangan yang menjelaskan cadangan tidak pernah tercapai
+  /// dalam kasus ini (kapasitas gabungan menutupinya: urutan
+  /// evaluateSend mendahulukan cadangan gabungan — temuan
+  /// lapangan 19 Nov 2026).
+  Widget _peerLimitBox({
+    required BigInt sendableMsat,
+    BigInt? balanceMsat,
+    BigInt? reserveMsat,
+  }) {
+    final showReserve =
+        balanceMsat != null && reserveMsat != null && reserveMsat > BigInt.zero;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -870,12 +925,27 @@ class _SendScreenState extends State<SendScreen> {
           color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
         ),
       ),
-      child: Text(
-        context.l10n.sendOfflinePeerLimit(
-          context.formatWalletAmount(sendableMsat),
-        ),
-        style: TextStyle(fontSize: 13, color: context.palette.label),
-        textAlign: TextAlign.center,
+      child: Column(
+        children: [
+          Text(
+            context.l10n.sendOfflinePeerLimit(
+              context.formatWalletAmount(sendableMsat),
+            ),
+            style: TextStyle(fontSize: 13, color: context.palette.label),
+            textAlign: TextAlign.center,
+          ),
+          if (showReserve) ...[
+            const SizedBox(height: 8),
+            Text(
+              context.l10n.sendOfflinePeerLimitReserve(
+                context.formatWalletAmount(balanceMsat),
+                context.formatWalletAmount(reserveMsat),
+              ),
+              style: TextStyle(fontSize: 13, color: context.palette.label),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -919,7 +989,23 @@ class _SendScreenState extends State<SendScreen> {
             ),
             // Angka yang benar-benar bisa dikirim saat ini —
             // kapasitas keluar menurut node, bukan saldo penuh.
-            if (_sendableMsat != null) ...[
+            // Saat tertaut, angka utamanya adalah plafon ke peer
+            // itu ("via jalur langsung") — angka gabungan yang
+            // ikut menghitung channel LSP menyesatkan dalam
+            // konteks tatap muka. Saat tidak tertaut, baris
+            // gabungan seperti biasa.
+            if (_linkedDisplaySendableMsat != null) ...[
+              const SizedBox(height: 14),
+              Text(
+                context.l10n.sendableLineDirect(
+                  context.formatWalletAmount(_linkedDisplaySendableMsat!),
+                ),
+                style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: context.palette.label),
+              ),
+            ] else if (_sendableMsat != null) ...[
               const SizedBox(height: 14),
               Text(
                 context.l10n
@@ -1266,10 +1352,18 @@ class _SendScreenState extends State<SendScreen> {
             // saldo kirim gabungan masih ada.
             if (_peerLimitSendableMsat != null) ...[
               const SizedBox(height: 20),
-              _peerLimitBox(sendableMsat: _peerLimitSendableMsat!),
+              _peerLimitBox(
+                sendableMsat: _peerLimitSendableMsat!,
+                balanceMsat: _linkedPeerBalanceMsat,
+                reserveMsat: _linkedPeerReserveMsat,
+              ),
             ] else if (_zeroLinkedSendable) ...[
               const SizedBox(height: 20),
-              _peerLimitBox(sendableMsat: BigInt.zero),
+              _peerLimitBox(
+                sendableMsat: BigInt.zero,
+                balanceMsat: _linkedPeerBalanceMsat,
+                reserveMsat: _linkedPeerReserveMsat,
+              ),
             ],
             if (_paid) ...[
               const SizedBox(height: 20),

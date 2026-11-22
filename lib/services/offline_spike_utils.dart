@@ -26,17 +26,28 @@ BigInt? parseNusanToMsat(String raw) {
   return msat;
 }
 
-/// Parse nominal kolom buka channel menjadi msat. Berbeda dari
-/// [parseNusanToMsat] (yang membaca '.' sebagai pemisah desimal),
-/// nominal channel mengikuti aturan isian nominal bersama aplikasi
-/// ([parseAmountInputToMsat], locale id: '.' pemisah ribuan, ','
-/// desimal) — persis seperti tampilan nominal di aplikasi sendiri,
-/// jadi "25.000" terbaca dua puluh lima ribu nusan, bukan 25, dan
-/// "1.000.000" sah. Channel hanya boleh bernilai nusan bulat, jadi
-/// hasil berpecahan (sisa msat di luar kelipatan 1.000, mis. "25,5")
-/// ditolak sebagai null; nol juga null (bawaan parser bersama).
-BigInt? parseChannelAmountToMsat(String raw) {
-  final msat = parseAmountInputToMsat(raw, DisplayUnit.nusan);
+/// Parse nominal kolom buka channel menjadi msat, dalam satuan
+/// tampilan aktif [unit] (saklar Profil — pemanggil mengisi dari
+/// `UnitController.unit.value`, seperti layar Kirim & Terima).
+/// Berbeda dari [parseNusanToMsat] (yang membaca '.' sebagai
+/// pemisah desimal), nominal channel mengikuti aturan isian
+/// nominal bersama aplikasi ([parseAmountInputToMsat]) — persis
+/// seperti tampilan nominal di aplikasi sendiri, jadi "25.000"
+/// terbaca dua puluh lima ribu nusan, bukan 25, dan "1.000.000"
+/// sah; dalam satuan NUX, "0,001" terbaca 100.000 nusan. Satuan
+/// yang dipakai HARUS satuan yang tampil di kolom — mem-parse
+/// dalam nusan sementara kolom menampilkan NUX membuat "0,001"
+/// ditolak membingungkan (temuan lapangan 19 Nov 2026).
+/// Channel hanya boleh bernilai nusan bulat, jadi hasil
+/// berpecahan (sisa msat di luar kelipatan 1.000, mis. "25,5"
+/// nusan atau "0,000000015" NUX) ditolak sebagai null; nol juga
+/// null (bawaan parser bersama).
+BigInt? parseChannelAmountToMsat(
+  String raw,
+  DisplayUnit unit, {
+  String locale = 'id',
+}) {
+  final msat = parseAmountInputToMsat(raw, unit, locale: locale);
   if (msat == null) return null;
   if (msat % BigInt.from(1000) != BigInt.zero) return null;
   return msat;

@@ -82,4 +82,29 @@ void main() {
       );
     });
   });
+
+  group('rememberedDiscoveredHost', () {
+    final discovered = [
+      const DiscoveredHost('endpoint-a', 'ELNUX-039b7213'),
+      const DiscoveredHost('endpoint-b', 'ELNUX-035d4490'),
+    ];
+
+    test('peer yang diingat ditemukan dari daftar penemuan', () {
+      final host = rememberedDiscoveredHost(discovered, 'ELNUX-035d4490');
+      expect(host, isNotNull);
+      expect(host!.endpointId, 'endpoint-b');
+    });
+
+    test('peer yang tidak ada di daftar menghasilkan null', () {
+      expect(rememberedDiscoveredHost(discovered, 'ELNUX-00000000'), isNull);
+    });
+
+    test('tidak ada yang diingat menghasilkan null', () {
+      expect(rememberedDiscoveredHost(discovered, null), isNull);
+    });
+
+    test('daftar kosong menghasilkan null', () {
+      expect(rememberedDiscoveredHost(const [], 'ELNUX-035d4490'), isNull);
+    });
+  });
 }

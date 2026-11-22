@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ldk_node/src/generated/api/types.dart';
 import 'package:ldk_node/src/generated/lib.dart';
 import 'package:nux_wallet/services/offline_spike_utils.dart';
+import 'package:nux_wallet/utils/format.dart';
 
 const _lspId =
     '02aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -125,23 +126,74 @@ void main() {
 
   group('parseChannelAmountToMsat', () {
     test('angka polos dan ribuan Indonesia terbaca sama', () {
-      expect(parseChannelAmountToMsat('25000'), BigInt.from(25000000));
-      expect(parseChannelAmountToMsat('25.000'), BigInt.from(25000000));
-      expect(parseChannelAmountToMsat('1.000.000'), BigInt.from(1000000000));
+      expect(
+        parseChannelAmountToMsat('25000', DisplayUnit.nusan),
+        BigInt.from(25000000),
+      );
+      expect(
+        parseChannelAmountToMsat('25.000', DisplayUnit.nusan),
+        BigInt.from(25000000),
+      );
+      expect(
+        parseChannelAmountToMsat('1.000.000', DisplayUnit.nusan),
+        BigInt.from(1000000000),
+      );
     });
 
     test('pecahan ditolak: channel hanya menerima nusan bulat', () {
-      expect(parseChannelAmountToMsat('25,5'), isNull);
-      expect(parseChannelAmountToMsat('25.5'), isNull);
-      expect(parseChannelAmountToMsat('0,001'), isNull);
+      expect(parseChannelAmountToMsat('25,5', DisplayUnit.nusan), isNull);
+      expect(parseChannelAmountToMsat('25.5', DisplayUnit.nusan), isNull);
+      expect(parseChannelAmountToMsat('0,001', DisplayUnit.nusan), isNull);
     });
 
     test('nol dan teks tidak valid ditolak', () {
-      expect(parseChannelAmountToMsat('0'), isNull);
-      expect(parseChannelAmountToMsat(''), isNull);
-      expect(parseChannelAmountToMsat('abc'), isNull);
-      expect(parseChannelAmountToMsat('-5'), isNull);
-      expect(parseChannelAmountToMsat('25.00'), isNull);
+      expect(parseChannelAmountToMsat('0', DisplayUnit.nusan), isNull);
+      expect(parseChannelAmountToMsat('', DisplayUnit.nusan), isNull);
+      expect(parseChannelAmountToMsat('abc', DisplayUnit.nusan), isNull);
+      expect(parseChannelAmountToMsat('-5', DisplayUnit.nusan), isNull);
+      expect(parseChannelAmountToMsat('25.00', DisplayUnit.nusan), isNull);
+    });
+
+    test('satuan NUX: pecahan NUX yang bernilai nusan bulat diterima', () {
+      // Temuan lapangan 19 Nov 2026: pengguna satuan NUX mengetik
+      // "0,001" (100.000 nusan) dan ditolak karena parser
+      // meng-hardcode nusan.
+      expect(
+        parseChannelAmountToMsat('0,001', DisplayUnit.nux),
+        BigInt.from(100000000),
+      );
+      expect(
+        parseChannelAmountToMsat('0,0001', DisplayUnit.nux),
+        BigInt.from(10000000),
+      );
+      expect(
+        parseChannelAmountToMsat('1', DisplayUnit.nux),
+        BigInt.from(100000000000),
+      );
+    });
+
+    test('satuan NUX: pecahan di bawah satu nusan ditolak', () {
+      // 0,000000015 NUX = 1,5 nusan — bukan nusan bulat.
+      expect(
+        parseChannelAmountToMsat('0,000000015', DisplayUnit.nux),
+        isNull,
+      );
+      // 0,00000001 NUX = tepat 1 nusan — sah.
+      expect(
+        parseChannelAmountToMsat('0,00000001', DisplayUnit.nux),
+        BigInt.from(1000),
+      );
+    });
+
+    test('locale en: pemisah Inggris dibaca dengan benar', () {
+      expect(
+        parseChannelAmountToMsat('25,000', DisplayUnit.nusan, locale: 'en'),
+        BigInt.from(25000000),
+      );
+      expect(
+        parseChannelAmountToMsat('0.001', DisplayUnit.nux, locale: 'en'),
+        BigInt.from(100000000),
+      );
     });
   });
 

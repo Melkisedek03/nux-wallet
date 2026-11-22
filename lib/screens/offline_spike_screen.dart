@@ -14,8 +14,10 @@ import '../services/lsp_service.dart';
 import '../services/offline_bridge.dart';
 import '../services/offline_spike_utils.dart';
 import '../theme.dart';
+import '../unit_controller.dart';
 import 'scan_screen.dart';
 import 'send_screen.dart';
+import '../utils/amount_input.dart';
 import '../utils/coin_alert.dart';
 import '../utils/format.dart';
 
@@ -432,7 +434,14 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
   /// null sesudah mencatat alasan penolakannya di log — dipakai
   /// bersama oleh pembukaan ke peer jembatan dan ke LSP.
   (BigInt, BigInt)? _validatedChannelAmount() {
-    final msat = parseChannelAmountToMsat(_channelAmountController.text);
+    // Parse dalam satuan tampilan aktif (sama seperti lembar
+    // nominal Mode Offline): kolom menampilkan satuan itu, jadi
+    // parser harus membacanya dalam satuan yang sama.
+    final msat = parseChannelAmountToMsat(
+      _channelAmountController.text,
+      UnitController.unit.value,
+      locale: LocaleController.locale.value.languageCode,
+    );
     if (msat == null || msat <= BigInt.zero) {
       _addLog('Jumlah channel tidak valid (nusan bulat, tanpa pecahan).');
       return null;
@@ -925,11 +934,28 @@ class _OfflineSpikeScreenState extends State<OfflineSpikeScreen> {
                 const SizedBox(height: 12),
                 TextField(
                   controller: _channelAmountController,
+                  // Pemformat nominal bersama (sama seperti kolom
+                  // nominal Kirim & Terima): ribuan dikelompokkan
+                  // on-the-fly mengikuti locale. Keyboard desimal
+                  // wajib: satuan NUX mengetik pecahan ("0,001").
+                  inputFormatters: [
+                    AmountInputFormatter(
+                      thousandsSep:
+                          LocaleController.locale.value.languageCode == 'en'
+                              ? ','
+                              : '.',
+                      decimalSep:
+                          LocaleController.locale.value.languageCode == 'en'
+                              ? '.'
+                              : ',',
+                    ),
+                  ],
                   decoration: InputDecoration(
                     labelText: l10n.offlineChannelAmount,
                     border: const OutlineInputBorder(),
                   ),
-                  keyboardType: TextInputType.number,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                 ),
                 const SizedBox(height: 10),
                 SizedBox(
