@@ -1230,6 +1230,124 @@
   "channelStatusReady": "Ready",
   "channelStatusPeerDown": "Ready (peer not connected)",
   "channelStatusPending": "Awaiting confirmations",
+  "channelOpenToLsp": "Open Channel to LSP",
+  "channelFundingTxid": "Funding tx",
+  "kelolaLspAmountTitle": "Open Channel to LSP",
+  "kelolaLspAmountDefaultNote": "Default amount",
+  "kelolaLspAmountOther": "Another amount",
+  "kelolaLspAmountHint": "e.g. {example}",
+  "@kelolaLspAmountHint": {
+    "placeholders": {
+      "example": {
+        "type": "String"
+      }
+    }
+  },
+  "kelolaLspAmountHelper": "At least {amount}, a whole number of nusan.",
+  "@kelolaLspAmountHelper": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "kelolaLspOnchainBalance": "Your on-chain balance: {amount}",
+  "@kelolaLspOnchainBalance": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "kelolaLspAmountTooSmall": "At least {amount} for one channel.",
+  "@kelolaLspAmountTooSmall": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "kelolaLspAmountInvalid": "Enter a valid {unit} amount.",
+  "@kelolaLspAmountInvalid": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "kelolaLspAmountContinue": "Continue",
+  "kelolaLspConfirmTitle": "Open a channel to the LSP?",
+  "kelolaLspConfirmAmount": "Channel amount",
+  "kelolaLspConfirmFeeEstimate": "Network fee (estimate)",
+  "kelolaLspConfirmFeeUnknown": "calculated when sending",
+  "kelolaLspConfirmFeeWord": "network fee",
+  "kelolaLspConfirmTotal": "Total from on-chain wallet",
+  "kelolaLspConfirmDirection": "{amount} moves from your on-chain wallet into this channel — you can send to anyone through the LSP.",
+  "@kelolaLspConfirmDirection": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "kelolaLspConfirmWait": "The channel is ready to use after 6 network confirmations.",
+  "kelolaLspConfirmCreate": "Open Channel",
+  "kelolaLspNoBalanceTitle": "On-chain balance is not enough",
+  "kelolaLspNoBalanceBody": "Opening a channel of {amount} needs that much on-chain balance, plus a little network fee. Your on-chain balance is now {balance}. Top up your on-chain wallet first, then come back here to open the channel.",
+  "@kelolaLspNoBalanceBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "balance": {
+        "type": "String"
+      }
+    }
+  },
+  "kelolaLspNoBalanceDeposit": "Top Up On-chain Wallet",
+  "kelolaLspNoBalanceLater": "Later",
+  "kelolaLspPreparing": "Channel to the LSP is being prepared…",
+  "kelolaLspPreparingConfirmations": "Confirmations {done}/{required}",
+  "@kelolaLspPreparingConfirmations": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "required": {
+        "type": "int"
+      }
+    }
+  },
+  "kelolaLspPreparingOfRequired": "of {required} confirmations needed",
+  "@kelolaLspPreparingOfRequired": {
+    "placeholders": {
+      "required": {
+        "type": "int"
+      }
+    }
+  },
+  "kelolaLspPreparingValue": "Channel value: {amount}",
+  "@kelolaLspPreparingValue": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "kelolaLspPreparingFee": "Network fee: {amount}",
+  "@kelolaLspPreparingFee": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "kelolaLspWaitingFirst": "Waiting for the first confirmation…",
+  "kelolaLspWaitingConfirmations": "Waiting for confirmations…",
+  "kelolaLspWaitingFirstNote": "New blocks appear on the network's mining schedule — please wait, or start mining on the Nusacoin network yourself.",
+  "kelolaLspOfflineDisabled": "Opening a channel needs internet — this session started without it.",
+  "kelolaLspOpenFailedGeneric": "Opening a channel to the LSP failed. Try again.",
+  "kelolaLspOpenFailedNotReady": "The wallet is not ready yet. Try again in a moment.",
   "closeChannelButton": "Close Channel",
   "closeChannelTitle": "Close this channel?",
   "closeChannelBody": "Your Lightning balance in this channel ({amount}) will return to your on-chain wallet once the closing transaction confirms on the network, minus the closing network fee.",

@@ -1230,6 +1230,124 @@
   "channelStatusReady": "Siap",
   "channelStatusPeerDown": "Siap (peer tidak tersambung)",
   "channelStatusPending": "Menunggu konfirmasi",
+  "channelOpenToLsp": "Buka Channel ke LSP",
+  "channelFundingTxid": "Tx pendanaan",
+  "kelolaLspAmountTitle": "Buka Channel ke LSP",
+  "kelolaLspAmountDefaultNote": "Nominal bawaan",
+  "kelolaLspAmountOther": "Nominal lain",
+  "kelolaLspAmountHint": "cth. {example}",
+  "@kelolaLspAmountHint": {
+    "placeholders": {
+      "example": {
+        "type": "String"
+      }
+    }
+  },
+  "kelolaLspAmountHelper": "Minimal {amount}, bernilai nusan bulat.",
+  "@kelolaLspAmountHelper": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "kelolaLspOnchainBalance": "Saldo on-chain-mu: {amount}",
+  "@kelolaLspOnchainBalance": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "kelolaLspAmountTooSmall": "Minimal {amount} untuk satu channel.",
+  "@kelolaLspAmountTooSmall": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "kelolaLspAmountInvalid": "Tulis jumlah {unit} yang sah.",
+  "@kelolaLspAmountInvalid": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "kelolaLspAmountContinue": "Lanjut",
+  "kelolaLspConfirmTitle": "Buka channel ke LSP?",
+  "kelolaLspConfirmAmount": "Jumlah channel",
+  "kelolaLspConfirmFeeEstimate": "Biaya jaringan (perkiraan)",
+  "kelolaLspConfirmFeeUnknown": "dihitung saat pengiriman",
+  "kelolaLspConfirmFeeWord": "biaya jaringan",
+  "kelolaLspConfirmTotal": "Total dari dompet on-chain",
+  "kelolaLspConfirmDirection": "{amount} dari dompet on-chain-mu pindah ke channel ini — kamu bisa mengirim ke siapa pun lewat LSP.",
+  "@kelolaLspConfirmDirection": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "kelolaLspConfirmWait": "Channel siap dipakai setelah 6 konfirmasi jaringan.",
+  "kelolaLspConfirmCreate": "Buka Channel",
+  "kelolaLspNoBalanceTitle": "Saldo on-chain belum cukup",
+  "kelolaLspNoBalanceBody": "Membuka channel {amount} butuh saldo on-chain sebesar itu, ditambah sedikit biaya jaringan. Saldo on-chain-mu sekarang {balance}. Isi dulu dompet on-chain-mu, lalu kembali ke sini untuk membuka channel.",
+  "@kelolaLspNoBalanceBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "balance": {
+        "type": "String"
+      }
+    }
+  },
+  "kelolaLspNoBalanceDeposit": "Isi Dompet On-chain",
+  "kelolaLspNoBalanceLater": "Nanti saja",
+  "kelolaLspPreparing": "Channel ke LSP sedang disiapkan…",
+  "kelolaLspPreparingConfirmations": "Konfirmasi {done}/{required}",
+  "@kelolaLspPreparingConfirmations": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "required": {
+        "type": "int"
+      }
+    }
+  },
+  "kelolaLspPreparingOfRequired": "dari {required} konfirmasi dibutuhkan",
+  "@kelolaLspPreparingOfRequired": {
+    "placeholders": {
+      "required": {
+        "type": "int"
+      }
+    }
+  },
+  "kelolaLspPreparingValue": "Nilai channel: {amount}",
+  "@kelolaLspPreparingValue": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "kelolaLspPreparingFee": "Biaya jaringan: {amount}",
+  "@kelolaLspPreparingFee": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "kelolaLspWaitingFirst": "Menunggu konfirmasi pertama…",
+  "kelolaLspWaitingConfirmations": "Menunggu konfirmasi…",
+  "kelolaLspWaitingFirstNote": "Blok baru muncul sesuai jadwal penambangan jaringan — mohon tunggu/mulailah menambang di jaringan Nusacoin secara mandiri.",
+  "kelolaLspOfflineDisabled": "Membuka channel butuh internet — sesi ini dimulai tanpa internet.",
+  "kelolaLspOpenFailedGeneric": "Buka channel ke LSP gagal. Coba lagi.",
+  "kelolaLspOpenFailedNotReady": "Dompet belum siap. Coba lagi sebentar.",
   "closeChannelButton": "Tutup Channel",
   "closeChannelTitle": "Tutup channel ini?",
   "closeChannelBody": "Saldo Lightning kamu di channel ini ({amount}) akan kembali ke dompet on-chain kamu sesudah transaksi penutup terkonfirmasi di jaringan, dikurangi biaya jaringan penutupan.",

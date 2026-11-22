@@ -2377,6 +2377,138 @@ class AppLocalizationsEn extends AppLocalizations {
   String get channelStatusPending => 'Awaiting confirmations';
 
   @override
+  String get channelOpenToLsp => 'Open Channel to LSP';
+
+  @override
+  String get channelFundingTxid => 'Funding tx';
+
+  @override
+  String get kelolaLspAmountTitle => 'Open Channel to LSP';
+
+  @override
+  String get kelolaLspAmountDefaultNote => 'Default amount';
+
+  @override
+  String get kelolaLspAmountOther => 'Another amount';
+
+  @override
+  String kelolaLspAmountHint(String example) {
+    return 'e.g. $example';
+  }
+
+  @override
+  String kelolaLspAmountHelper(String amount) {
+    return 'At least $amount, a whole number of nusan.';
+  }
+
+  @override
+  String kelolaLspOnchainBalance(String amount) {
+    return 'Your on-chain balance: $amount';
+  }
+
+  @override
+  String kelolaLspAmountTooSmall(String amount) {
+    return 'At least $amount for one channel.';
+  }
+
+  @override
+  String kelolaLspAmountInvalid(String unit) {
+    return 'Enter a valid $unit amount.';
+  }
+
+  @override
+  String get kelolaLspAmountContinue => 'Continue';
+
+  @override
+  String get kelolaLspConfirmTitle => 'Open a channel to the LSP?';
+
+  @override
+  String get kelolaLspConfirmAmount => 'Channel amount';
+
+  @override
+  String get kelolaLspConfirmFeeEstimate => 'Network fee (estimate)';
+
+  @override
+  String get kelolaLspConfirmFeeUnknown => 'calculated when sending';
+
+  @override
+  String get kelolaLspConfirmFeeWord => 'network fee';
+
+  @override
+  String get kelolaLspConfirmTotal => 'Total from on-chain wallet';
+
+  @override
+  String kelolaLspConfirmDirection(String amount) {
+    return '$amount moves from your on-chain wallet into this channel — you can send to anyone through the LSP.';
+  }
+
+  @override
+  String get kelolaLspConfirmWait =>
+      'The channel is ready to use after 6 network confirmations.';
+
+  @override
+  String get kelolaLspConfirmCreate => 'Open Channel';
+
+  @override
+  String get kelolaLspNoBalanceTitle => 'On-chain balance is not enough';
+
+  @override
+  String kelolaLspNoBalanceBody(String amount, String balance) {
+    return 'Opening a channel of $amount needs that much on-chain balance, plus a little network fee. Your on-chain balance is now $balance. Top up your on-chain wallet first, then come back here to open the channel.';
+  }
+
+  @override
+  String get kelolaLspNoBalanceDeposit => 'Top Up On-chain Wallet';
+
+  @override
+  String get kelolaLspNoBalanceLater => 'Later';
+
+  @override
+  String get kelolaLspPreparing => 'Channel to the LSP is being prepared…';
+
+  @override
+  String kelolaLspPreparingConfirmations(int done, int required) {
+    return 'Confirmations $done/$required';
+  }
+
+  @override
+  String kelolaLspPreparingOfRequired(int required) {
+    return 'of $required confirmations needed';
+  }
+
+  @override
+  String kelolaLspPreparingValue(String amount) {
+    return 'Channel value: $amount';
+  }
+
+  @override
+  String kelolaLspPreparingFee(String amount) {
+    return 'Network fee: $amount';
+  }
+
+  @override
+  String get kelolaLspWaitingFirst => 'Waiting for the first confirmation…';
+
+  @override
+  String get kelolaLspWaitingConfirmations => 'Waiting for confirmations…';
+
+  @override
+  String get kelolaLspWaitingFirstNote =>
+      'New blocks appear on the network\'s mining schedule — please wait, or start mining on the Nusacoin network yourself.';
+
+  @override
+  String get kelolaLspOfflineDisabled =>
+      'Opening a channel needs internet — this session started without it.';
+
+  @override
+  String get kelolaLspOpenFailedGeneric =>
+      'Opening a channel to the LSP failed. Try again.';
+
+  @override
+  String get kelolaLspOpenFailedNotReady =>
+      'The wallet is not ready yet. Try again in a moment.';
+
+  @override
   String get closeChannelButton => 'Close Channel';
 
   @override
