@@ -1236,6 +1236,18 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
             style:
                 TextStyle(fontSize: 12.5, color: context.palette.muted),
           ),
+          // Txid pendanaan (PR 2 rancangan Kelola Channel):
+          // tampil lengkap di SETIAP kartu channel, bisa diketuk
+          // untuk menyalin — catatan menetap dari fundingTxo
+          // node, berbeda dari kartu "disiapkan" PR 4 yang hanya
+          // melacak pembukaan kunjungan ini. Pada channel yang
+          // masih menunggu, txid berdampingan dengan kemajuan
+          // x/6 di baris status di atas. Tanpa fundingTxo
+          // (jendela negosiasi) barisnya tidak tampil.
+          if (ch.fundingTxo?.txid.hash != null) ...[
+            const SizedBox(height: 10),
+            _fundingTxidRow(ch.fundingTxo!.txid.hash),
+          ],
           if (ch.isChannelReady) ...[
             const SizedBox(height: 10),
             Align(

@@ -188,6 +188,15 @@ class _HomeScreenState extends State<HomeScreen>
   /// per pembayaran.
   String? _bolt12OfferLabel;
 
+  /// Label pendanaan channel lokal (txid hex → jenis
+  /// pendanaan 'lsp'/'direct'), dimuat bersama catatan/tag.
+  /// Korelasi txid ↔ channel hanya bisa dibuktikan selama
+  /// channel-nya masih terdaftar di node, jadi pasangannya
+  /// dicatat saat pertama kali cocok (lihat
+  /// ChannelFundingLabelStore) dan dibaca dari peta ini saat
+  /// detail dibuka — tidak pernah dibaca per baris.
+  Map<String, String> _fundingLabels = const {};
+
   /// Deteksi koin masuk: true setelah muat riwayat pertama selesai —
   /// riwayat lama tidak memicu bunyi/getar, hanya kedatangan baru.
   bool _paymentsPrimed = false;
@@ -341,12 +350,46 @@ class _HomeScreenState extends State<HomeScreen>
       final notes = await PaymentNoteStore().loadAll();
       final tags = await PaymentTagStore().loadAll();
       final offerLabel = await Bolt12OfferStore().loadCustomDescription();
+      // Label pendanaan channel (PR 2): cocokkan kiriman
+      // on-chain dengan channel yang masih dikenal node, simpan
+      // pasangan BARU supaya labelnya bertahan sesudah channel
+      // ditutup. Hanya kiriman KELUAR yang dicocokkan —
+      // pendanaan tampil sebagai kiriman on-chain di sisi
+      // pendana saja. Gagal-diam total: label adalah lapisan
+      // tampilan detail, tidak boleh menggagalkan penyegaran
+      // riwayat. Penyimpanan dilakukan SEBELUM peta dimuat,
+      // supaya pasangan yang baru tercatat langsung terlihat di
+      // penyegaran yang sama.
+      try {
+        final channels = await lspService.listChannels();
+        final store = ChannelFundingLabelStore();
+        final known = await store.loadAll();
+        final fresh = <String, String>{};
+        for (final p in payments) {
+          if (p.direction != PaymentDirection.outbound) continue;
+          final kind = p.kind;
+          if (kind is! PaymentKind_Onchain) continue;
+          final txid = kind.txid.hash;
+          if (known.containsKey(txid) || fresh.containsKey(txid)) continue;
+          final matched = matchChannelFundingKind(
+            txid: txid,
+            channels: channels,
+            lspNodeIdHex: AppConfig.lspNodeId,
+          );
+          if (matched != null) fresh[txid] = matched;
+        }
+        if (fresh.isNotEmpty) await store.saveAll(fresh);
+      } catch (_) {
+        // Abaikan — detail kiriman tampil on-chain polos.
+      }
+      final fundingLabels = await ChannelFundingLabelStore().loadAll();
       if (mounted) {
         setState(() {
           _payments = payments;
           _paymentNotes = notes;
           _paymentTags = tags;
           _bolt12OfferLabel = offerLabel;
+          _fundingLabels = fundingLabels;
         });
       }
     } catch (_) {
@@ -1591,6 +1634,14 @@ class _HomeScreenState extends State<HomeScreen>
     // Bolt12Offer juga); hashHex di atas khusus pencarian invoice
     // tersimpan yang memang hanya ada untuk Bolt11/JIT.
     final tagHashHex = _paymentHashHex(payment);
+    // Label pendanaan channel (PR 2): hanya kiriman on-chain
+    // KELUAR yang bisa menjadi pendanaan — jenisnya dibaca dari
+    // peta yang dimuat per penyegaran (bukan dari node di sini).
+    String? fundingLabel;
+    if (kind is PaymentKind_Onchain &&
+        payment.direction == PaymentDirection.outbound) {
+      fundingLabel = fundingLabelTextForKind(_fundingLabels[kind.txid.hash]);
+    }
     if (!mounted) return;
     await Navigator.push(
       context,
@@ -1604,6 +1655,7 @@ class _HomeScreenState extends State<HomeScreen>
           // menerapkannya dengan syarat yang sama persis seperti
           // baris (Bolt12 masuk) supaya kedua permukaan sepakat.
           bolt12Label: _bolt12OfferLabel,
+          fundingLabel: fundingLabel,
         ),
       ),
     );

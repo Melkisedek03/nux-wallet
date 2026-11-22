@@ -361,8 +361,9 @@ void main() {
       expect(find.text('Channel ke LSP sedang disiapkan…'), findsOneWidget);
       expect(find.text('Menunggu konfirmasi pertama…'), findsOneWidget);
       expect(find.text('Nilai channel: 100.000 nusan'), findsOneWidget);
-      // Txid pendanaan tampil lengkap di kartu disiapkan.
-      expect(find.text('cc' * 32), findsOneWidget);
+      // Txid pendanaan tampil lengkap di kartu disiapkan DAN di
+      // kartu channel-nya sendiri (PR 2: txid menetap di kartu).
+      expect(find.text('cc' * 32), findsNWidgets(2));
       // Channel-nya juga tampil di daftar dengan status menunggu.
       expect(find.text('Menunggu konfirmasi • Konfirmasi 0/6'), findsOneWidget);
     });
@@ -403,8 +404,10 @@ void main() {
       expect(find.text('Biaya jaringan: 250 nusan'), findsOneWidget);
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
 
-      // Ketuk ikon salin: txid disalin, snackbar tampil.
-      await tester.tap(find.byIcon(Icons.copy_rounded));
+      // Ketuk ikon salin kartu disiapkan (yang pertama — kartu
+      // channel di bawahnya kini punya ikon salin sendiri, PR 2):
+      // txid disalin, snackbar tampil.
+      await tester.tap(find.byIcon(Icons.copy_rounded).first);
       await _pumpManual(tester);
       expect(_copiedText, 'cc' * 32);
       expect(find.text('Disalin'), findsOneWidget);
@@ -478,6 +481,87 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Channel ke LSP sedang disiapkan…'), findsNothing);
+    });
+  });
+
+  group('ChannelsScreen txid pendanaan di kartu (PR 2)', () {
+    testWidgets('kartu channel siap menampilkan txid lengkap', (tester) async {
+      await _pumpScreen(
+        tester,
+        service: _FakeLspService(
+          channels: [
+            _channel(
+              AppConfig.lspNodeId,
+              fundingTxo: _fundingTxo('dd' * 32),
+              confirmations: 6,
+              confirmationsRequired: 6,
+            ),
+            _channel(
+              _peerId,
+              channelValueSats: 20000,
+              fundingTxo: _fundingTxo('ee' * 32),
+              confirmations: 6,
+              confirmationsRequired: 6,
+            ),
+          ],
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.text('Tx pendanaan'), findsNWidgets(2));
+      expect(find.text('dd' * 32), findsOneWidget);
+      expect(find.text('ee' * 32), findsOneWidget);
+      expect(find.text('Siap'), findsNWidgets(2));
+    });
+
+    testWidgets('kartu channel menunggu: txid + kemajuan x/6', (tester) async {
+      await _pumpScreen(
+        tester,
+        service: _FakeLspService(
+          channels: [
+            _channel(
+              _peerId,
+              usable: false,
+              channelValueSats: 300000,
+              fundingTxo: _fundingTxo('ff' * 32),
+              confirmations: 2,
+              confirmationsRequired: 6,
+            ),
+          ],
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.text('ff' * 32), findsOneWidget);
+      expect(find.text('Menunggu konfirmasi • Konfirmasi 2/6'), findsOneWidget);
+    });
+
+    testWidgets('ketuk ikon salin kartu: txid disalin', (tester) async {
+      _mockClipboard();
+      await _pumpScreen(
+        tester,
+        service: _FakeLspService(
+          channels: [
+            _channel(
+              AppConfig.lspNodeId,
+              fundingTxo: _fundingTxo('dd' * 32),
+              confirmations: 6,
+              confirmationsRequired: 6,
+            ),
+          ],
+        ),
+      );
+      await tester.tap(find.byIcon(Icons.copy_rounded));
+      await _pumpManual(tester);
+      expect(_copiedText, 'dd' * 32);
+      expect(find.text('Disalin'), findsOneWidget);
+    });
+
+    testWidgets('tanpa fundingTxo: baris txid tidak tampil', (tester) async {
+      await _pumpScreen(
+        tester,
+        service: _FakeLspService(channels: [_channel(AppConfig.lspNodeId)]),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.text('Tx pendanaan'), findsNothing);
     });
   });
 }

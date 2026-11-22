@@ -162,6 +162,63 @@ void main() {
         '⛓ on-chain',
       );
     });
+
+    test('label pendanaan menang atas on-chain polos (detail)', () {
+      expect(
+        historyRowTag(
+          isJit: false,
+          isOnchain: true,
+          routeTag: null,
+          fundingLabel: 'Pembukaan Channel ke LSP⚡',
+        ),
+        'Pembukaan Channel ke LSP⚡',
+      );
+      expect(
+        historyRowTag(
+          isJit: false,
+          isOnchain: true,
+          routeTag: null,
+          fundingLabel: 'Pembukaan Channel Langsung⚡',
+        ),
+        'Pembukaan Channel Langsung⚡',
+      );
+    });
+
+    test('label pendanaan diabaikan bila bukan on-chain', () {
+      expect(
+        historyRowTag(
+          isJit: false,
+          isOnchain: false,
+          routeTag: null,
+          fundingLabel: 'Pembukaan Channel ke LSP⚡',
+        ),
+        '⚡',
+      );
+    });
+
+    test('label pendanaan kosong → on-chain polos', () {
+      expect(
+        historyRowTag(
+          isJit: false,
+          isOnchain: true,
+          routeTag: null,
+          fundingLabel: '   ',
+        ),
+        '⛓ on-chain',
+      );
+    });
+
+    test('JIT tetap menang atas label pendanaan', () {
+      expect(
+        historyRowTag(
+          isJit: true,
+          isOnchain: false,
+          routeTag: null,
+          fundingLabel: 'Pembukaan Channel ke LSP⚡',
+        ),
+        '⚡ JIT',
+      );
+    });
   });
 
   group('bolt12OfferLabelTag', () {
