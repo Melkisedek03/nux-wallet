@@ -93,6 +93,79 @@ void main() {
     });
   });
 
+  group('Bolt12OfferStore: ikatan jaringan (R2)', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+
+    test('offer testnet tidak terbaca build mainnet, dan sebaliknya', () async {
+      final testnet = Bolt12OfferStore(isTestnet: true);
+      final mainnet = Bolt12OfferStore(isTestnet: false);
+      await testnet.save(_offerContoh, forDescription: 'uji');
+      expect(await testnet.load(), _offerContoh);
+      expect(await testnet.loadOfferDescription(), 'uji');
+      expect(await mainnet.load(), isNull);
+      expect(await mainnet.loadOfferDescription(), isNull);
+
+      await mainnet.save(_offerContoh, forDescription: 'uji');
+      expect(await mainnet.load(), _offerContoh);
+      expect(await mainnet.loadOfferDescription(), 'uji');
+      // Slot testnet tetap utuh — tiap jaringan punya simpanan
+      // sendiri, bukan satu slot yang ditimpa bergantian.
+      expect(await testnet.load(), _offerContoh);
+    });
+
+    test('label kustom mengikuti ikatan jaringan yang sama', () async {
+      final testnet = Bolt12OfferStore(isTestnet: true);
+      final mainnet = Bolt12OfferStore(isTestnet: false);
+      await testnet.saveCustomDescription('Toko Berkah');
+      expect(await testnet.loadCustomDescription(), 'Toko Berkah');
+      expect(await mainnet.loadCustomDescription(), isNull);
+
+      await mainnet.saveCustomDescription('Toko Utama');
+      expect(await mainnet.loadCustomDescription(), 'Toko Utama');
+      expect(await testnet.loadCustomDescription(), 'Toko Berkah');
+    });
+
+    test('clearOffer hanya membuang slot jaringannya sendiri', () async {
+      final testnet = Bolt12OfferStore(isTestnet: true);
+      final mainnet = Bolt12OfferStore(isTestnet: false);
+      await testnet.save(_offerContoh, forDescription: 'uji');
+      await mainnet.save(_offerContoh, forDescription: 'uji');
+      await testnet.clearOffer();
+      expect(await testnet.load(), isNull);
+      expect(await testnet.loadOfferDescription(), isNull);
+      expect(await mainnet.load(), _offerContoh);
+      expect(await mainnet.loadOfferDescription(), 'uji');
+    });
+
+    test('simpanan lama (kunci polos) tetap berlaku di testnet', () async {
+      // Kunci polos adalah kunci testnet (konvensi berkas seed):
+      // simpanan yang ditulis build lama — yang hanya pernah
+      // ada sebagai testnet — tetap terbaca tanpa migrasi.
+      SharedPreferences.setMockInitialValues({
+        Bolt12OfferStore.storageKey: _offerContoh,
+        Bolt12OfferStore.offerDescriptionKey: 'uji',
+      });
+      expect(await Bolt12OfferStore(isTestnet: true).load(), _offerContoh);
+      expect(await Bolt12OfferStore(isTestnet: false).load(), isNull);
+    });
+
+    test('kunci mainnet = kunci dasar + akhiran _mainnet', () async {
+      final mainnet = Bolt12OfferStore(isTestnet: false);
+      await mainnet.save(_offerContoh, forDescription: 'uji');
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getString(
+          '${Bolt12OfferStore.storageKey}'
+          '${Bolt12OfferStore.mainnetKeySuffix}',
+        ),
+        _offerContoh,
+      );
+      expect(prefs.getString(Bolt12OfferStore.storageKey), isNull);
+    });
+  });
+
   group('Bolt12OfferService.ensureOffer', () {
     test('dari simpanan: ready tanpa menyentuh node', () async {
       SharedPreferences.setMockInitialValues({
@@ -159,6 +232,44 @@ void main() {
       final service = Bolt12OfferService(LspService());
       final result =
           await service.ensureOffer(defaultDescription: 'Terima NUX');
+      expect(result.outcome, StaticOfferOutcome.ready);
+      expect(result.offer, _offerContoh);
+    });
+
+    test('REGRESI R2: offer testnet tersimpan TIDAK dipakai ulang '
+        'build mainnet', () async {
+      // Skenario audit: APK mainnet dipasang di atas instalasi
+      // testnet — simpanan testnet masih ada di SharedPreferences
+      // yang sama. Build mainnet tidak boleh menyajikannya.
+      SharedPreferences.setMockInitialValues({
+        Bolt12OfferStore.storageKey: _offerContoh,
+        Bolt12OfferStore.offerDescriptionKey: 'uji',
+      });
+      final service = Bolt12OfferService(
+        LspService(),
+        store: Bolt12OfferStore(isTestnet: false),
+      );
+      // Node mati: bila offer testnet dipakai ulang hasilnya
+      // ready; yang benar adalah usaha buat baru → failed.
+      final result = await service.ensureOffer(defaultDescription: 'uji');
+      expect(result.outcome, StaticOfferOutcome.failed);
+      expect(result.offer, isNull);
+    });
+
+    test('offer mainnet tersimpan dipakai ulang build mainnet', () async {
+      SharedPreferences.setMockInitialValues({
+        '${Bolt12OfferStore.storageKey}'
+                '${Bolt12OfferStore.mainnetKeySuffix}':
+            _offerContoh,
+        '${Bolt12OfferStore.offerDescriptionKey}'
+                '${Bolt12OfferStore.mainnetKeySuffix}':
+            'uji',
+      });
+      final service = Bolt12OfferService(
+        LspService(),
+        store: Bolt12OfferStore(isTestnet: false),
+      );
+      final result = await service.ensureOffer(defaultDescription: 'uji');
       expect(result.outcome, StaticOfferOutcome.ready);
       expect(result.offer, _offerContoh);
     });
