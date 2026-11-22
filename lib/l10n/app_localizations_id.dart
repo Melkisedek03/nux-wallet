@@ -2386,6 +2386,15 @@ class AppLocalizationsId extends AppLocalizations {
   String get channelFundingTxid => 'Tx pendanaan';
 
   @override
+  String get channelLspJit => 'Via LSP — JIT';
+
+  @override
+  String get channelLspSelfFunded => 'Via LSP — Self-Funded';
+
+  @override
+  String get channelDirect => 'Channel Langsung';
+
+  @override
   String get kelolaLspAmountTitle => 'Buka Channel ke LSP';
 
   @override

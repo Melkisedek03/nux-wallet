@@ -72,6 +72,15 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
   List<ChannelDetails> _channels = const [];
   bool _loading = true;
   bool _loadFailed = false;
+  // Status menyegarkan muat-ulang (PR 1 rancangan Kelola
+  // Channel): muat pertama memakai _loading (layar penuh);
+  // muat ulang memakai _refreshing (ikon berputar di AppBar)
+  // supaya daftar tetap terlihat selama data baru tiba.
+  // Penghitung dalam-penerbangan menjaga dua pemuatan yang
+  // tumpang-tindih (timer 5 detik + ketukan tombol) tidak
+  // mematikan indikator terlalu dini.
+  bool _refreshing = false;
+  int _muatInFlight = 0;
   bool _closing = false;
   // Pembukaan channel ke LSP yang dilacak kunjungan ini
   // (hex userChannelId dari `openChannelToLsp`): selama channel
@@ -117,7 +126,36 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
       ch.counterpartyNodeId.hex.toLowerCase() ==
       AppConfig.lspNodeId.toLowerCase();
 
+  /// Label jenis channel (PR 1 rancangan Kelola Channel):
+  /// lawan + is_outbound membedakan JIT (didanai LSP, lahir
+  /// dari pembayaran masuk) dari Self-Funded (dibuka dan
+  /// didanai pengguna sendiri ke LSP) secara eksak — tanpa
+  /// tebak-tebakan. Perbandingan ID node tidak peka huruf
+  /// (pola _isLsp yang sama).
+  String _kindLabel(ChannelDetails ch) {
+    final l10n = context.l10n;
+    if (!_isLsp(ch)) return l10n.channelDirect;
+    return ch.isOutbound ? l10n.channelLspSelfFunded : l10n.channelLspJit;
+  }
+
   Future<void> _muat() async {
+    // Umpan balik muat-ulang (PR 1): nyalakan status
+    // menyegarkan di AWAL pemuatan ulang — bukan hanya
+    // mematikannya di akhir. Sebelum PR ini _muat() tidak
+    // pernah menyalakan status apa pun di awal, sehingga
+    // ketukan tombol segarkan sesudah muatan pertama tidak
+    // mengubah tampilan apa pun dan terasa seperti tombol
+    // mati. Muat pertama dikecualikan: ia sudah ditutup
+    // _loading (layar penuh).
+    final isReload = !_loading;
+    // Dihitung hanya bila benar-benar menaikkan penghitung —
+    // finally di bawah memakai penanda yang sama supaya
+    // penghitung tidak pernah turun tanpa naik.
+    final counted = isReload && mounted;
+    if (counted) {
+      _muatInFlight++;
+      if (_muatInFlight == 1) setState(() => _refreshing = true);
+    }
     try {
       final all = await widget.lspService.listChannels();
       if (!mounted) return;
@@ -155,6 +193,13 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
         _loading = false;
         _loadFailed = true;
       });
+    } finally {
+      if (counted) {
+        _muatInFlight--;
+        if (_muatInFlight == 0 && mounted) {
+          setState(() => _refreshing = false);
+        }
+      }
     }
   }
 
@@ -1128,10 +1173,23 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          IconButton(
-            onPressed: _loading ? null : _muat,
-            icon: const Icon(Icons.refresh_rounded),
-          ),
+          // Umpan balik muat-ulang (PR 1): selama data baru
+          // tiba, ikon segarkan diganti indikator berputar —
+          // ketukan tombol terasa dijawab, bukan mati.
+          if (_refreshing)
+            const Padding(
+              padding: EdgeInsets.all(14),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2.5),
+              ),
+            )
+          else
+            IconButton(
+              onPressed: _loading ? null : _muat,
+              icon: const Icon(Icons.refresh_rounded),
+            ),
         ],
       ),
       body: _loading
@@ -1219,6 +1277,17 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                   style: TextStyle(
                       fontSize: 12, color: context.palette.muted)),
             ],
+          ),
+          // Label jenis (PR 1): barisnya sendiri di bawah
+          // judul, BUKAN di dalam Row judul — Row judul punya
+          // cacat tata letak yang diketahui (teks status tanpa
+          // batas lebar mendesak label panjang sampai melipat
+          // huruf-per-huruf; perbaikannya jatah PR R3). Di
+          // baris sendiri, label selalu punya lebar penuh kartu.
+          const SizedBox(height: 4),
+          Text(
+            _kindLabel(ch),
+            style: TextStyle(fontSize: 12, color: context.palette.muted),
           ),
           if (!isLsp) ...[
             const SizedBox(height: 4),

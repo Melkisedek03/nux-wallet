@@ -22,6 +22,7 @@ ChannelDetails _channel(
   String counterpartyHex, {
   bool usable = true,
   bool? channelReady,
+  bool isOutbound = true,
   int outboundMsat = 24000000,
   int channelValueSats = 25000,
   OutPoint? fundingTxo,
@@ -44,7 +45,7 @@ ChannelDetails _channel(
     feerateSatPer1000Weight: 1000,
     outboundCapacityMsat: BigInt.from(outboundMsat),
     inboundCapacityMsat: BigInt.from(1000000),
-    isOutbound: true,
+    isOutbound: isOutbound,
     isChannelReady: channelReady ?? usable,
     isUsable: usable,
     counterpartyUnspendablePunishmentReserve: BigInt.from(1000),
@@ -74,6 +75,14 @@ class _FakeLspService extends LspService {
   bool offlineMode;
   bool failOpen;
 
+  /// Jeda buatan listChannels — tes umpan balik refresh
+  /// menyalakannya SESUDAH muatan awal supaya keadaan
+  /// menyegarkan di tengah-penerbangan bisa diamati.
+  Duration listDelay = Duration.zero;
+
+  /// Jumlah pemanggilan listChannels.
+  int listCalls = 0;
+
   /// Nominal setiap pembukaan channel ke LSP yang diminta layar.
   final List<BigInt> openedAmounts = [];
 
@@ -92,7 +101,13 @@ class _FakeLspService extends LspService {
   bool get isOfflineMode => offlineMode;
 
   @override
-  Future<List<ChannelDetails>> listChannels() async => channels;
+  Future<List<ChannelDetails>> listChannels() async {
+    listCalls++;
+    if (listDelay > Duration.zero) {
+      await Future.delayed(listDelay);
+    }
+    return channels;
+  }
 
   @override
   Future<BigInt> spendableOnchainBalanceSats() async => spendableSats;
@@ -216,6 +231,13 @@ void _mockClipboard() {
         return null;
       });
 }
+
+/// Indikator berputar di AppBar — bedakan dari spinner layar
+/// penuh muat pertama (di body, bukan di AppBar).
+Finder get _appBarSpinner => find.descendant(
+  of: find.byType(AppBar),
+  matching: find.byType(CircularProgressIndicator),
+);
 
 void main() {
   tearDown(() {
@@ -562,6 +584,157 @@ void main() {
       );
       expect(tester.takeException(), isNull);
       expect(find.text('Tx pendanaan'), findsNothing);
+    });
+  });
+
+  group('ChannelsScreen umpan balik refresh + label jenis (PR 1)', () {
+    testWidgets('tombol segarkan: indikator tampil sampai muat ulang selesai', (
+      tester,
+    ) async {
+      final service = _FakeLspService(
+        channels: [_channel(AppConfig.lspNodeId, channelValueSats: 25000)],
+      );
+      await _pumpScreen(tester, service: service);
+      expect(_appBarSpinner, findsNothing);
+      expect(find.text('Siap'), findsOneWidget);
+
+      // Muat ulang dengan jeda: tombol ditekan, daftar berubah
+      // di belakang layar.
+      service.listDelay = const Duration(milliseconds: 500);
+      service.channels = [
+        _channel(AppConfig.lspNodeId, channelValueSats: 25000),
+        _channel(_peerId, channelValueSats: 20000, userIdFill: 1),
+      ];
+      await tester.tap(find.byIcon(Icons.refresh_rounded));
+      await tester.pump();
+      expect(_appBarSpinner, findsOneWidget);
+
+      // Jeda berlalu: indikator hilang, tombol kembali,
+      // daftar baru tampil.
+      await tester.pump(const Duration(milliseconds: 600));
+      await _pumpManual(tester);
+      expect(tester.takeException(), isNull);
+      expect(_appBarSpinner, findsNothing);
+      expect(find.byIcon(Icons.refresh_rounded), findsOneWidget);
+      expect(find.text('Siap'), findsNWidgets(2));
+    });
+
+    testWidgets('tarik-untuk-segarkan: indikator + daftar diperbarui', (
+      tester,
+    ) async {
+      // Delapan kartu supaya daftar bisa di-scroll (tanpa
+      // scroll, tarik tidak memicu RefreshIndicator).
+      final service = _FakeLspService(
+        channels: [
+          for (var i = 0; i < 8; i++)
+            _channel(
+              _peerId,
+              channelValueSats: 20000 + i * 1000,
+              userIdFill: i,
+            ),
+        ],
+      );
+      await _pumpScreen(tester, service: service);
+      // Jeda 2 detik: fling sendiri memakan ~400 ms waktu palsu,
+      // jadi jeda 500 ms hampir habis sebelum indikator diamati.
+      service.listDelay = const Duration(seconds: 2);
+      service.channels = [
+        _channel(AppConfig.lspNodeId, channelValueSats: 25000),
+      ];
+
+      await tester.drag(find.byType(ListView), const Offset(0, 400));
+      // onRefresh RefreshIndicator baru menyala setelah
+      // animasi snap + settle scroll pasca-lepas (~0,5–1 detik
+      // waktu palsu) — tunggu sampai _muat benar-benar
+      // berjalan, lalu amati indikatornya (jeda 2 detik
+      // memberi ruang longgar).
+      for (var i = 0; i < 10 && service.listCalls < 2; i++) {
+        await tester.pump(const Duration(milliseconds: 200));
+      }
+      expect(service.listCalls, 2);
+      expect(_appBarSpinner, findsOneWidget);
+
+      await tester.pump(const Duration(milliseconds: 2100));
+      await _pumpManual(tester);
+      expect(tester.takeException(), isNull);
+      expect(_appBarSpinner, findsNothing);
+      expect(find.text('Via LSP'), findsOneWidget);
+      expect(find.text('Channel langsung'), findsNothing);
+    });
+
+    testWidgets('label jenis: JIT vs Self-Funded vs langsung', (tester) async {
+      await _pumpScreen(
+        tester,
+        service: _FakeLspService(
+          channels: [
+            _channel(AppConfig.lspNodeId, isOutbound: false),
+            _channel(
+              AppConfig.lspNodeId,
+              isOutbound: true,
+              channelValueSats: 11000,
+              userIdFill: 1,
+            ),
+            _channel(_peerId, channelValueSats: 20000, userIdFill: 2),
+          ],
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.text('Via LSP — JIT'), findsOneWidget);
+      expect(find.text('Via LSP — Self-Funded'), findsOneWidget);
+      expect(find.text('Channel Langsung'), findsOneWidget);
+    });
+
+    testWidgets('label jenis: ID node LSP tidak peka huruf', (tester) async {
+      await _pumpScreen(
+        tester,
+        service: _FakeLspService(
+          channels: [
+            _channel(AppConfig.lspNodeId.toUpperCase(), isOutbound: false),
+          ],
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.text('Via LSP — JIT'), findsOneWidget);
+    });
+
+    testWidgets('label panjang tidak melipat di layar sempit', (tester) async {
+      // Ponsel sempit (360 px logis): label jenis di barisnya
+      // sendiri harus tetap satu baris — cacat melipat
+      // huruf-per-huruf hidup di Row judul (jatah PR R3),
+      // bukan di sini. Lebar > 50 membuktikan teks terbentang
+      // horizontal (label yang melipat selebar satu huruf,
+      // ~10 px). devicePixelRatio tes adalah 3,0 — tanpa
+      // disetel 1,0, ukuran logisnya jadi 120×213.
+      //
+      // Sengaja hanya channel SIAP (status pendek "Siap"):
+      // status panjang channel menunggu ("Menunggu konfirmasi
+      // • Konfirmasi 0/6") meluberkan Row judul yang
+      // statusnya tanpa batas lebar — cacat yang sudah
+      // diketahui itu jatah PR R3, bukan tes ini.
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await _pumpScreen(
+        tester,
+        service: _FakeLspService(
+          channels: [
+            _channel(
+              AppConfig.lspNodeId,
+              isOutbound: true,
+              channelValueSats: 11000,
+            ),
+            _channel(_peerId, channelValueSats: 300000, userIdFill: 1),
+          ],
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      final labelSize = tester.getSize(find.text('Via LSP — Self-Funded'));
+      expect(labelSize.width, greaterThan(50));
+      expect(labelSize.height, lessThan(30));
+      final directSize = tester.getSize(find.text('Channel Langsung'));
+      expect(directSize.width, greaterThan(50));
+      expect(directSize.height, lessThan(30));
     });
   });
 }

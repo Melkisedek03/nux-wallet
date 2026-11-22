@@ -4328,6 +4328,24 @@ abstract class AppLocalizations {
   /// **'Tx pendanaan'**
   String get channelFundingTxid;
 
+  /// No description provided for @channelLspJit.
+  ///
+  /// In id, this message translates to:
+  /// **'Via LSP — JIT'**
+  String get channelLspJit;
+
+  /// No description provided for @channelLspSelfFunded.
+  ///
+  /// In id, this message translates to:
+  /// **'Via LSP — Self-Funded'**
+  String get channelLspSelfFunded;
+
+  /// No description provided for @channelDirect.
+  ///
+  /// In id, this message translates to:
+  /// **'Channel Langsung'**
+  String get channelDirect;
+
   /// No description provided for @kelolaLspAmountTitle.
   ///
   /// In id, this message translates to:

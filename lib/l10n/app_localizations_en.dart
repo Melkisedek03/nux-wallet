@@ -2383,6 +2383,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get channelFundingTxid => 'Funding tx';
 
   @override
+  String get channelLspJit => 'Via LSP — JIT';
+
+  @override
+  String get channelLspSelfFunded => 'Via LSP — Self-Funded';
+
+  @override
+  String get channelDirect => 'Direct Channel';
+
+  @override
   String get kelolaLspAmountTitle => 'Open Channel to LSP';
 
   @override
