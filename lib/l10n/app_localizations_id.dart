@@ -147,6 +147,23 @@ class AppLocalizationsId extends AppLocalizations {
   String get onchainNewAddress => 'Alamat baru';
 
   @override
+  String get onchainPendingTitle => 'Menunggu konfirmasi';
+
+  @override
+  String onchainDepositConfirmations(int done, int required) {
+    return 'Konfirmasi $done/$required';
+  }
+
+  @override
+  String onchainDepositWaitingFirst(int required) {
+    return '0/$required — menunggu blok pertama';
+  }
+
+  @override
+  String get onchainDepositConfirmationsUnknown =>
+      'Konfirmasi belum dapat dimuat';
+
+  @override
   String get networkTestnet => 'Lightning Network • Testnet';
 
   @override

@@ -60,6 +60,27 @@
   "onchainCopied": "Address copied",
   "onchainLoadFailed": "Could not load the on-chain wallet",
   "onchainNewAddress": "New address",
+  "onchainPendingTitle": "Waiting for confirmation",
+  "onchainDepositConfirmations": "Confirmation {done}/{required}",
+  "@onchainDepositConfirmations": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "required": {
+        "type": "int"
+      }
+    }
+  },
+  "onchainDepositWaitingFirst": "0/{required} — waiting for the first block",
+  "@onchainDepositWaitingFirst": {
+    "placeholders": {
+      "required": {
+        "type": "int"
+      }
+    }
+  },
+  "onchainDepositConfirmationsUnknown": "Confirmations unavailable",
   "networkTestnet": "Lightning Network • Testnet",
   "networkMainnet": "Lightning Network • Mainnet",
   "lightningActive": "Lightning active — ready for instant receive",
