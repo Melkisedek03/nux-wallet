@@ -1,6 +1,5 @@
-Perbaikan Kelola Channel dan Terima:
-- Tombol Buka Channel ke LSP di Kelola Channel: buka channel langsung dari layar produksi, lengkap dengan estimasi fee dan kartu persiapan
-- Kartu channel menampilkan txid funding (ketuk untuk salin) dan label jenis channel (Via LSP — JIT / Self-Funded / Channel Langsung)
-- Detail Aktivitas kini menjelaskan pembayaran yang membuka channel
-- Tombol refresh Kelola Channel kini menampilkan putaran saat memuat ulang
-- Kode statis Terima kini terikat ke jaringannya, supaya tidak tertukar antar jaringan
+Perbaikan keamanan dompet dan Kelola Channel:
+- Seed dan frasa pemulihan kini disimpan di penyimpanan aman perangkat (Android Keystore), bukan lagi berkas biasa — dompet yang sudah ada dipindahkan otomatis saat aplikasi dibuka
+- Dialog tutup-paksa kini menampilkan angka konkret: delay 144 blok, perkiraan terbuka sekitar blok N, dan catatan ~10 hari di mainnet
+- Halaman Dompet On-chain kini menampilkan progres deposit: nominal, konfirmasi x/6, dan txid (ketuk untuk salin)
+- Kartu channel diperbaiki: status tidak lagi melipat, ada status "Menutup…" saat tutup berjalan, dan hitungan konfirmasi tidak melebihi kebutuhan

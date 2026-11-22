@@ -1,6 +1,5 @@
-Channel management and Receive fixes:
-- Open Channel to LSP button in Channel Management: open a channel from the production screen, with a fee estimate and a preparing card
-- Channel cards show the funding txid (tap to copy) and the channel kind (Via LSP — JIT / Self-Funded / Direct Channel)
-- Activity detail now explains payments that opened a channel
-- The Channel Management refresh button now shows a spinner while reloading
-- The static Receive code is now bound to its network, so it cannot be mixed up between networks
+Wallet security and Channel Management fixes:
+- The seed and recovery phrase are now stored in the device secure storage (Android Keystore), no longer in plain files — existing wallets are moved automatically when the app opens
+- The force-close dialog now shows concrete numbers: a 144-block delay, an estimated unlock around block N, and a ~10-day note on mainnet
+- The On-chain Wallet page now shows deposit progress: amount, x/6 confirmations, and the txid (tap to copy)
+- Channel cards fixed: status no longer folds, a "Closing…" state shows while a close is in flight, and confirmation counts never exceed the requirement
