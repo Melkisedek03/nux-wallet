@@ -4316,6 +4316,216 @@ abstract class AppLocalizations {
   /// **'Menunggu konfirmasi'**
   String get channelStatusPending;
 
+  /// No description provided for @channelOpenToLsp.
+  ///
+  /// In id, this message translates to:
+  /// **'Buka Channel ke LSP'**
+  String get channelOpenToLsp;
+
+  /// No description provided for @channelFundingTxid.
+  ///
+  /// In id, this message translates to:
+  /// **'Tx pendanaan'**
+  String get channelFundingTxid;
+
+  /// No description provided for @kelolaLspAmountTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Buka Channel ke LSP'**
+  String get kelolaLspAmountTitle;
+
+  /// No description provided for @kelolaLspAmountDefaultNote.
+  ///
+  /// In id, this message translates to:
+  /// **'Nominal bawaan'**
+  String get kelolaLspAmountDefaultNote;
+
+  /// No description provided for @kelolaLspAmountOther.
+  ///
+  /// In id, this message translates to:
+  /// **'Nominal lain'**
+  String get kelolaLspAmountOther;
+
+  /// No description provided for @kelolaLspAmountHint.
+  ///
+  /// In id, this message translates to:
+  /// **'cth. {example}'**
+  String kelolaLspAmountHint(String example);
+
+  /// No description provided for @kelolaLspAmountHelper.
+  ///
+  /// In id, this message translates to:
+  /// **'Minimal {amount}, bernilai nusan bulat.'**
+  String kelolaLspAmountHelper(String amount);
+
+  /// No description provided for @kelolaLspOnchainBalance.
+  ///
+  /// In id, this message translates to:
+  /// **'Saldo on-chain-mu: {amount}'**
+  String kelolaLspOnchainBalance(String amount);
+
+  /// No description provided for @kelolaLspAmountTooSmall.
+  ///
+  /// In id, this message translates to:
+  /// **'Minimal {amount} untuk satu channel.'**
+  String kelolaLspAmountTooSmall(String amount);
+
+  /// No description provided for @kelolaLspAmountInvalid.
+  ///
+  /// In id, this message translates to:
+  /// **'Tulis jumlah {unit} yang sah.'**
+  String kelolaLspAmountInvalid(String unit);
+
+  /// No description provided for @kelolaLspAmountContinue.
+  ///
+  /// In id, this message translates to:
+  /// **'Lanjut'**
+  String get kelolaLspAmountContinue;
+
+  /// No description provided for @kelolaLspConfirmTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Buka channel ke LSP?'**
+  String get kelolaLspConfirmTitle;
+
+  /// No description provided for @kelolaLspConfirmAmount.
+  ///
+  /// In id, this message translates to:
+  /// **'Jumlah channel'**
+  String get kelolaLspConfirmAmount;
+
+  /// No description provided for @kelolaLspConfirmFeeEstimate.
+  ///
+  /// In id, this message translates to:
+  /// **'Biaya jaringan (perkiraan)'**
+  String get kelolaLspConfirmFeeEstimate;
+
+  /// No description provided for @kelolaLspConfirmFeeUnknown.
+  ///
+  /// In id, this message translates to:
+  /// **'dihitung saat pengiriman'**
+  String get kelolaLspConfirmFeeUnknown;
+
+  /// No description provided for @kelolaLspConfirmFeeWord.
+  ///
+  /// In id, this message translates to:
+  /// **'biaya jaringan'**
+  String get kelolaLspConfirmFeeWord;
+
+  /// No description provided for @kelolaLspConfirmTotal.
+  ///
+  /// In id, this message translates to:
+  /// **'Total dari dompet on-chain'**
+  String get kelolaLspConfirmTotal;
+
+  /// No description provided for @kelolaLspConfirmDirection.
+  ///
+  /// In id, this message translates to:
+  /// **'{amount} dari dompet on-chain-mu pindah ke channel ini — kamu bisa mengirim ke siapa pun lewat LSP.'**
+  String kelolaLspConfirmDirection(String amount);
+
+  /// No description provided for @kelolaLspConfirmWait.
+  ///
+  /// In id, this message translates to:
+  /// **'Channel siap dipakai setelah 6 konfirmasi jaringan.'**
+  String get kelolaLspConfirmWait;
+
+  /// No description provided for @kelolaLspConfirmCreate.
+  ///
+  /// In id, this message translates to:
+  /// **'Buka Channel'**
+  String get kelolaLspConfirmCreate;
+
+  /// No description provided for @kelolaLspNoBalanceTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Saldo on-chain belum cukup'**
+  String get kelolaLspNoBalanceTitle;
+
+  /// No description provided for @kelolaLspNoBalanceBody.
+  ///
+  /// In id, this message translates to:
+  /// **'Membuka channel {amount} butuh saldo on-chain sebesar itu, ditambah sedikit biaya jaringan. Saldo on-chain-mu sekarang {balance}. Isi dulu dompet on-chain-mu, lalu kembali ke sini untuk membuka channel.'**
+  String kelolaLspNoBalanceBody(String amount, String balance);
+
+  /// No description provided for @kelolaLspNoBalanceDeposit.
+  ///
+  /// In id, this message translates to:
+  /// **'Isi Dompet On-chain'**
+  String get kelolaLspNoBalanceDeposit;
+
+  /// No description provided for @kelolaLspNoBalanceLater.
+  ///
+  /// In id, this message translates to:
+  /// **'Nanti saja'**
+  String get kelolaLspNoBalanceLater;
+
+  /// No description provided for @kelolaLspPreparing.
+  ///
+  /// In id, this message translates to:
+  /// **'Channel ke LSP sedang disiapkan…'**
+  String get kelolaLspPreparing;
+
+  /// No description provided for @kelolaLspPreparingConfirmations.
+  ///
+  /// In id, this message translates to:
+  /// **'Konfirmasi {done}/{required}'**
+  String kelolaLspPreparingConfirmations(int done, int required);
+
+  /// No description provided for @kelolaLspPreparingOfRequired.
+  ///
+  /// In id, this message translates to:
+  /// **'dari {required} konfirmasi dibutuhkan'**
+  String kelolaLspPreparingOfRequired(int required);
+
+  /// No description provided for @kelolaLspPreparingValue.
+  ///
+  /// In id, this message translates to:
+  /// **'Nilai channel: {amount}'**
+  String kelolaLspPreparingValue(String amount);
+
+  /// No description provided for @kelolaLspPreparingFee.
+  ///
+  /// In id, this message translates to:
+  /// **'Biaya jaringan: {amount}'**
+  String kelolaLspPreparingFee(String amount);
+
+  /// No description provided for @kelolaLspWaitingFirst.
+  ///
+  /// In id, this message translates to:
+  /// **'Menunggu konfirmasi pertama…'**
+  String get kelolaLspWaitingFirst;
+
+  /// No description provided for @kelolaLspWaitingConfirmations.
+  ///
+  /// In id, this message translates to:
+  /// **'Menunggu konfirmasi…'**
+  String get kelolaLspWaitingConfirmations;
+
+  /// No description provided for @kelolaLspWaitingFirstNote.
+  ///
+  /// In id, this message translates to:
+  /// **'Blok baru muncul sesuai jadwal penambangan jaringan — mohon tunggu/mulailah menambang di jaringan Nusacoin secara mandiri.'**
+  String get kelolaLspWaitingFirstNote;
+
+  /// No description provided for @kelolaLspOfflineDisabled.
+  ///
+  /// In id, this message translates to:
+  /// **'Membuka channel butuh internet — sesi ini dimulai tanpa internet.'**
+  String get kelolaLspOfflineDisabled;
+
+  /// No description provided for @kelolaLspOpenFailedGeneric.
+  ///
+  /// In id, this message translates to:
+  /// **'Buka channel ke LSP gagal. Coba lagi.'**
+  String get kelolaLspOpenFailedGeneric;
+
+  /// No description provided for @kelolaLspOpenFailedNotReady.
+  ///
+  /// In id, this message translates to:
+  /// **'Dompet belum siap. Coba lagi sebentar.'**
+  String get kelolaLspOpenFailedNotReady;
+
   /// No description provided for @closeChannelButton.
   ///
   /// In id, this message translates to:

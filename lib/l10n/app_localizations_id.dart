@@ -2380,6 +2380,138 @@ class AppLocalizationsId extends AppLocalizations {
   String get channelStatusPending => 'Menunggu konfirmasi';
 
   @override
+  String get channelOpenToLsp => 'Buka Channel ke LSP';
+
+  @override
+  String get channelFundingTxid => 'Tx pendanaan';
+
+  @override
+  String get kelolaLspAmountTitle => 'Buka Channel ke LSP';
+
+  @override
+  String get kelolaLspAmountDefaultNote => 'Nominal bawaan';
+
+  @override
+  String get kelolaLspAmountOther => 'Nominal lain';
+
+  @override
+  String kelolaLspAmountHint(String example) {
+    return 'cth. $example';
+  }
+
+  @override
+  String kelolaLspAmountHelper(String amount) {
+    return 'Minimal $amount, bernilai nusan bulat.';
+  }
+
+  @override
+  String kelolaLspOnchainBalance(String amount) {
+    return 'Saldo on-chain-mu: $amount';
+  }
+
+  @override
+  String kelolaLspAmountTooSmall(String amount) {
+    return 'Minimal $amount untuk satu channel.';
+  }
+
+  @override
+  String kelolaLspAmountInvalid(String unit) {
+    return 'Tulis jumlah $unit yang sah.';
+  }
+
+  @override
+  String get kelolaLspAmountContinue => 'Lanjut';
+
+  @override
+  String get kelolaLspConfirmTitle => 'Buka channel ke LSP?';
+
+  @override
+  String get kelolaLspConfirmAmount => 'Jumlah channel';
+
+  @override
+  String get kelolaLspConfirmFeeEstimate => 'Biaya jaringan (perkiraan)';
+
+  @override
+  String get kelolaLspConfirmFeeUnknown => 'dihitung saat pengiriman';
+
+  @override
+  String get kelolaLspConfirmFeeWord => 'biaya jaringan';
+
+  @override
+  String get kelolaLspConfirmTotal => 'Total dari dompet on-chain';
+
+  @override
+  String kelolaLspConfirmDirection(String amount) {
+    return '$amount dari dompet on-chain-mu pindah ke channel ini — kamu bisa mengirim ke siapa pun lewat LSP.';
+  }
+
+  @override
+  String get kelolaLspConfirmWait =>
+      'Channel siap dipakai setelah 6 konfirmasi jaringan.';
+
+  @override
+  String get kelolaLspConfirmCreate => 'Buka Channel';
+
+  @override
+  String get kelolaLspNoBalanceTitle => 'Saldo on-chain belum cukup';
+
+  @override
+  String kelolaLspNoBalanceBody(String amount, String balance) {
+    return 'Membuka channel $amount butuh saldo on-chain sebesar itu, ditambah sedikit biaya jaringan. Saldo on-chain-mu sekarang $balance. Isi dulu dompet on-chain-mu, lalu kembali ke sini untuk membuka channel.';
+  }
+
+  @override
+  String get kelolaLspNoBalanceDeposit => 'Isi Dompet On-chain';
+
+  @override
+  String get kelolaLspNoBalanceLater => 'Nanti saja';
+
+  @override
+  String get kelolaLspPreparing => 'Channel ke LSP sedang disiapkan…';
+
+  @override
+  String kelolaLspPreparingConfirmations(int done, int required) {
+    return 'Konfirmasi $done/$required';
+  }
+
+  @override
+  String kelolaLspPreparingOfRequired(int required) {
+    return 'dari $required konfirmasi dibutuhkan';
+  }
+
+  @override
+  String kelolaLspPreparingValue(String amount) {
+    return 'Nilai channel: $amount';
+  }
+
+  @override
+  String kelolaLspPreparingFee(String amount) {
+    return 'Biaya jaringan: $amount';
+  }
+
+  @override
+  String get kelolaLspWaitingFirst => 'Menunggu konfirmasi pertama…';
+
+  @override
+  String get kelolaLspWaitingConfirmations => 'Menunggu konfirmasi…';
+
+  @override
+  String get kelolaLspWaitingFirstNote =>
+      'Blok baru muncul sesuai jadwal penambangan jaringan — mohon tunggu/mulailah menambang di jaringan Nusacoin secara mandiri.';
+
+  @override
+  String get kelolaLspOfflineDisabled =>
+      'Membuka channel butuh internet — sesi ini dimulai tanpa internet.';
+
+  @override
+  String get kelolaLspOpenFailedGeneric =>
+      'Buka channel ke LSP gagal. Coba lagi.';
+
+  @override
+  String get kelolaLspOpenFailedNotReady =>
+      'Dompet belum siap. Coba lagi sebentar.';
+
+  @override
   String get closeChannelButton => 'Tutup Channel';
 
   @override
