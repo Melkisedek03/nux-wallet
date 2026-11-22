@@ -152,6 +152,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onchainNewAddress => 'New address';
 
   @override
+  String get onchainPendingTitle => 'Waiting for confirmation';
+
+  @override
+  String onchainDepositConfirmations(int done, int required) {
+    return 'Confirmation $done/$required';
+  }
+
+  @override
+  String onchainDepositWaitingFirst(int required) {
+    return '0/$required — waiting for the first block';
+  }
+
+  @override
+  String get onchainDepositConfirmationsUnknown => 'Confirmations unavailable';
+
+  @override
   String get networkTestnet => 'Lightning Network • Testnet';
 
   @override

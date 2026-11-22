@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../locale_controller.dart';
+import '../services/deposit_progress.dart';
 import '../services/lsp_service.dart';
 import '../services/onchain_address_store.dart';
 import '../theme.dart';
@@ -19,8 +22,13 @@ import '../utils/format.dart';
 /// Angka utama kartu Beranda tetap khusus Lightning.
 class OnchainScreen extends StatefulWidget {
   final LspService lspService;
+  final DepositProgressService? depositProgressService;
 
-  const OnchainScreen({super.key, required this.lspService});
+  const OnchainScreen({
+    super.key,
+    required this.lspService,
+    this.depositProgressService,
+  });
 
   @override
   State<OnchainScreen> createState() => _OnchainScreenState();
@@ -28,15 +36,62 @@ class OnchainScreen extends StatefulWidget {
 
 class _OnchainScreenState extends State<OnchainScreen> {
   final _addressStore = OnchainAddressStore();
+  late final DepositProgressService _depositProgress;
   OnchainOverview? _overview;
   String? _address;
   bool _loading = true;
   bool _refreshingAddress = false;
+  List<PendingDeposit> _pendingDeposits = const [];
+  Timer? _depositTimer;
 
   @override
   void initState() {
     super.initState();
+    _depositProgress =
+        widget.depositProgressService ?? DepositProgressService();
     _muat();
+    _muatDeposit();
+  }
+
+  @override
+  void dispose() {
+    _depositTimer?.cancel();
+    super.dispose();
+  }
+
+  /// Muat deposit yang masih menunggu konfirmasi: riwayat dari
+  /// node + tinggi ujung dari electrs. Gagal-terbuka penuh —
+  /// kegagalan di sini tidak boleh merusak layar saldo: daftar
+  /// terakhir tetap tampil (atau kosong bila belum pernah ada).
+  Future<void> _muatDeposit() async {
+    try {
+      final payments = await widget.lspService.listPayments();
+      final tip = await _depositProgress.fetchTipHeight();
+      if (!mounted) return;
+      setState(() {
+        _pendingDeposits = pendingDeposits(payments, tip);
+      });
+      _syncDepositTimer();
+    } catch (_) {
+      // Daftar terakhir tetap tampil; percobaan berikutnya dari
+      // timer atau refresh manual.
+      if (mounted) _syncDepositTimer();
+    }
+  }
+
+  /// Timer 5 detik HANYA selama ada deposit tertunda (pola yang
+  /// sama dengan timer kartu "disiapkan" Kelola Channel) — tanpa
+  /// deposit tertunda tidak ada polling yang berjalan.
+  void _syncDepositTimer() {
+    if (_pendingDeposits.isNotEmpty && _depositTimer == null) {
+      _depositTimer = Timer.periodic(
+        const Duration(seconds: 5),
+        (_) => _muatDeposit(),
+      );
+    } else if (_pendingDeposits.isEmpty) {
+      _depositTimer?.cancel();
+      _depositTimer = null;
+    }
   }
 
   /// Muat ringkasan saldo + alamat deposit sekali per kunjungan
@@ -106,11 +161,12 @@ class _OnchainScreenState extends State<OnchainScreen> {
     }
   }
 
-  /// Muat ulang saldo saja. Alamat TIDAK dimuat ulang: setiap
-  /// panggilan onchainAddress menurunkan alamat BARU dari dompet,
-  /// jadi memuat ulang alamat akan membakar alamat yang belum
-  /// sempat dipakai.
+  /// Muat ulang saldo + deposit tertunda. Alamat TIDAK dimuat
+  /// ulang: setiap panggilan onchainAddress menurunkan alamat
+  /// BARU dari dompet, jadi memuat ulang alamat akan membakar
+  /// alamat yang belum sempat dipakai.
   Future<void> _muatUlangSaldo() async {
+    _muatDeposit();
     try {
       final overview = await widget.lspService.getOnchainOverview();
       if (!mounted) return;
@@ -224,6 +280,27 @@ class _OnchainScreenState extends State<OnchainScreen> {
               '${amount(overview.timelockSats)} $unit'
                   '${overview.timelockHeight == null ? '' : ' • ${l10n.balanceTimelockUnlocks(overview.timelockHeight!)}'}',
             ),
+          // Deposit yang masih menunggu konfirmasi — satu baris
+          // per deposit, dengan progres x/6. Bagian ini HILANG
+          // seluruhnya bila tidak ada deposit tertunda (tanpa
+          // pesan keadaan kosong): deposit yang mencapai 6/6
+          // berstatus Succeeded dan catatan riwayatnya yang
+          // tersisa.
+          if (_pendingDeposits.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              l10n.onchainPendingTitle,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: context.palette.label,
+              ),
+            ),
+            const SizedBox(height: 8),
+            for (final deposit in _pendingDeposits)
+              _depositCard(context, deposit, amount),
+            const SizedBox(height: 6),
+          ],
           if (_address != null) ...[
             const SizedBox(height: 14),
             Text(
@@ -281,6 +358,108 @@ class _OnchainScreenState extends State<OnchainScreen> {
                   TextStyle(fontSize: 12, color: context.palette.muted),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  /// Salin txid deposit (pola yang sama dengan baris txid kartu
+  /// channel): teks maupun ikon bisa diketuk.
+  void _copyTxid(String txid) {
+    Clipboard.setData(ClipboardData(text: txid));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(context.l10n.txCopied)),
+    );
+  }
+
+  /// Kartu satu deposit tertunda: jumlah, progres konfirmasi
+  /// x/6 + batang progres, dan txid (ketuk untuk salin).
+  ///
+  /// Seluruhnya Column mengikuti [_row]: jumlah dan teks
+  /// progres masing-masing di barisnya sendiri — teks progres
+  /// terpanjang ("0/6 — menunggu blok pertama") berdampingan
+  /// dengan jumlah dalam satu Row meluber 49dp pada lebar 360
+  /// (ditemukan tes widget). txid 64 karakter juga tidak pernah
+  /// masuk satu baris Row tanpa meluber.
+  Widget _depositCard(
+    BuildContext context,
+    PendingDeposit deposit,
+    String Function(BigInt) amount,
+  ) {
+    final l10n = context.l10n;
+    final confirmations = deposit.confirmations;
+    final progressText = confirmations == null
+        ? l10n.onchainDepositConfirmationsUnknown
+        : confirmations == 0
+        ? l10n.onchainDepositWaitingFirst(depositConfirmationsRequired)
+        : l10n.onchainDepositConfirmations(
+            confirmations,
+            depositConfirmationsRequired,
+          );
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: context.palette.card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: context.palette.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '+${amount(deposit.amountSats)} ${context.displayUnit.label}',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: context.palette.label,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            progressText,
+            style: TextStyle(fontSize: 12, color: context.palette.muted),
+          ),
+          if (confirmations != null) ...[
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              value: confirmations / depositConfirmationsRequired,
+              backgroundColor: context.palette.border,
+              color: const Color(0xFF34D399),
+            ),
+          ],
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => _copyTxid(deposit.txid),
+                  child: Text(
+                    deposit.txid,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: () => _copyTxid(deposit.txid),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Icon(
+                    Icons.copy_rounded,
+                    size: 18,
+                    color: context.palette.muted,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

@@ -362,6 +362,30 @@ abstract class AppLocalizations {
   /// **'Alamat baru'**
   String get onchainNewAddress;
 
+  /// No description provided for @onchainPendingTitle.
+  ///
+  /// In id, this message translates to:
+  /// **'Menunggu konfirmasi'**
+  String get onchainPendingTitle;
+
+  /// No description provided for @onchainDepositConfirmations.
+  ///
+  /// In id, this message translates to:
+  /// **'Konfirmasi {done}/{required}'**
+  String onchainDepositConfirmations(int done, int required);
+
+  /// No description provided for @onchainDepositWaitingFirst.
+  ///
+  /// In id, this message translates to:
+  /// **'0/{required} — menunggu blok pertama'**
+  String onchainDepositWaitingFirst(int required);
+
+  /// No description provided for @onchainDepositConfirmationsUnknown.
+  ///
+  /// In id, this message translates to:
+  /// **'Konfirmasi belum dapat dimuat'**
+  String get onchainDepositConfirmationsUnknown;
+
   /// No description provided for @networkTestnet.
   ///
   /// In id, this message translates to:
