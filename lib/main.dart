@@ -39,6 +39,7 @@ import 'services/path_ready_watcher.dart';
 import 'services/csv_export.dart';
 import 'services/history_filter.dart';
 import 'services/update_service.dart';
+import 'services/wallet_seed_store.dart';
 import 'unit_controller.dart';
 import 'utils/community_links.dart';
 import 'utils/format.dart';
@@ -138,9 +139,9 @@ class _HomeScreenState extends State<HomeScreen>
   /// ditampilkan sekali lewat layar Backup sebelum user memakai dompet.
   bool _isNewWallet = false;
 
-  /// Berkas & direktori dompet (diisi _boot; dipakai aksi reset dompet).
-  File? _seedFile;
-  File? _mnemonicFile;
+  /// Penyimpanan seed + frasa dompet (diisi _boot; dipakai aksi
+  /// reset/restore dompet) + direktori storage node LDK.
+  WalletSeedStore? _seedStore;
   Directory? _storageDir;
 
   /// Sapaan mengikuti jam lokal HP user.
@@ -573,10 +574,12 @@ class _HomeScreenState extends State<HomeScreen>
   ///
   /// Dompet baru lahir dari frasa BIP39 12 kata: seed node (64 byte)
   /// diturunkan dari frasa itu (mnemonicToSeed), lalu frasa + seed
-  /// disimpan di app support dir dan frasa ditampilkan sekali ke user.
-  /// Dompet lama (seed ada, frasa tidak ada) ditandai legacy.
-  /// CATATAN MVP: berkas disimpan sebagai file biasa. Untuk produksi,
-  /// pindah ke flutter_secure_storage (Keychain/Keystore).
+  /// disimpan di secure storage (Keychain/Keystore) dan frasa
+  /// ditampilkan sekali ke user. Dompet lama (seed ada, frasa tidak
+  /// ada) ditandai legacy. Instalasi lama yang masih menyimpan seed
+  /// + frasa sebagai berkas biasa dimigrasikan dulu ke secure
+  /// storage (verifikasi baca-balik, baru berkas dihapus) — lihat
+  /// [WalletSeedStore].
   Future<void> _boot({bool offlineMode = false}) async {
     try {
       // Profil LSP aktif: pilihan user yang tersimpan bila sah dan
@@ -593,38 +596,33 @@ class _HomeScreenState extends State<HomeScreen>
       // berakhiran _mainnet supaya tidak mewarisi seed/storage testnet
       // (APK mainnet menimpa paket yang sama). Nama testnet dibiarkan
       // persis seperti sebelumnya — wallet testnet yang ada tidak berubah.
-      final seedName =
-          AppConfig.isTestnet ? 'lsp_seed.bin' : 'lsp_seed_mainnet.bin';
-      final storageName =
-          AppConfig.isTestnet ? 'lsp_storage' : 'lsp_storage_mainnet';
-      final mnemonicName = AppConfig.isTestnet
-          ? 'wallet_mnemonic.txt'
-          : 'wallet_mnemonic_mainnet.txt';
-      final seedFile = File('${dir.path}/$seedName');
-      final mnemonicFile = File('${dir.path}/$mnemonicName');
-      _seedFile = seedFile;
-      _mnemonicFile = mnemonicFile;
+      final seedStore = WalletSeedStore(supportDir: dir);
+      _seedStore = seedStore;
+      // Migrasi berkas biasa → secure storage (fail-open: kegagalan
+      // ditelan di dalam, aplikasi tetap berjalan dari berkas biasa
+      // dan migrasi dicoba lagi saat buka berikutnya).
+      await seedStore.migrateFromPlainFiles();
       List<int>? seedBytes;
-      if (await seedFile.exists()) {
-        final existing = await seedFile.readAsBytes();
-        if (existing.length == 64) {
-          seedBytes = existing;
-        } else if (existing.length != 32) {
-          throw StateError(context.l10n.seedCorrupt(
-              existing.length, seedFile.path));
-        }
-        // Panjang 32 = berkas dari versi awal yang keliru (builder
-        // mensyaratkan 64 byte dan selalu menolak 32, jadi node tidak
-        // pernah terbangun dengannya) — belum ada wallet/dana di
-        // bawah seed itu, aman dibuat ulang di bawah ini.
+      try {
+        seedBytes = await seedStore.loadSeed();
+      } on SeedCorruptException catch (e) {
+        // Pertahankan pesan lama untuk berkas korup (termasuk jalur
+        // berkasnya); simpanan aman korup tidak punya berkas yang
+        // bisa dihapus — pemulihan hanya lewat frasa backup.
+        throw StateError(
+          e.path != null
+              ? context.l10n.seedCorrupt(e.length ?? 0, e.path!)
+              : context.l10n.seedSecureCorrupt,
+        );
       }
       if (seedBytes != null) {
-        // Dompet yang sudah ada: frasa hanya tersedia bila berkas
+        // Dompet yang sudah ada: frasa hanya tersedia bila simpanan
         // frasanya ikut ada (dompet dibuat oleh versi frasa BIP39).
         // Dompet dari versi sebelumnya tidak punya frasa — tandai
         // legacy supaya user ditawari membuat dompet baru berfrasa.
-        if (await mnemonicFile.exists()) {
-          final words = (await mnemonicFile.readAsString())
+        final mnemonic = await seedStore.loadMnemonic();
+        if (mnemonic != null) {
+          final words = mnemonic
               .trim()
               .split(RegExp(r'\s+'))
               .where((w) => w.isNotEmpty)
@@ -642,18 +640,20 @@ class _HomeScreenState extends State<HomeScreen>
       if (seedBytes == null) {
         // Dompet BARU: lahir dari frasa BIP39 12 kata. Seed node =
         // mnemonicToSeed (PBKDF2-HMAC-SHA512, 64 byte) — persis format
-        // yang diminta builder LDK. Frasa disimpan terpisah supaya bisa
-        // ditampilkan lagi dari tab Profil; seed tetap disimpan sebagai
-        // berkas 64 byte seperti sebelumnya supaya identitas node
-        // stabil antar-update aplikasi.
+        // yang diminta builder LDK. Frasa + seed disimpan di secure
+        // storage supaya identitas node stabil antar-update aplikasi
+        // tanpa berkas biasa yang bisa dibaca aplikasi lain.
         final mnemonic = bip39.generateMnemonic();
         seedBytes = bip39.mnemonicToSeed(mnemonic);
-        await seedFile.writeAsBytes(seedBytes, flush: true);
-        await mnemonicFile.writeAsString(mnemonic, flush: true);
+        await seedStore.saveSeed(seedBytes);
+        await seedStore.saveMnemonic(mnemonic);
         _mnemonicWords = mnemonic.split(' ');
         _legacyWallet = false;
         _isNewWallet = true;
       }
+      final storageName = AppConfig.isTestnet
+          ? 'lsp_storage'
+          : 'lsp_storage_mainnet';
       final storageDir = Directory('${dir.path}/$storageName');
       _storageDir = storageDir;
       if (!await storageDir.exists()) {
@@ -881,18 +881,15 @@ class _HomeScreenState extends State<HomeScreen>
   /// Hapus dompet lama tanpa frasa dan buat dompet baru berfrasa.
   /// Hanya ditawarkan untuk dompet legacy; pemanggil (tab Profil)
   /// sudah memastikan user paham dompet lama harus KOSONG — dana di
-  /// dompet lama hilang permanen begitu berkasnya dihapus.
+  /// dompet lama hilang permanen begitu datanya dihapus.
   Future<void> _resetWalletWithPhrase() async {
     try {
       await lspService.stop();
     } catch (_) {
       // Node mungkin belum sempat start penuh — abaikan.
     }
-    if (_seedFile != null && await _seedFile!.exists()) {
-      await _seedFile!.delete();
-    }
-    if (_mnemonicFile != null && await _mnemonicFile!.exists()) {
-      await _mnemonicFile!.delete();
+    if (_seedStore != null) {
+      await _seedStore!.clearAll();
     }
     if (_storageDir != null && await _storageDir!.exists()) {
       await _storageDir!.delete(recursive: true);
@@ -913,7 +910,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   /// Pulihkan dompet dari frasa BIP39 yang sudah divalidasi layar
   /// Restore (jumlah kata + checksum). Pola sama dengan
-  /// _resetWalletWithPhrase: hentikan node, hapus berkas dompet aktif
+  /// _resetWalletWithPhrase: hentikan node, hapus data dompet aktif
   /// (seed + frasa + storage channel), tulis seed turunan frasa
   /// (mnemonicToSeed, sama seperti _boot) + frasanya, lalu boot ulang.
   /// _boot berikutnya membaca seed + frasa yang valid → dompet hasil
@@ -927,7 +924,7 @@ class _HomeScreenState extends State<HomeScreen>
     if (!bip39.validateMnemonic(mnemonic)) {
       throw StateError(context.l10n.restoreInvalidWords);
     }
-    if (_seedFile == null || _mnemonicFile == null || _storageDir == null) {
+    if (_seedStore == null || _storageDir == null) {
       throw StateError(context.l10n.restoreFailed);
     }
     try {
@@ -936,8 +933,8 @@ class _HomeScreenState extends State<HomeScreen>
       // Node mungkin belum sempat start penuh — abaikan.
     }
     final seedBytes = bip39.mnemonicToSeed(mnemonic);
-    await _seedFile!.writeAsBytes(seedBytes, flush: true);
-    await _mnemonicFile!.writeAsString(mnemonic, flush: true);
+    await _seedStore!.saveSeed(seedBytes);
+    await _seedStore!.saveMnemonic(mnemonic);
     if (await _storageDir!.exists()) {
       await _storageDir!.delete(recursive: true);
     }

@@ -78,6 +78,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get seedSecureCorrupt =>
+      'Seed in secure storage is corrupted. Restore the wallet from the 12-word backup phrase.';
+
+  @override
   String get exitTitle => 'Exit ELNUX?';
 
   @override

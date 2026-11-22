@@ -77,6 +77,10 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String get seedSecureCorrupt =>
+      'Seed di penyimpanan aman korup. Pulihkan dompet dari frasa backup 12 kata.';
+
+  @override
   String get exitTitle => 'Keluar dari ELNUX?';
 
   @override

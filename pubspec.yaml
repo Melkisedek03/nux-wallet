@@ -41,6 +41,11 @@ dependencies:
   # Pilihan tema Gelap/Terang tersimpan antar-buka aplikasi.
   shared_preferences: ^2.5.3
 
+  # Seed + frasa dompet di Keychain/Keystore (R1 audit kesiapan
+  # mainnet): berkas biasa bisa dibaca aplikasi lain/ekstraksi
+  # backup/perangkat root. Lihat lib/services/wallet_seed_store.dart.
+  flutter_secure_storage: ^11.2.0
+
   # Basis data lokal Mode Toko (keputusan NUX 4 Nov 2026):
   # katalog, pesanan, shift, dan data transaksional toko hidup
   # di SQLite (satu berkas store_pos.db) — transaksi atomik &
