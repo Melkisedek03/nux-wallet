@@ -1,0 +1,9 @@
+Buat Jalur fixes (8 device-test findings):
+- Channel amount follows the display unit (NUX/nusan) - 0.001 NUX is no longer rejected
+- Shorter amount-field hints; the minimum rule shows below the field
+- Digits group automatically while typing a channel amount
+- The preparing card shows the 6-confirmation requirement and the mining-schedule note
+- The offline bridge reconnects on its own when the link drops
+- The keyboard dismisses automatically once the Receive QR appears
+- The send-limit box explains the channel reserve kept aside
+- The Send screen shows the direct-path limit while linked
