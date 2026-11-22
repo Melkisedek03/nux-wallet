@@ -460,7 +460,14 @@ void main() {
       expect(find.text('Konfirmasi 3/6'), findsOneWidget);
       expect(find.text('dari 6 konfirmasi dibutuhkan'), findsOneWidget);
       expect(find.text('Biaya jaringan: 250 nusan'), findsOneWidget);
-      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      // Dua batang 3/6: kartu disiapkan DAN kartu channel
+      // regulernya (channel yang sama muncul di daftar, masih
+      // menunggu — kartunya kini ikut menampilkan batang).
+      final bars = find.byType(LinearProgressIndicator);
+      expect(bars, findsNWidgets(2));
+      for (final bar in tester.widgetList<LinearProgressIndicator>(bars)) {
+        expect(bar.value, closeTo(3 / 6, 0.001));
+      }
 
       // Ketuk ikon salin kartu disiapkan (yang pertama — kartu
       // channel di bawahnya kini punya ikon salin sendiri, PR 2):
@@ -943,6 +950,171 @@ void main() {
       expect(labelSize.width, greaterThan(50));
       expect(labelSize.height, lessThan(30));
       expect(find.text('Menunggu konfirmasi • Konfirmasi 0/6'), findsOneWidget);
+    });
+  });
+
+  group('ChannelsScreen batang kemajuan konfirmasi kartu', () {
+    testWidgets('kartu menunggu: batang tampil di antara status dan '
+        'label jenis, nilai 2/6', (tester) async {
+      await _pumpScreen(
+        tester,
+        service: _FakeLspService(
+          channels: [
+            _channel(
+              _peerId,
+              usable: false,
+              channelValueSats: 300000,
+              fundingTxo: _fundingTxo('ff' * 32),
+              confirmations: 2,
+              confirmationsRequired: 6,
+            ),
+          ],
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.text('Menunggu konfirmasi • Konfirmasi 2/6'), findsOneWidget);
+      expect(find.text('Channel Langsung'), findsOneWidget);
+      final bar = find.byType(LinearProgressIndicator);
+      expect(bar, findsOneWidget);
+      expect(
+        tester.widget<LinearProgressIndicator>(bar).value,
+        closeTo(2 / 6, 0.001),
+      );
+      // Penempatan: batang di antara baris status dan label jenis.
+      final statusY = tester
+          .getCenter(find.text('Menunggu konfirmasi • Konfirmasi 2/6'))
+          .dy;
+      final barY = tester.getCenter(bar).dy;
+      final labelY = tester.getCenter(find.text('Channel Langsung')).dy;
+      expect(statusY, lessThan(barY));
+      expect(barY, lessThan(labelY));
+    });
+
+    testWidgets('kartu siap: batang tidak tampil', (tester) async {
+      await _pumpScreen(
+        tester,
+        service: _FakeLspService(
+          channels: [_channel(_peerId, channelValueSats: 20000)],
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.text('Siap'), findsOneWidget);
+      expect(find.byType(LinearProgressIndicator), findsNothing);
+    });
+
+    testWidgets('kartu peer-down: batang tidak tampil', (tester) async {
+      await _pumpScreen(
+        tester,
+        service: _FakeLspService(
+          channels: [
+            _channel(
+              _peerId,
+              usable: false,
+              channelReady: true,
+              channelValueSats: 20000,
+            ),
+          ],
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.text('Siap (peer tidak tersambung)'), findsOneWidget);
+      expect(find.byType(LinearProgressIndicator), findsNothing);
+    });
+
+    testWidgets('kartu menutup: batang tidak tampil', (tester) async {
+      final service = _FakeLspService(
+        channels: [_channel(_peerId, channelValueSats: 20000)],
+      );
+      await _pumpScreen(tester, service: service);
+      await tester.tap(find.text('Tutup Channel'));
+      await _pumpManual(tester);
+      await tester.tap(find.text('Tutup Channel').last);
+      await _pumpManual(tester);
+      expect(tester.takeException(), isNull);
+      expect(find.text('Menutup…'), findsOneWidget);
+      expect(find.byType(LinearProgressIndicator), findsNothing);
+    });
+
+    testWidgets('hitungan basi 69/6: batang penuh, tidak meluber nilai', (
+      tester,
+    ) async {
+      await _pumpScreen(
+        tester,
+        service: _FakeLspService(
+          channels: [
+            _channel(
+              _peerId,
+              usable: false,
+              channelValueSats: 20000,
+              fundingTxo: _fundingTxo('aa' * 32),
+              confirmations: 69,
+              confirmationsRequired: 6,
+            ),
+          ],
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.text('Menunggu konfirmasi • Konfirmasi 6/6'), findsOneWidget);
+      final bar = find.byType(LinearProgressIndicator);
+      expect(bar, findsOneWidget);
+      expect(tester.widget<LinearProgressIndicator>(bar).value, 1.0);
+    });
+
+    testWidgets('jumlah wajib tidak diketahui: batang tak tentu', (
+      tester,
+    ) async {
+      await _pumpScreen(
+        tester,
+        service: _FakeLspService(
+          channels: [
+            _channel(
+              _peerId,
+              usable: false,
+              channelValueSats: 20000,
+              fundingTxo: _fundingTxo('bb' * 32),
+            ),
+          ],
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.text('Menunggu konfirmasi'), findsOneWidget);
+      final bar = find.byType(LinearProgressIndicator);
+      expect(bar, findsOneWidget);
+      expect(tester.widget<LinearProgressIndicator>(bar).value, isNull);
+    });
+
+    testWidgets('layar 360 px + channel menunggu: batang tampil tanpa '
+        'luber', (tester) async {
+      // Regresi luber 168 px (PR #43) + batang baru: di layar
+      // 360 px, batang harus muat di dalam kartu.
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await _pumpScreen(
+        tester,
+        service: _FakeLspService(
+          channels: [
+            _channel(
+              _peerId,
+              usable: false,
+              channelValueSats: 300000,
+              fundingTxo: _fundingTxo('ff' * 32),
+              confirmations: 0,
+              confirmationsRequired: 6,
+            ),
+          ],
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.text('Menunggu konfirmasi • Konfirmasi 0/6'), findsOneWidget);
+      final bar = find.byType(LinearProgressIndicator);
+      expect(bar, findsOneWidget);
+      expect(tester.getBottomRight(bar).dx, lessThanOrEqualTo(360));
+      expect(tester.getSize(bar).width, greaterThan(100));
+      final labelSize = tester.getSize(find.text('Channel langsung'));
+      expect(labelSize.width, greaterThan(50));
+      expect(labelSize.height, lessThan(30));
     });
   });
 

@@ -298,6 +298,14 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
     return '${hex.substring(0, 10)}…${hex.substring(hex.length - 6)}';
   }
 
+  /// Channel masih menunggu konfirmasi: persis cabang menunggu
+  /// [_status] — belum siap dan bukan sedang ditutup. Batang
+  /// kemajuan kartu memakai predikat ini; bila cabang status
+  /// berubah, predikat ini ikut berubah.
+  bool _isConfirming(ChannelDetails ch) =>
+      !_closingIds.contains(userChannelIdHex(ch.userChannelId)) &&
+      !ch.isChannelReady;
+
   String _status(ChannelDetails ch) {
     final l10n = context.l10n;
     // Penutupan yang dimulai dari layar ini: channel masih
@@ -1077,7 +1085,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
           ],
           if (channel != null && channel.confirmationsRequired != null) ...[
             const SizedBox(height: 12),
-            _preparingProgressBar(channel),
+            _confirmationProgressBar(channel),
           ],
         ],
       ),
@@ -1229,9 +1237,11 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
     _showSnack(copied);
   }
 
-  /// Batang kemajuan konfirmasi kartu disiapkan: nilai X/6 bila
-  /// jumlah wajib diketahui, tak tentu (indeterminate) bila tidak.
-  Widget _preparingProgressBar(ChannelDetails channel) {
+  /// Batang kemajuan konfirmasi channel: nilai X/6 bila jumlah
+  /// wajib diketahui, tak tentu (indeterminate) bila tidak.
+  /// Dipakai kartu disiapkan dan kartu channel yang masih
+  /// menunggu — satu gaya batang untuk seluruh layar.
+  Widget _confirmationProgressBar(ChannelDetails channel) {
     final required = channel.confirmationsRequired;
     final done = channel.confirmations ?? 0;
     return ClipRRect(
@@ -1372,6 +1382,14 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
             _status(ch),
             style: TextStyle(fontSize: 12, color: context.palette.muted),
           ),
+          // Batang kemajuan konfirmasi: hanya selama channel
+          // masih menunggu, duduk di antara baris status dan
+          // label jenis — batang yang sama dengan kartu
+          // disiapkan, satu gaya untuk seluruh layar.
+          if (_isConfirming(ch)) ...[
+            const SizedBox(height: 6),
+            _confirmationProgressBar(ch),
+          ],
           // Label jenis (PR 1): barisnya sendiri di bawah
           // judul — di baris sendiri, label selalu punya lebar
           // penuh kartu.
