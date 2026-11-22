@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../config.dart';
 import 'lsp_service.dart';
 
 /// Validasi bentuk string offer Bolt12.
@@ -59,7 +60,38 @@ StaticOfferStep decideStaticOfferStep({
 /// offer lama gugur dan offer baru dibuat dengan label baru
 /// (permintaan NUX 4 Nov 2026: QR Bolt12 bisa di-custom, tidak
 /// diset = bawaan).
+///
+/// Offer terikat JARINGAN (R2 audit kesiapan mainnet): offer
+/// mengandung identitas node + chain hash jaringannya, jadi
+/// offer testnet tidak boleh tersaji sebagai kode bayar statis
+/// mainnet bila APK mainnet dipasang di atas instalasi testnet
+/// (paket sama, SharedPreferences sama, seed/node baru).
+/// Kunci simpanan dibedakan per jaringan: testnet memakai kunci
+/// polos, mainnet memakai akhiran `_mainnet` — konvensi yang
+/// sama dengan berkas seed (`lsp_seed.bin` vs
+/// `lsp_seed_mainnet.bin`). Simpanan testnet yang sudah ada
+/// tetap berlaku tanpa migrasi (belum ada build mainnet yang
+/// pernah dibagikan ke user, jadi kunci polos hanya pernah
+/// ditulis build testnet), sementara build mainnet membaca slot
+/// kosong dan membuat offer baru untuk nodenya. Label kustom
+/// mengikuti ikatan yang sama: label testnet tidak terbawa ke
+/// offer mainnet.
+///
+/// Sengaja BUKAN ikatan node ID (pola OnchainAddressStore):
+/// jalur simpanan [Bolt12OfferService.ensureOffer] dirancang
+/// tidak menyentuh node sama sekali — offer tersimpan tetap
+/// tampil saat node sedang mati — sementara `ownNodeId()`
+/// melempar bila node belum berjalan, jadi memverifikasi node ID
+/// akan merusak jaminan itu. Jaringan adalah konstanta
+/// waktu-build, sehingga pemeriksaan ini total tanpa menyentuh
+/// node. Yang tidak dicakup: pemulihan dompet dari frasa lain
+/// DI jaringan yang sama (node ID berganti, jaringan tetap)
+/// masih menyajikan offer lama — pembayaran ke sana gagal aman
+/// (tidak ada dana berpindah) dan user bisa membuat ulang lewat
+/// editor label.
 class Bolt12OfferStore {
+  /// Kunci dasar (testnet). Kunci mainnet = kunci dasar +
+  /// [mainnetKeySuffix]; lihat [_key].
   static const String storageKey = 'bolt12_static_offer';
 
   /// Deskripsi yang dipakai saat offer tersimpan dibuat.
@@ -68,13 +100,27 @@ class Bolt12OfferStore {
   /// Label kustom pilihan user; absen/kosong = label bawaan.
   static const String customDescriptionKey = 'bolt12_offer_custom_label';
 
-  /// Muat offer tersimpan; null bila belum ada atau bentuknya
-  /// tidak sah lagi (mis. simpanan dari versi lama) — pemanggil
-  /// akan membuat ulang dalam kasus itu.
+  /// Akhiran kunci simpanan untuk jaringan mainnet.
+  static const String mainnetKeySuffix = '_mainnet';
+
+  final bool _isTestnet;
+
+  /// [isTestnet] hanya untuk tes — produksi selalu memakai
+  /// [AppConfig.isTestnet].
+  Bolt12OfferStore({bool? isTestnet})
+    : _isTestnet = isTestnet ?? AppConfig.isTestnet;
+
+  /// Kunci simpanan [base] untuk jaringan build ini.
+  String _key(String base) => _isTestnet ? base : '$base$mainnetKeySuffix';
+
+  /// Muat offer tersimpan jaringan ini; null bila belum ada,
+  /// bentuknya tidak sah lagi (mis. simpanan dari versi lama),
+  /// atau simpanan milik jaringan lain — pemanggil akan membuat
+  /// ulang dalam kasus itu.
   Future<String?> load() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(storageKey);
+      final raw = prefs.getString(_key(storageKey));
       return isValidStaticOffer(raw) ? raw!.trim() : null;
     } catch (_) {
       return null;
@@ -89,7 +135,7 @@ class Bolt12OfferStore {
   Future<String?> loadOfferDescription() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      return prefs.getString(offerDescriptionKey);
+      return prefs.getString(_key(offerDescriptionKey));
     } catch (_) {
       return null;
     }
@@ -98,8 +144,8 @@ class Bolt12OfferStore {
   Future<void> save(String offer, {required String forDescription}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(storageKey, offer.trim());
-      await prefs.setString(offerDescriptionKey, forDescription);
+      await prefs.setString(_key(storageKey), offer.trim());
+      await prefs.setString(_key(offerDescriptionKey), forDescription);
     } catch (_) {
       // Abaikan — offer sesi ini tetap tampil; pembuatan ulang di
       // sesi berikut hanya mengganti kode, bukan dana.
@@ -111,19 +157,19 @@ class Bolt12OfferStore {
   Future<void> clearOffer() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(storageKey);
-      await prefs.remove(offerDescriptionKey);
+      await prefs.remove(_key(storageKey));
+      await prefs.remove(_key(offerDescriptionKey));
     } catch (_) {
       // Abaikan — ketidaksesuaian deskripsi tetap memicu
       // pembuatan ulang pada ensureOffer berikutnya.
     }
   }
 
-  /// Label kustom user; null bila tidak dipasang.
+  /// Label kustom user jaringan ini; null bila tidak dipasang.
   Future<String?> loadCustomDescription() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(customDescriptionKey)?.trim();
+      final raw = prefs.getString(_key(customDescriptionKey))?.trim();
       return raw == null || raw.isEmpty ? null : raw;
     } catch (_) {
       return null;
@@ -136,9 +182,9 @@ class Bolt12OfferStore {
       final prefs = await SharedPreferences.getInstance();
       final trimmed = description?.trim() ?? '';
       if (trimmed.isEmpty) {
-        await prefs.remove(customDescriptionKey);
+        await prefs.remove(_key(customDescriptionKey));
       } else {
-        await prefs.setString(customDescriptionKey, trimmed);
+        await prefs.setString(_key(customDescriptionKey), trimmed);
       }
     } catch (_) {
       // Abaikan — label sesi berikut jatuh ke simpanan lama.
