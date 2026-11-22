@@ -31,6 +31,7 @@
       }
     }
   },
+  "seedSecureCorrupt": "Seed in secure storage is corrupted. Restore the wallet from the 12-word backup phrase.",
   "exitTitle": "Exit ELNUX?",
   "exitBody": "The app will close. While the app is closed, the wallet cannot receive payments.",
   "cancel": "Cancel",

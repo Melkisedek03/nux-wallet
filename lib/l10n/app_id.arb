@@ -31,6 +31,7 @@
       }
     }
   },
+  "seedSecureCorrupt": "Seed di penyimpanan aman korup. Pulihkan dompet dari frasa backup 12 kata.",
   "exitTitle": "Keluar dari ELNUX?",
   "exitBody": "Aplikasi akan ditutup. Selama aplikasi tertutup, dompet tidak dapat menerima pembayaran.",
   "cancel": "Batal",

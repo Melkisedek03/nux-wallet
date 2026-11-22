@@ -224,6 +224,12 @@ abstract class AppLocalizations {
   /// **'File seed korup (panjang {length}, harus 64). Hapus {path} untuk generate ulang (DANA LAMA HILANG).'**
   String seedCorrupt(int length, String path);
 
+  /// No description provided for @seedSecureCorrupt.
+  ///
+  /// In id, this message translates to:
+  /// **'Seed di penyimpanan aman korup. Pulihkan dompet dari frasa backup 12 kata.'**
+  String get seedSecureCorrupt;
+
   /// No description provided for @exitTitle.
   ///
   /// In id, this message translates to:
