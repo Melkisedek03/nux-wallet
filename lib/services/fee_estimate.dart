@@ -27,6 +27,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../config.dart';
+import 'market_info.dart';
 
 /// Asumsi ukuran transaksi pendanaan dalam vB — pendanaan 1-input
 /// tipikal ±150 vB; 250 vB memberi ruang untuk masukan kedua.
@@ -125,6 +126,23 @@ class FeeEstimateService {
       final rate = pickFeeRate(rates);
       if (rate == null) return null;
       return estimateFundingFeeSats(rate);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Tinggi blok ujung (tip) saat ini dari endpoint
+  /// `/blocks/tip/height` — bahan perkiraan tinggi buka kunci
+  /// dana tutup paksa (dialog tutup paksa, R3). Null bila
+  /// pengambilan atau parse-nya gagal — pemanggil
+  /// menyembunyikan baris perkiraannya.
+  Future<int?> fetchTipHeight() async {
+    try {
+      final respons = await _client
+          .get(Uri.parse('${AppConfig.electrsRestBase}/blocks/tip/height'))
+          .timeout(feeEstimateTimeout);
+      if (respons.statusCode != 200) return null;
+      return parseTipHeight(respons.body);
     } catch (_) {
       return null;
     }

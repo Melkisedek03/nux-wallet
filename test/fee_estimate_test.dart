@@ -122,5 +122,26 @@ void main() {
       final service = FeeEstimateService(client: client);
       expect(await service.fetchFundingFee('aa' * 32), isNull);
     });
+
+    test('tinggi ujung dari /blocks/tip/height', () async {
+      final client = MockClient((request) async {
+        expect(request.url.path, '/blocks/tip/height');
+        return http.Response('1500', 200);
+      });
+      final service = FeeEstimateService(client: client);
+      expect(await service.fetchTipHeight(), 1500);
+    });
+
+    test('tinggi ujung gagal ambil berarti null', () async {
+      final client = MockClient((_) async => http.Response('error', 500));
+      final service = FeeEstimateService(client: client);
+      expect(await service.fetchTipHeight(), isNull);
+    });
+
+    test('tinggi ujung bukan angka berarti null', () async {
+      final client = MockClient((_) async => http.Response('bukan angka', 200));
+      final service = FeeEstimateService(client: client);
+      expect(await service.fetchTipHeight(), isNull);
+    });
   });
 }

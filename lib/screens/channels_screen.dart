@@ -27,6 +27,33 @@ final BigInt defaultLspChannelAmountSats = BigInt.from(100000);
 /// sama seperti minimum Buat Jalur.
 final BigInt minLspChannelAmountSats = BigInt.from(10000);
 
+/// Jeda pengaman penutupan paksa dalam blok (CSV —
+/// OP_CHECKSEQUENCEVERIFY, BIP 112): RELATIF terhadap
+/// konfirmasi transaksi penutup, jadi jendela hukumannya selalu
+/// penuh 144 blok kapan pun penutupan terjadi. Berlaku untuk
+/// dana to_local si penutup pada tutup PAKSA saja; tutup kerja
+/// sama tidak punya jeda.
+const int forceCloseDelayBlocks = 144;
+
+/// Perkiraan tinggi buka kunci dana tutup paksa dari tinggi
+/// ujung [tipHeight] saat ini: transaksi penutup diasumsikan
+/// terkonfirmasi di blok berikutnya, lalu jeda 144 blok. Label
+/// "sekitar" di pemanggil menampung selisih ±1 blok dari
+/// pembulatan ini. Murni supaya bisa diuji unit.
+int forceCloseUnlockEstimate(int tipHeight) =>
+    tipHeight + forceCloseDelayBlocks;
+
+/// Konfirmasi yang DITAMPILKAN untuk channel menunggu: tidak
+/// pernah melebihi jumlah wajib. Hitungan pendanaan basi bisa
+/// jauh melampaui wajibnya (temuan lapangan: "Konfirmasi 69/6"
+/// pada kartu yang sedang ditutup) dan hanya membingungkan.
+/// Murni supaya bisa diuji unit.
+int cappedConfirmations(int done, int required) {
+  if (done < 0) return 0;
+  if (done > required) return required;
+  return done;
+}
+
 /// Layar Kelola Channel — daftar semua channel node (LSP dan
 /// langsung) beserta penutupannya dari sisi pengguna.
 ///
@@ -34,8 +61,10 @@ final BigInt minLspChannelAmountSats = BigInt.from(10000);
 /// ELNUX: saldo Lightning kembali ke dompet on-chain internal
 /// (alamat dari frasa yang sama) lewat transaksi penutup.
 /// Alurnya selalu tutup KERJA SAMA lebih dulu; tutup paksa hanya
-/// ditawarkan sesudah kerja sama gagal, dengan penjelasannya
-/// sendiri (jeda pengaman dalam blok + biaya lebih mahal).
+/// ditawarkan sesudah kerja sama gagal, dengan angka konkretnya
+/// sendiri (144 blok + perkiraan tinggi buka kunci + biaya lebih
+/// mahal) — keputusan sepihak ini harus diambil dengan tahu
+/// akibatnya.
 ///
 /// Batas v1 yang disengaja: tombol tutup hanya ada untuk
 /// channel yang sudah siap (channel_ready). Channel yang masih
@@ -89,6 +118,13 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
   // Sengaja hanya di memori kunjungan ini — tampilan txid yang
   // menetap di kartu channel adalah PR 2, bukan PR ini.
   final Set<String> _openingLspIds = {};
+  // Penutupan yang dimulai dari layar ini (hex userChannelId):
+  // selama channel yang ditutup masih terdaftar di node,
+  // kartunya menampilkan "Menutup…" — bukan cabang menunggu
+  // dengan hitungan pendanaan basi. Sengaja hanya di memori
+  // kunjungan ini; mulai ulang aplikasi di tengah penutupan
+  // mengembalikan kartu ke tampilan sebelum ditutup.
+  final Set<String> _closingIds = {};
   // Biaya pasti pendanaan per txid (nusan utuh) — diambil sekali
   // per txid dari REST electrs begitu konfirmasi pertama tercatat;
   // txid yang gagal diambil tidak diulangi selama layar hidup.
@@ -172,6 +208,11 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
         final ch = _channelByOpeningId(sorted, id);
         return ch != null && ch.isChannelReady;
       });
+      // Pangkas penutupan yang dilacak: channel yang sudah
+      // meninggalkan daftar (handshake penutup selesai dan
+      // transaksi penutup terakit) tidak butuh status
+      // "Menutup…" lagi.
+      _closingIds.removeWhere((id) => _channelByOpeningId(sorted, id) == null);
       // Biaya pasti pendanaan (best-effort): begitu konfirmasi
       // pertama tercatat, ambil field fee-nya dari REST electrs —
       // sekali per txid, gagal-diam.
@@ -259,11 +300,19 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
 
   String _status(ChannelDetails ch) {
     final l10n = context.l10n;
+    // Penutupan yang dimulai dari layar ini: channel masih
+    // terdaftar tetapi sudah tidak channel_ready, jadi tanpa
+    // cabang ini ia jatuh ke cabang menunggu dengan hitungan
+    // pendanaan basi ("Konfirmasi 69/6", temuan lapangan).
+    if (_closingIds.contains(userChannelIdHex(ch.userChannelId))) {
+      return l10n.channelStatusClosing;
+    }
     if (!ch.isChannelReady) {
       final conf = ch.confirmations;
       final req = ch.confirmationsRequired;
       if (conf != null && req != null) {
-        return '${l10n.channelStatusPending} • ${l10n.offlineConfirmations} $conf/$req';
+        final shown = cappedConfirmations(conf, req);
+        return '${l10n.channelStatusPending} • ${l10n.offlineConfirmations} $shown/$req';
       }
       return l10n.channelStatusPending;
     }
@@ -347,6 +396,10 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
     try {
       await widget.lspService.closeChannel(ch);
       if (!mounted) return;
+      // Penutupan dimulai: kartu menampilkan "Menutup…"
+      // sampai channel meninggalkan daftar (muat-ulang
+      // sesudah ini memangkasnya bila handshake sudah selesai).
+      _closingIds.add(userChannelIdHex(ch.userChannelId));
       setState(() => _closing = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(context.l10n.closeChannelStarted)),
@@ -366,6 +419,14 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
   /// akibatnya, bukan karena panik.
   Future<void> _tawarkanTutupPaksa(ChannelDetails ch, Object sebab) async {
     final l10n = context.l10n;
+    // Tinggi ujung untuk perkiraan tinggi buka kunci: gagal-
+    // terbuka (null) berarti baris perkiraannya tidak tampil —
+    // dialog tidak boleh menggantung menunggu jaringan.
+    final tipHeight = await _feeEstimates.fetchTipHeight();
+    if (!mounted) return;
+    final unlockEstimate = tipHeight == null
+        ? null
+        : forceCloseUnlockEstimate(tipHeight);
     final jadi = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -384,6 +445,18 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
             ),
             const SizedBox(height: 10),
             Text(ctx.l10n.closeForceBody),
+            if (unlockEstimate != null) ...[
+              const SizedBox(height: 10),
+              Text(ctx.l10n.closeForceUnlockEstimate(unlockEstimate)),
+            ],
+            // Catatan hari hanya di mainnet: penambangan
+            // terjadwal ±98 menit/blok membuat 144 blok ≈ 10
+            // hari; di testnet blok ditambang sesuai permintaan
+            // sehingga angka hari tidak berarti.
+            if (!AppConfig.isTestnet) ...[
+              const SizedBox(height: 10),
+              Text(ctx.l10n.closeForceDaysNote),
+            ],
           ],
         ),
         actions: [
@@ -407,6 +480,9 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
     try {
       await widget.lspService.forceCloseChannel(ch);
       if (!mounted) return;
+      // Sama seperti tutup kerja sama: kartu menampilkan
+      // "Menutup…" sampai channel meninggalkan daftar.
+      _closingIds.add(userChannelIdHex(ch.userChannelId));
       setState(() => _closing = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.closeForceStarted)),
@@ -1046,9 +1122,14 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
         ),
       );
     } else {
+      // Aturan yang sama seperti status kartu: hitungan yang
+      // ditampilkan tidak pernah melebihi jumlah wajib.
       lines.add(
         Text(
-          l10n.kelolaLspPreparingConfirmations(done, required),
+          l10n.kelolaLspPreparingConfirmations(
+            cappedConfirmations(done, required),
+            required,
+          ),
           style: lineStyle.copyWith(color: context.palette.muted),
         ),
       );
@@ -1156,7 +1237,11 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
     return ClipRRect(
       borderRadius: BorderRadius.circular(4),
       child: LinearProgressIndicator(
-        value: required == null ? null : done / required,
+        // Nilai dibatasi 1,0: hitungan yang melampaui wajib
+        // akan melempar assertion di mode debug.
+        value: required == null
+            ? null
+            : cappedConfirmations(done, required) / required,
         minHeight: 6,
         backgroundColor: context.palette.border,
         valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF34D399)),
@@ -1273,17 +1358,23 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                       fontSize: 14, fontWeight: FontWeight.w700),
                 ),
               ),
-              Text(_status(ch),
-                  style: TextStyle(
-                      fontSize: 12, color: context.palette.muted)),
             ],
           ),
+          // Status di barisnya sendiri (R3): sebelumnya status
+          // duduk di Row judul tanpa batas lebar — teks status
+          // mengambil lebar intrinsiknya duluan, mendesak label
+          // sampai melipat huruf-per-huruf dan meluber 168 px
+          // pada layar 360 px dengan channel menunggu. Di baris
+          // sendiri, status memakai lebar penuh kartu dan hanya
+          // terlipat di batas kata.
+          const SizedBox(height: 4),
+          Text(
+            _status(ch),
+            style: TextStyle(fontSize: 12, color: context.palette.muted),
+          ),
           // Label jenis (PR 1): barisnya sendiri di bawah
-          // judul, BUKAN di dalam Row judul — Row judul punya
-          // cacat tata letak yang diketahui (teks status tanpa
-          // batas lebar mendesak label panjang sampai melipat
-          // huruf-per-huruf; perbaikannya jatah PR R3). Di
-          // baris sendiri, label selalu punya lebar penuh kartu.
+          // judul — di baris sendiri, label selalu punya lebar
+          // penuh kartu.
           const SizedBox(height: 4),
           Text(
             _kindLabel(ch),
