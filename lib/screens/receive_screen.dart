@@ -999,7 +999,37 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
             // belum bisa dibayar tidak ditawarkan sebagai QR,
             // melainkan sebagai penjelasan dan jalan
             // mengaktifkannya (terima lewat invoice dulu).
-            if (!_konteksOffline) ...[
+            if (_konteksOffline) ...[
+              // Catatan pengganti (G5.2): bagian Kode Bayar Statis
+              // disembunyikan offline karena kodenya tidak bisa
+              // dibayar tanpa internet — tetapi celah kosong membuat
+              // pengguna mengira kodenya terhapus/rusak. Catatan
+              // ini menjelaskan alasannya dan mengarahkan ke
+              // invoice di atas (formulir pembuatannya selalu ada
+              // di atas; QR-nya tampil di sana sesudah dibuat).
+              const SizedBox(height: 28),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.qr_code_2_rounded,
+                    size: 16,
+                    color: context.palette.muted,
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      context.l10n.staticCodeOfflineNote,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: context.palette.muted,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            ] else ...[
             const SizedBox(height: 28),
             OutlinedButton.icon(
               onPressed: _toggleStaticCode,

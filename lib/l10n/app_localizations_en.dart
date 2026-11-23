@@ -65,6 +65,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bootOfflineButton => 'Continue without internet';
 
   @override
+  String get bootTakingLong => 'Taking a while to connect?';
+
+  @override
+  String get bootSkippingToOffline => 'Preparing offline mode…';
+
+  @override
+  String get offlineSessionChip =>
+      'No internet — only paths that are already ready can be used';
+
+  @override
   String get bootGenericError =>
       'Something went wrong while starting the wallet.';
 
@@ -463,6 +473,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get staticCodeFailed =>
       'Couldn\'t create your payment code. Try again.';
+
+  @override
+  String get staticCodeOfflineNote =>
+      'Static Payment Code can\'t be used without internet — receive with the invoice above.';
 
   @override
   String get staticOfferDescription => 'ELNUX payment code';
@@ -2056,6 +2070,26 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get offlineModeStartFailed =>
       'Offline Mode failed to start. Try again.';
+
+  @override
+  String get offlineModeConnectFailed =>
+      'Couldn\'t connect to this device. Move both phones closer, then try again.';
+
+  @override
+  String get offlineModeStartFailedPermission =>
+      'Allow Bluetooth and Location for ELNUX';
+
+  @override
+  String get offlineModeStartFailedLocation =>
+      'Turn on Location to use Offline Mode';
+
+  @override
+  String get offlineModeStartFailedBluetooth =>
+      'Turn on Bluetooth to use Offline Mode';
+
+  @override
+  String get offlineModeStartFailedUnknown =>
+      'Offline Mode failed to start. Make sure Bluetooth and Location are on, then try again.';
 
   @override
   String get offlineModeMakePath => 'Create Payment Path';

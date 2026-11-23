@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -11,8 +12,68 @@ import '../theme.dart';
 /// Tampil selama `_booting` di HomeScreen (node LDK + LSPS2 sedang
 /// diinisialisasi). Latar sengaja gelap di kedua tema: splash adalah
 /// momen brand, bukan bagian dari tema terang/gelap aplikasi.
-class SplashScreen extends StatelessWidget {
-  const SplashScreen({super.key});
+///
+/// Jalan masuk offline (G1.1): bila boot memakan waktu lama, splash
+/// menampilkan tawaran "Lanjutkan tanpa internet" sesudah
+/// [waitThreshold] — pengguna tanpa internet tidak perlu menatap
+/// spinner tanpa tahu ada jalan offline. Tawarannya hanya tampil
+/// bila [onSkipToOffline] dipasang (pemilik layar yang memutuskan:
+/// testnet saja, mengikuti tombol yang sama di layar gagal boot).
+/// Timer milik layar ini: setiap boot baru memasang splash baru,
+/// sehingga ambang diukur dari awal boot itu.
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({
+    super.key,
+    this.waitThreshold = const Duration(seconds: 20),
+    this.onSkipToOffline,
+  });
+
+  /// Batas tunggu sebelum tawaran offline tampil.
+  final Duration waitThreshold;
+
+  /// Dipanggil saat pengguna mengetuk "Lanjutkan tanpa internet".
+  /// Future-nya selesai saat boot offline dimulai (atau saat boot
+  /// online ternyata berhasil sementara itu) — selama menunggu,
+  /// tombol menampilkan keadaan sibuk. Null = tidak ada tawaran.
+  final Future<void> Function()? onSkipToOffline;
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  Timer? _timer;
+  bool _takingLong = false;
+  bool _skipping = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.onSkipToOffline != null) {
+      _timer = Timer(widget.waitThreshold, () {
+        if (mounted) setState(() => _takingLong = true);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _onSkipPressed() async {
+    final callback = widget.onSkipToOffline;
+    if (callback == null || _skipping) return;
+    setState(() => _skipping = true);
+    try {
+      await callback();
+    } catch (_) {
+      // Gagal-diam: keadaan boot adalah wewenang pemilik layar;
+      // layar ini hanya menampilkan tombolnya.
+    }
+    if (mounted) setState(() => _skipping = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -102,6 +163,50 @@ class SplashScreen extends StatelessWidget {
                   context.l10n.bootConnecting,
                   style: const TextStyle(color: Colors.white70, fontSize: 13),
                 ),
+                // Tawaran jalan offline (G1.1): hanya sesudah ambang
+                // tunggu terlewati dan hanya bila pemilik layar
+                // memasang callback-nya.
+                if (_takingLong && widget.onSkipToOffline != null) ...[
+                  const SizedBox(height: 20),
+                  Text(
+                    context.l10n.bootTakingLong,
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                  const SizedBox(height: 10),
+                  if (_skipping) ...[
+                    const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF10B981),
+                        strokeWidth: 2,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      context.l10n.bootSkippingToOffline,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ] else
+                    OutlinedButton(
+                      onPressed: _onSkipPressed,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF6EE7B7),
+                        side: const BorderSide(color: Color(0xFF10B981)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: Text(context.l10n.bootOfflineButton),
+                    ),
+                ],
               ],
             ),
           ),

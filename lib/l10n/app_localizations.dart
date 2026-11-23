@@ -206,6 +206,24 @@ abstract class AppLocalizations {
   /// **'Lanjutkan tanpa internet'**
   String get bootOfflineButton;
 
+  /// No description provided for @bootTakingLong.
+  ///
+  /// In id, this message translates to:
+  /// **'Lama tersambung?'**
+  String get bootTakingLong;
+
+  /// No description provided for @bootSkippingToOffline.
+  ///
+  /// In id, this message translates to:
+  /// **'Menyiapkan mode offline…'**
+  String get bootSkippingToOffline;
+
+  /// No description provided for @offlineSessionChip.
+  ///
+  /// In id, this message translates to:
+  /// **'Tanpa internet — hanya jalur yang sudah siap yang bisa dipakai'**
+  String get offlineSessionChip;
+
   /// No description provided for @bootGenericError.
   ///
   /// In id, this message translates to:
@@ -919,6 +937,12 @@ abstract class AppLocalizations {
   /// In id, this message translates to:
   /// **'Gagal membuat kode bayar. Coba lagi.'**
   String get staticCodeFailed;
+
+  /// No description provided for @staticCodeOfflineNote.
+  ///
+  /// In id, this message translates to:
+  /// **'Kode Bayar Statis tidak bisa dipakai tanpa internet — terima lewat invoice di atas.'**
+  String get staticCodeOfflineNote;
 
   /// No description provided for @staticOfferDescription.
   ///
@@ -3745,6 +3769,36 @@ abstract class AppLocalizations {
   /// In id, this message translates to:
   /// **'Mode Offline gagal dimulai. Coba lagi.'**
   String get offlineModeStartFailed;
+
+  /// No description provided for @offlineModeConnectFailed.
+  ///
+  /// In id, this message translates to:
+  /// **'Tidak bisa tersambung ke perangkat ini. Dekatkan kedua HP, lalu coba lagi.'**
+  String get offlineModeConnectFailed;
+
+  /// No description provided for @offlineModeStartFailedPermission.
+  ///
+  /// In id, this message translates to:
+  /// **'Izinkan Bluetooth dan Lokasi untuk ELNUX'**
+  String get offlineModeStartFailedPermission;
+
+  /// No description provided for @offlineModeStartFailedLocation.
+  ///
+  /// In id, this message translates to:
+  /// **'Nyalakan Lokasi untuk memakai Mode Offline'**
+  String get offlineModeStartFailedLocation;
+
+  /// No description provided for @offlineModeStartFailedBluetooth.
+  ///
+  /// In id, this message translates to:
+  /// **'Nyalakan Bluetooth untuk memakai Mode Offline'**
+  String get offlineModeStartFailedBluetooth;
+
+  /// No description provided for @offlineModeStartFailedUnknown.
+  ///
+  /// In id, this message translates to:
+  /// **'Mode Offline gagal dimulai. Pastikan Bluetooth dan Lokasi menyala, lalu coba lagi.'**
+  String get offlineModeStartFailedUnknown;
 
   /// No description provided for @offlineModeMakePath.
   ///

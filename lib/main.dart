@@ -46,6 +46,7 @@ import 'utils/format.dart';
 import 'utils/coin_alert.dart';
 import 'utils/update_dialog.dart';
 import 'widgets/lightning_status_pill.dart';
+import 'widgets/offline_session_chip.dart';
 import 'widgets/transaction_row.dart';
 import 'utils/friendly_error.dart';
 
@@ -110,6 +111,23 @@ class _HomeScreenState extends State<HomeScreen>
     with WidgetsBindingObserver {
   int _tabIndex = 0;
   bool _booting = true;
+
+  /// Boot yang sedang berjalan (bila ada): future-nya ditunggu
+  /// tombol lewati-ke-offline di splash sebelum boot offline
+  /// dimulai — dua inisialisasi node tidak boleh berjalan
+  /// bersamaan (lihat [_skipToOfflineBoot]).
+  Future<void>? _bootFuture;
+
+  /// True bila boot yang sedang berjalan adalah boot offline —
+  /// tawaran lewati di splash disembunyikan (tidak ada yang
+  /// perlu dilewati lagi).
+  bool _bootOfflineMode = false;
+
+  /// True selama tombol lewati-ke-offline menunggu boot yang
+  /// sedang berjalan selesai — kegagalan boot itu tidak boleh
+  /// memunculkan layar gagal (splash tetap tampil sampai boot
+  /// offline dimulai).
+  bool _skipOfflinePending = false;
 
   /// Pengendali geser wilayah aktivitas tab Beranda. Kepala
   /// layar + kartu saldo TIDAK ikut bergeser (permintaan NUX
@@ -570,6 +588,18 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
+  /// Jalankan boot dan lacak future-nya di [_bootFuture] supaya
+  /// tombol lewati-ke-offline di splash bisa menunggu boot yang
+  /// sedang berjalan selesai sebelum memulai boot offline.
+  /// Semua pemanggil memakai pembungkus ini; pekerjaannya di
+  /// [_bootInner].
+  Future<void> _boot({bool offlineMode = false}) {
+    _bootOfflineMode = offlineMode;
+    final future = _bootInner(offlineMode: offlineMode);
+    _bootFuture = future;
+    return future;
+  }
+
   /// Inisialisasi node LDK + LSPS2 saat aplikasi dibuka.
   ///
   /// Dompet baru lahir dari frasa BIP39 12 kata: seed node (64 byte)
@@ -580,7 +610,7 @@ class _HomeScreenState extends State<HomeScreen>
   /// + frasa sebagai berkas biasa dimigrasikan dulu ke secure
   /// storage (verifikasi baca-balik, baru berkas dihapus) — lihat
   /// [WalletSeedStore].
-  Future<void> _boot({bool offlineMode = false}) async {
+  Future<void> _bootInner({bool offlineMode = false}) async {
     try {
       // Profil LSP aktif: pilihan user yang tersimpan bila sah dan
       // jaringannya cocok, selain itu profil bawaan dari AppConfig.
@@ -713,16 +743,60 @@ class _HomeScreenState extends State<HomeScreen>
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _booting = false;
-          _bootError =
-              friendlyError(e,
-                  fallback: context.l10n.bootGenericError,
-                  l10n: context.l10n);
-        });
+      if (!mounted) return;
+      if (_skipOfflinePending) {
+        // Lewati-ke-offline sedang menunggu boot ini: tetap di
+        // splash — layar gagal hanya akan berkedip sesaat sebelum
+        // boot offline dimulai. Penangan lewati yang memulai boot
+        // offline berikutnya.
+        return;
       }
+      setState(() {
+        _booting = false;
+        _bootError = friendlyError(
+          e,
+          fallback: context.l10n.bootGenericError,
+          l10n: context.l10n,
+        );
+      });
     }
+  }
+
+  /// Lewati boot yang sedang berjalan ke boot offline (G1.1):
+  /// jalan yang sama dengan tombol "Lanjutkan tanpa internet" di
+  /// layar gagal boot, tetapi dari splash — tanpa menunggu boot
+  /// online gagal dulu.
+  ///
+  /// Boot yang sedang berjalan DITUNGGU sampai selesai sebelum
+  /// boot offline dimulai: dua inisialisasi node tidak boleh
+  /// berjalan bersamaan. Mulai node (ldk-node `Node::start`)
+  /// tidak bisa dibatalkan dari luar — `stop()` mengembalikan
+  /// NotRunning sampai start selesai — dan node kedua di atas
+  /// storage yang sama akan berbagi berkas channel monitor
+  /// dengan node pertama. Future ini selesai saat boot offline
+  /// dimulai (atau saat boot online ternyata berhasil sementara
+  /// menunggu — dalam hal itu dasbor sudah tampil dan tidak ada
+  /// yang perlu dilakukan).
+  Future<void> _skipToOfflineBoot() async {
+    if (_skipOfflinePending || _bootOfflineMode) return;
+    _skipOfflinePending = true;
+    try {
+      await _bootFuture;
+    } catch (_) {
+      // Boot yang ditunggu tidak pernah melempar ke pemanggil
+      // (_bootInner menelan semua error ke keadaan) — penjaga ini
+      // hanya supaya tombol tidak pernah menggantung.
+    }
+    if (!mounted) return;
+    _skipOfflinePending = false;
+    // Boot online mungkin berhasil selama menunggu — dasbor sudah
+    // tampil, tidak ada yang perlu dilakukan.
+    if (!_booting && _bootError == null) return;
+    setState(() {
+      _booting = true;
+      _bootError = null;
+    });
+    _boot(offlineMode: true);
   }
 
   /// Kelola heartbeat deteksi internet setelah boot berhasil.
@@ -1015,8 +1089,17 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildBody(BuildContext context) {
     if (_booting) {
       // Layar awal bergaya splash: logo + partikel + tagline,
-      // tampil selama node LDK + LSPS2 diinisialisasi.
-      return const SplashScreen();
+      // tampil selama node LDK + LSPS2 diinisialisasi. Tawaran
+      // lewati-ke-offline (G1.1) mengikuti gerbang yang sama
+      // dengan tombol di layar gagal boot (testnet saja) dan
+      // disembunyikan selama boot yang berjalan sudah offline.
+      // CATATAN SYNC MAINNET (G1): pembukaan gerbang di mainnet
+      // wajib mencakup tawaran splash ini juga.
+      return SplashScreen(
+        onSkipToOffline: AppConfig.isTestnet && !_bootOfflineMode
+            ? _skipToOfflineBoot
+            : null,
+      );
     }
     if (_bootError != null) {
       return Scaffold(
@@ -1283,6 +1366,11 @@ class _HomeScreenState extends State<HomeScreen>
                   ],
                 ),
               ),
+              // Penanda sesi boot-offline (G1.4): chip menetap
+              // selama sesi ini di-boot tanpa internet — berbeda
+              // dari sesi jembatan (Mode Offline), yang punya
+              // penandanya sendiri di layar Mode Offline.
+              if (lspService.isOfflineMode) const OfflineSessionChip(),
               // Peringatan dompet lama tanpa frasa backup
               if (_legacyWallet)
                 GestureDetector(

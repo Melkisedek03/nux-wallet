@@ -6,6 +6,7 @@ import 'package:ldk_node/src/generated/api/types.dart';
 import '../config.dart';
 import '../l10n/app_localizations.dart';
 import '../locale_controller.dart';
+import '../services/bridge_start_cause.dart';
 import '../services/fee_estimate.dart';
 import '../services/lsp_service.dart';
 import '../services/offline_bridge.dart';
@@ -99,6 +100,16 @@ class _OfflineModeScreenState extends State<OfflineModeScreen> {
   late final FeeEstimateService _feeEstimates;
   bool _wasLinked = false;
   String? _lastPeerId;
+  // Pelacak kegagalan sambung dari ketukan pengguna (G3.1) +
+  // penyebab kegagalan mulai jembatan (G2.3). `_lastPhase`
+  // mengikuti fase jembatan di setiap pemberitahuan — transisi
+  // connecting -> discovering sesudah ketukan berarti sambungan
+  // gagal (jembatan sendiri hanya mencatatnya di log), dan
+  // masuk ke fase error berarti mulai jembatan gagal dan
+  // penyebabnya perlu diuji dari sistem.
+  OfflineBridgePhase _lastPhase = OfflineBridgePhase.idle;
+  bool _awaitingUserConnect = false;
+  BridgeStartCause _startFailureCause = BridgeStartCause.unknown;
   Timer? _pathTimer;
 
   OfflineBridgeService get _bridge => widget.bridge;
@@ -110,6 +121,7 @@ class _OfflineModeScreenState extends State<OfflineModeScreen> {
     _bridge.addListener(_onBridgeChanged);
     _wasLinked = _bridge.isLinked;
     _lastPeerId = _bridge.peerNodeId;
+    _lastPhase = _bridge.phase;
     _loadOwnNodeId();
     _syncPathTimer();
     _refreshPath();
@@ -132,11 +144,83 @@ class _OfflineModeScreenState extends State<OfflineModeScreen> {
     // perangkat akan membanjiri node dengan panggilan listChannels.
     final linkChanged = _bridge.isLinked != _wasLinked;
     final peerChanged = _bridge.peerNodeId != _lastPeerId;
+    final phase = _bridge.phase;
+    // (G3.1) Ketukan Sambungkan yang gagal: jembatan kembali ke
+    // discovering tanpa pesan apa pun — tampilkan snackbar SEKALI
+    // per ketukan. Sambung-ulang otomatis tidak pernah menyetel
+    // benderanya, jadi tidak ada spam saat percobaan ulang.
+    // Tertaut, sesi berakhir, sesi dimulai ulang, atau mulai
+    // gagal: percobaan itu sudah tidak tertunda lagi.
+    if (phase == OfflineBridgePhase.linked ||
+        phase == OfflineBridgePhase.idle ||
+        phase == OfflineBridgePhase.advertising ||
+        phase == OfflineBridgePhase.error) {
+      _awaitingUserConnect = false;
+    } else if (_awaitingUserConnect &&
+        _lastPhase == OfflineBridgePhase.connecting &&
+        phase == OfflineBridgePhase.discovering) {
+      _awaitingUserConnect = false;
+      _showSnack(context.l10n.offlineModeConnectFailed);
+    }
+    // (G2.3) Masuk fase error berarti mulai jembatan gagal —
+    // uji penyebabnya dari sistem; teks kartu diganti dengan
+    // penyebab spesifik begitu hasil ujinya tiba. Keluar dari
+    // fase error membuang penyebab lama supaya tidak basi.
+    if (phase == OfflineBridgePhase.error &&
+        _lastPhase != OfflineBridgePhase.error) {
+      _probeStartFailureCause();
+    } else if (phase != OfflineBridgePhase.error &&
+        _lastPhase == OfflineBridgePhase.error) {
+      _startFailureCause = BridgeStartCause.unknown;
+    }
     setState(() {});
     _syncPathTimer();
     if (linkChanged || peerChanged) _refreshPath();
     _wasLinked = _bridge.isLinked;
     _lastPeerId = _bridge.peerNodeId;
+    _lastPhase = phase;
+  }
+
+  /// Uji penyebab kegagalan mulai jembatan (G2.3): Nearby hanya
+  /// mengembalikan bool, jadi penyebabnya (izin / Lokasi mati /
+  /// Bluetooth mati) dibaca langsung dari sistem. Hasilnya
+  /// mengganti teks kartu error — sampai hasil tiba, kartu
+  /// menampilkan pesan fallback.
+  Future<void> _probeStartFailureCause() async {
+    final cause = await probeBridgeStartCause();
+    if (!mounted) return;
+    // Hanya pakai hasil ini bila layar masih di fase error —
+    // pengguna mungkin sudah menyalakan sesi ulang sementara
+    // itu, dan penyebab dari kegagalan lama tidak berlaku lagi.
+    if (_bridge.phase != OfflineBridgePhase.error) return;
+    setState(() => _startFailureCause = cause);
+  }
+
+  /// Teks kartu error mulai jembatan (G2.3): penyebab spesifik
+  /// bila sudah teruji, pesan fallback yang tetap menyebut
+  /// tindakan bila belum/tidak bisa dibedakan.
+  String _startFailureMessage(AppLocalizations l10n) {
+    switch (_startFailureCause) {
+      case BridgeStartCause.permission:
+        return l10n.offlineModeStartFailedPermission;
+      case BridgeStartCause.locationOff:
+        return l10n.offlineModeStartFailedLocation;
+      case BridgeStartCause.bluetoothOff:
+        return l10n.offlineModeStartFailedBluetooth;
+      case BridgeStartCause.unknown:
+        return l10n.offlineModeStartFailedUnknown;
+    }
+  }
+
+  /// Ketukan Sambungkan pada kandidat (G3.1): menandai bahwa
+  /// percobaan ini berasal dari pengguna — bila jembatan kembali
+  /// ke discovering, [_onBridgeChanged] menampilkan snackbar
+  /// kegagalan sekali. Sambung-ulang otomatis memanggil
+  /// `connectCombined` langsung dan tidak pernah menyetel
+  /// bendera ini.
+  void _onConnectTap(DiscoveredHost host) {
+    _awaitingUserConnect = true;
+    _bridge.connectCombined(host);
   }
 
   /// Timer 5 detik selama tertaut ATAU selama ada jalur yang
@@ -1053,7 +1137,7 @@ class _OfflineModeScreenState extends State<OfflineModeScreen> {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      l10n.offlineModeStartFailed,
+                      _startFailureMessage(l10n),
                       style: const TextStyle(
                         fontSize: 12,
                         color: Color(0xFFF87171),
@@ -1187,7 +1271,7 @@ class _OfflineModeScreenState extends State<OfflineModeScreen> {
           ElevatedButton(
             onPressed: _bridge.phase == OfflineBridgePhase.connecting
                 ? null
-                : () => _bridge.connectCombined(host),
+                : () => _onConnectTap(host),
             child: Text(l10n.offlineModeConnect),
           ),
         ],
