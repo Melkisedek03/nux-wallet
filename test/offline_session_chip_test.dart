@@ -42,5 +42,35 @@ void main() {
       await tester.pump();
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('diketuk dengan onTap: panggilan diteruskan sekali', (
+      tester,
+    ) async {
+      var taps = 0;
+      await tester.pumpWidget(
+        _app(Scaffold(body: OfflineSessionChip(onTap: () => taps++))),
+      );
+      await tester.pump();
+      await tester.tap(
+        find.text(
+          'Tanpa internet — hanya jalur yang sudah siap yang bisa dipakai',
+        ),
+      );
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      expect(taps, 1);
+    });
+
+    testWidgets('tanpa onTap: diketuk pun tidak apa-apa', (tester) async {
+      await tester.pumpWidget(_app(const Scaffold(body: OfflineSessionChip())));
+      await tester.pump();
+      await tester.tap(
+        find.text(
+          'Tanpa internet — hanya jalur yang sudah siap yang bisa dipakai',
+        ),
+      );
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
   });
 }

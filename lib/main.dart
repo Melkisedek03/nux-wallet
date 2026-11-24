@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:bip39/bip39.dart' as bip39;
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+
 import 'config.dart';
 import 'locale_controller.dart';
 import 'l10n/app_localizations.dart';
@@ -81,8 +83,11 @@ class NuxWalletApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge(
-          [ThemeController.mode, LocaleController.locale, UnitController.unit]),
+      listenable: Listenable.merge([
+        ThemeController.mode,
+        LocaleController.locale,
+        UnitController.unit,
+      ]),
       builder: (context, _) {
         return MaterialApp(
           title: 'NUX Wallet',
@@ -107,8 +112,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
-    with WidgetsBindingObserver {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _tabIndex = 0;
   bool _booting = true;
 
@@ -180,7 +184,7 @@ class _HomeScreenState extends State<HomeScreen>
   /// segmen saja sama dengan total hero, jadi tidak ada yang
   /// perlu dirinci.
   ({BigInt jitMsat, BigInt selfFundedMsat, BigInt directMsat})?
-      _balanceBreakdown;
+  _balanceBreakdown;
 
   /// Riwayat pembayaran terakhir dari node (terbaru di depan).
   List<PaymentDetails> _payments = const [];
@@ -306,7 +310,8 @@ class _HomeScreenState extends State<HomeScreen>
       final breakdown = await lspService.getLightningBalanceBreakdown();
       if (mounted) {
         setState(() {
-          _balanceMsat = breakdown.jitMsat +
+          _balanceMsat =
+              breakdown.jitMsat +
               breakdown.selfFundedMsat +
               breakdown.directMsat;
           _balanceBreakdown = breakdown;
@@ -334,9 +339,11 @@ class _HomeScreenState extends State<HomeScreen>
       // _receivedAlertKeys). Muat pertama (riwayat lama) TIDAK
       // memicu — himpunannya hanya diisi sebagai garis dasar.
       final succeededIn = payments
-          .where((p) =>
-              p.direction == PaymentDirection.inbound &&
-              p.status == PaymentStatus.succeeded)
+          .where(
+            (p) =>
+                p.direction == PaymentDirection.inbound &&
+                p.status == PaymentStatus.succeeded,
+          )
           .map(_paymentKey)
           .toSet();
       final freshIn = succeededIn.difference(_receivedAlertKeys);
@@ -426,8 +433,11 @@ class _HomeScreenState extends State<HomeScreen>
   /// sendiri TIDAK diubah: deteksi koin masuk dan logika lain
   /// tetap membaca daftar utuh dari node.
   List<PaymentDetails> get _displayPayments => _payments
-      .where((p) => !(p.direction == PaymentDirection.inbound &&
-          p.status == PaymentStatus.pending))
+      .where(
+        (p) =>
+            !(p.direction == PaymentDirection.inbound &&
+                p.status == PaymentStatus.pending),
+      )
       .toList();
 
   /// Pilihan filter tanggal tab Riwayat (bawaan: seminggu terakhir).
@@ -471,12 +481,32 @@ class _HomeScreenState extends State<HomeScreen>
   String _shortDate(DateTime d) {
     final en = context.l10n.localeName.startsWith('en');
     const monthsId = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
     ];
     const monthsEn = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     final months = en ? monthsEn : monthsId;
     return '${d.day} ${months[d.month - 1]} ${d.year}';
@@ -498,16 +528,16 @@ class _HomeScreenState extends State<HomeScreen>
               trailing: _historyPreset == HistoryRangePreset.last7Days
                   ? const Icon(Icons.check)
                   : null,
-              onTap: () => Navigator.pop(
-                  sheetContext, HistoryRangePreset.last7Days),
+              onTap: () =>
+                  Navigator.pop(sheetContext, HistoryRangePreset.last7Days),
             ),
             ListTile(
               title: Text(l10n.historyLast30Days),
               trailing: _historyPreset == HistoryRangePreset.last30Days
                   ? const Icon(Icons.check)
                   : null,
-              onTap: () => Navigator.pop(
-                  sheetContext, HistoryRangePreset.last30Days),
+              onTap: () =>
+                  Navigator.pop(sheetContext, HistoryRangePreset.last30Days),
             ),
             ListTile(
               title: Text(l10n.historyCustomRange),
@@ -528,9 +558,12 @@ class _HomeScreenState extends State<HomeScreen>
         context: context,
         firstDate: DateTime(2025),
         lastDate: now,
-        initialDateRange: _historyCustomRange ??
+        initialDateRange:
+            _historyCustomRange ??
             DateTimeRange(
-                start: now.subtract(const Duration(days: 7)), end: now),
+              start: now.subtract(const Duration(days: 7)),
+              end: now,
+            ),
       );
       if (range == null || !mounted) return;
       setState(() {
@@ -566,10 +599,7 @@ class _HomeScreenState extends State<HomeScreen>
     try {
       final channels = await lspService.listChannels();
       if (!mounted) return;
-      final fresh = _pathReadyWatcher.check(
-        channels,
-        AppConfig.lspNodeId,
-      );
+      final fresh = _pathReadyWatcher.check(channels, AppConfig.lspNodeId);
       if (fresh.isEmpty) return;
       final l10n = context.l10n;
       for (final channel in fresh) {
@@ -618,8 +648,7 @@ class _HomeScreenState extends State<HomeScreen>
       // sebelumnya — persiapan ini belum mengubah endpoint apa pun.
       final lspProfile = await LspProfileStore.load();
       if (!lspProfile.isConfigured) {
-        throw StateError(
-            context.l10n.lspNodeIdMissing);
+        throw StateError(context.l10n.lspNodeIdMissing);
       }
       final dir = await getApplicationSupportDirectory();
       // Seed & storage dipisah per network: build mainnet memakai nama
@@ -657,8 +686,7 @@ class _HomeScreenState extends State<HomeScreen>
               .split(RegExp(r'\s+'))
               .where((w) => w.isNotEmpty)
               .toList();
-          if (words.length >= 12 &&
-              bip39.validateMnemonic(words.join(' '))) {
+          if (words.length >= 12 && bip39.validateMnemonic(words.join(' '))) {
             _mnemonicWords = words;
           } else {
             _legacyWallet = true;
@@ -711,10 +739,10 @@ class _HomeScreenState extends State<HomeScreen>
       // lanjutkan niat sesi tersimpan bila ada. Upaya terbaik —
       // kegagalan di sini tidak menggagalkan boot dompet.
       offlineBridge.peerConnector = (nodeIdHex) => lspService.connectToPeer(
-            nodeIdHex,
-            '127.0.0.1',
-            OfflineBridgeService.guestBridgePort,
-          );
+        nodeIdHex,
+        '127.0.0.1',
+        OfflineBridgeService.guestBridgePort,
+      );
       offlineBridge.restoreSession().catchError((_) => false);
       // Segarkan berkala selama aplikasi terbuka: saldo + riwayat
       // selalu mutakhir, dan koin masuk terdeteksi untuk peringatan
@@ -811,8 +839,7 @@ class _HomeScreenState extends State<HomeScreen>
     _offlineWatchTimer = null;
     _probeSuccessStreak = 0;
     if (!offlineMode) return;
-    _offlineWatchTimer =
-        Timer.periodic(const Duration(seconds: 20), (_) async {
+    _offlineWatchTimer = Timer.periodic(const Duration(seconds: 20), (_) async {
       if (!mounted || _booting) return;
       final reachable = await lspService.probeLspReachable();
       if (!mounted) return;
@@ -869,22 +896,22 @@ class _HomeScreenState extends State<HomeScreen>
           await showUpdateDialog(context, hasil.info!);
         }
       case UpdateCheckStatus.upToDate:
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.updateUpToDate)),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(context.l10n.updateUpToDate)));
       case UpdateCheckStatus.failed:
       case UpdateCheckStatus.disabled:
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.updateCheckFailed)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(context.l10n.updateCheckFailed)));
     }
   }
 
   Future<void> _shareNodeLog() async {
     try {
       final dir = await getApplicationSupportDirectory();
-      final storageName =
-          AppConfig.isTestnet ? 'lsp_storage' : 'lsp_storage_mainnet';
+      final storageName = AppConfig.isTestnet
+          ? 'lsp_storage'
+          : 'lsp_storage_mainnet';
       final logFile = File('${dir.path}/$storageName/ldk_node.log');
       if (!await logFile.exists() || await logFile.length() == 0) {
         if (mounted) {
@@ -896,7 +923,8 @@ class _HomeScreenState extends State<HomeScreen>
       }
       final now = DateTime.now();
       String two(int v) => v.toString().padLeft(2, '0');
-      final stamp = '${now.year}${two(now.month)}${two(now.day)}'
+      final stamp =
+          '${now.year}${two(now.month)}${two(now.day)}'
           '-${two(now.hour)}${two(now.minute)}${two(now.second)}';
       final network = AppConfig.isTestnet ? 'testnet' : 'mainnet';
       final cacheDir = await getTemporaryDirectory();
@@ -909,8 +937,13 @@ class _HomeScreenState extends State<HomeScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(friendlyError(e,
-                fallback: context.l10n.shareLogFailed, l10n: context.l10n)),
+            content: Text(
+              friendlyError(
+                e,
+                fallback: context.l10n.shareLogFailed,
+                l10n: context.l10n,
+              ),
+            ),
           ),
         );
       }
@@ -926,26 +959,31 @@ class _HomeScreenState extends State<HomeScreen>
   /// sama seperti di layar.
   Future<void> _exportHistoryCsv() async {
     try {
-      final csv =
-          buildTransactionsCsv(_historyPayments, routeTags: _paymentTags);
+      final csv = buildTransactionsCsv(
+        _historyPayments,
+        routeTags: _paymentTags,
+      );
       final now = DateTime.now();
       String two(int v) => v.toString().padLeft(2, '0');
-      final stamp = '${now.year}${two(now.month)}${two(now.day)}'
+      final stamp =
+          '${now.year}${two(now.month)}${two(now.day)}'
           '-${two(now.hour)}${two(now.minute)}${two(now.second)}';
       final network = AppConfig.isTestnet ? 'testnet' : 'mainnet';
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/elnux-history-$network-$stamp.csv');
       await file.writeAsString(csv);
-      await SharePlus.instance.share(
-        ShareParams(files: [XFile(file.path)]),
-      );
+      await SharePlus.instance.share(ShareParams(files: [XFile(file.path)]));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(friendlyError(e,
+            content: Text(
+              friendlyError(
+                e,
                 fallback: context.l10n.historyExportFailed,
-                l10n: context.l10n)),
+                l10n: context.l10n,
+              ),
+            ),
           ),
         );
       }
@@ -1041,18 +1079,25 @@ class _HomeScreenState extends State<HomeScreen>
           borderRadius: BorderRadius.circular(24),
           side: BorderSide(color: ctx.palette.border),
         ),
-        title: Text(context.l10n.exitTitle,
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+        title: Text(
+          context.l10n.exitTitle,
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+        ),
         content: Text(
           context.l10n.exitBody,
           style: TextStyle(
-              fontSize: 13.5, color: ctx.palette.secondary, height: 1.4),
+            fontSize: 13.5,
+            color: ctx.palette.secondary,
+            height: 1.4,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(context.l10n.cancel,
-                style: TextStyle(color: ctx.palette.secondary)),
+            child: Text(
+              context.l10n.cancel,
+              style: TextStyle(color: ctx.palette.secondary),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -1110,19 +1155,26 @@ class _HomeScreenState extends State<HomeScreen>
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('⚠️',
-                    style: TextStyle(fontSize: 40),
-                    textAlign: TextAlign.center),
+                const Text(
+                  '⚠️',
+                  style: TextStyle(fontSize: 40),
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: 12),
-                Text(context.l10n.bootFailedTitle,
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                    textAlign: TextAlign.center),
+                Text(
+                  context.l10n.bootFailedTitle,
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: 8),
-                Text(_bootError!,
-                    style: TextStyle(
-                        fontSize: 13, color: context.palette.secondary),
-                    textAlign: TextAlign.center),
+                Text(
+                  _bootError!,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: context.palette.secondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: () {
@@ -1182,327 +1234,397 @@ class _HomeScreenState extends State<HomeScreen>
             // bergeser); hanya wilayah di bawah kartu — baris
             // Kirim/Terima + aktivitas — yang bergeser.
             Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(22, 22, 22, 6),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(_greeting,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 22, 22, 6),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _greeting,
                                 style: TextStyle(
-                                    fontSize: 13,
-                                    color: context.palette.secondary)),
-                            const SizedBox(width: 7),
-                            // Duplikat ikon live dari kartu saldo
-                            // (permintaan NUX) — hijau emerald agar
-                            // lebih terlihat di header.
-                            PulseDot(
-                              active: lspService.isRunning,
-                              color: const Color(0xFF34D399),
-                              size: 9,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        const Text('Nusanian \u2726',
+                                  fontSize: 13,
+                                  color: context.palette.secondary,
+                                ),
+                              ),
+                              const SizedBox(width: 7),
+                              // Duplikat ikon live dari kartu saldo
+                              // (permintaan NUX) — hijau emerald agar
+                              // lebih terlihat di header.
+                              PulseDot(
+                                active: lspService.isRunning,
+                                color: const Color(0xFF34D399),
+                                size: 9,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          const Text(
+                            'Nusanian \u2726',
                             style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.3)),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        // Toggle tema Gelap/Terang — pilihan tersimpan
-                        // dan berlaku di semua layar.
-                        IconButton(
-                          onPressed: ThemeController.toggle,
-                          tooltip: context.l10n.changeThemeTooltip,
-                          icon: Icon(
-                            Theme.of(context).brightness == Brightness.dark
-                                ? Icons.light_mode_rounded
-                                : Icons.dark_mode_rounded,
-                            color: context.palette.muted,
-                          ),
-                          style: IconButton.styleFrom(
-                            backgroundColor: context.palette.card,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.3,
                             ),
-                            side:
-                                BorderSide(color: context.palette.border),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        // Lencana ikon aplikasi — ketuk untuk ke tab Profil.
-                        GestureDetector(
-                          onTap: () => setState(() => _tabIndex = 3),
-                          child: Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                  color: context.palette.border),
-                            ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(14),
-                          child: Image.asset('assets/app_icon.png',
-                              fit: BoxFit.cover),
-                        ),
+                        ],
                       ),
-                    ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              // Balance hero card
-              Container(
-                margin: const EdgeInsets.all(18),
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(28),
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF10B981), Color(0xFF059669), Color(0xFF065F46)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+                      Row(
+                        children: [
+                          // Toggle tema Gelap/Terang — pilihan tersimpan
+                          // dan berlaku di semua layar.
+                          IconButton(
+                            onPressed: ThemeController.toggle,
+                            tooltip: context.l10n.changeThemeTooltip,
+                            icon: Icon(
+                              Theme.of(context).brightness == Brightness.dark
+                                  ? Icons.light_mode_rounded
+                                  : Icons.dark_mode_rounded,
+                              color: context.palette.muted,
+                            ),
+                            style: IconButton.styleFrom(
+                              backgroundColor: context.palette.card,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              side: BorderSide(color: context.palette.border),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          // Lencana ikon aplikasi — ketuk untuk ke tab Profil.
+                          GestureDetector(
+                            onTap: () => setState(() => _tabIndex = 3),
+                            child: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: context.palette.border,
+                                ),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(14),
+                                child: Image.asset(
+                                  'assets/app_icon.png',
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(context.l10n.totalBalance,
-                        style: TextStyle(fontSize: 13, color: Colors.white70)),
-                    const SizedBox(height: 6),
-                    // FittedBox scaleDown: saldo besar (banyak digit)
-                    // menyusut mengikuti lebar kartu, tidak meluap
-                    // di layar sempit — pola aman yang sama seperti
-                    // pil status di bawah.
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          Text(
+                // Balance hero card
+                Container(
+                  margin: const EdgeInsets.all(18),
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(28),
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color(0xFF10B981),
+                        Color(0xFF059669),
+                        Color(0xFF065F46),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        context.l10n.totalBalance,
+                        style: TextStyle(fontSize: 13, color: Colors.white70),
+                      ),
+                      const SizedBox(height: 6),
+                      // FittedBox scaleDown: saldo besar (banyak digit)
+                      // menyusut mengikuti lebar kartu, tidak meluap
+                      // di layar sempit — pola aman yang sama seperti
+                      // pil status di bawah.
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text(
                               _balanceMsat == null
                                   ? '\u2014'
                                   : context.formatWalletAmountNumber(
-                                      _balanceMsat!),
+                                      _balanceMsat!,
+                                    ),
                               style: const TextStyle(
-                                  fontSize: 44,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -1,
-                                  color: Colors.white)),
-                          const SizedBox(width: 6),
-                          Text(context.displayUnit.label,
+                                fontSize: 44,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -1,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              context.displayUnit.label,
                               style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white70)),
-                        ],
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white70,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    Text(
+                      Text(
                         AppConfig.isTestnet
                             ? context.l10n.networkTestnet
                             : context.l10n.networkMainnet,
                         style: const TextStyle(
-                            fontSize: 13, color: Colors.white70)),
-                    // Rincian per sumber (JIT / Self / Langsung): hanya
-                    // segmen yang tidak nol, dan hanya bila dua segmen
-                    // atau lebih tidak nol — satu segmen saja sama
-                    // dengan total hero, jadi tidak ada yang perlu
-                    // dirinci. Total gabungan saja bisa salah dibaca
-                    // sebagai yang bisa dibelanjakan saat offline,
-                    // padahal yang bergerak offline hanya porsi channel
-                    // langsung. Kartu ini khusus Lightning: saldo
-                    // on-chain tinggal di halaman Dompet On-chain di
-                    // Profil (baris on-chain di kartu terbukti membuat
-                    // kartu membengkak — QA visual build 109).
-                    if (_balanceBreakdown != null &&
-                        [
-                          _balanceBreakdown!.jitMsat,
-                          _balanceBreakdown!.selfFundedMsat,
-                          _balanceBreakdown!.directMsat,
-                        ].where((s) => s > BigInt.zero).length >= 2) ...[
-                      const SizedBox(height: 4),
-                      Text(
+                          fontSize: 13,
+                          color: Colors.white70,
+                        ),
+                      ),
+                      // Rincian per sumber (JIT / Self / Langsung): hanya
+                      // segmen yang tidak nol, dan hanya bila dua segmen
+                      // atau lebih tidak nol — satu segmen saja sama
+                      // dengan total hero, jadi tidak ada yang perlu
+                      // dirinci. Total gabungan saja bisa salah dibaca
+                      // sebagai yang bisa dibelanjakan saat offline,
+                      // padahal yang bergerak offline hanya porsi channel
+                      // langsung. Kartu ini khusus Lightning: saldo
+                      // on-chain tinggal di halaman Dompet On-chain di
+                      // Profil (baris on-chain di kartu terbukti membuat
+                      // kartu membengkak — QA visual build 109).
+                      if (_balanceBreakdown != null &&
                           [
-                            if (_balanceBreakdown!.jitMsat > BigInt.zero)
-                              '${context.l10n.balanceLspShort} ${context.formatWalletAmountNumber(_balanceBreakdown!.jitMsat)}',
-                            if (_balanceBreakdown!.selfFundedMsat >
-                                BigInt.zero)
-                              '${context.l10n.balanceSelf} ${context.formatWalletAmountNumber(_balanceBreakdown!.selfFundedMsat)}',
-                            if (_balanceBreakdown!.directMsat > BigInt.zero)
-                              '${context.l10n.balanceDirectShort} ${context.formatWalletAmountNumber(_balanceBreakdown!.directMsat)}',
-                          ].join(' • ') +
+                                _balanceBreakdown!.jitMsat,
+                                _balanceBreakdown!.selfFundedMsat,
+                                _balanceBreakdown!.directMsat,
+                              ].where((s) => s > BigInt.zero).length >=
+                              2) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          [
+                                if (_balanceBreakdown!.jitMsat > BigInt.zero)
+                                  '${context.l10n.balanceLspShort} ${context.formatWalletAmountNumber(_balanceBreakdown!.jitMsat)}',
+                                if (_balanceBreakdown!.selfFundedMsat >
+                                    BigInt.zero)
+                                  '${context.l10n.balanceSelf} ${context.formatWalletAmountNumber(_balanceBreakdown!.selfFundedMsat)}',
+                                if (_balanceBreakdown!.directMsat > BigInt.zero)
+                                  '${context.l10n.balanceDirectShort} ${context.formatWalletAmountNumber(_balanceBreakdown!.directMsat)}',
+                              ].join(' • ') +
                               ' ${context.displayUnit.label}',
                           style: const TextStyle(
-                              fontSize: 12.5, color: Colors.white70)),
-                    ],
-                    const SizedBox(height: 14),
-                    // Pil status: widget khusus yang isinya
-                    // menyusut mengikuti lebar kartu (lihat
-                    // LightningStatusPill) — teks status tidak
-                    // bisa mendorong bingkai di ukuran layar atau
-                    // skala font berapa pun.
-                    LightningStatusPill(
-                      active: lspService.isRunning,
-                      label: lspService.isRunning
-                          ? context.l10n.lightningActive
-                          : context.l10n.lightningConnecting,
-                    ),
-                  ],
-                ),
-              ),
-              // Penanda sesi boot-offline (G1.4): chip menetap
-              // selama sesi ini di-boot tanpa internet — berbeda
-              // dari sesi jembatan (Mode Offline), yang punya
-              // penandanya sendiri di layar Mode Offline.
-              if (lspService.isOfflineMode) const OfflineSessionChip(),
-              // Peringatan dompet lama tanpa frasa backup
-              if (_legacyWallet)
-                GestureDetector(
-                  onTap: () => setState(() => _tabIndex = 3),
-                  child: Container(
-                    margin: const EdgeInsets.fromLTRB(18, 0, 18, 4),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                          color: const Color(0xFFF59E0B).withValues(alpha: 0.35)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.warning_amber_rounded,
-                            color: context.palette.warningIcon, size: 20),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            context.l10n.legacyStrip,
-                            style: TextStyle(
-                                fontSize: 12.5,
-                                color: context.palette.warningText,
-                                height: 1.35),
+                            fontSize: 12.5,
+                            color: Colors.white70,
                           ),
                         ),
+                      ],
+                      const SizedBox(height: 14),
+                      // Pil status: widget khusus yang isinya
+                      // menyusut mengikuti lebar kartu (lihat
+                      // LightningStatusPill) — teks status tidak
+                      // bisa mendorong bingkai di ukuran layar atau
+                      // skala font berapa pun.
+                      LightningStatusPill(
+                        active: lspService.isRunning,
+                        label: lspService.isRunning
+                            ? context.l10n.lightningActive
+                            : context.l10n.lightningConnecting,
+                      ),
+                    ],
+                  ),
+                ),
+                // Penanda sesi boot-offline (G1.4): chip menetap
+                // selama sesi ini di-boot tanpa internet — berbeda
+                // dari sesi jembatan (Mode Offline), yang punya
+                // penandanya sendiri di layar Mode Offline. Diketuk,
+                // chip membuka layar itu supaya pengguna langsung
+                // sampai ke tempat jalur offline dikelola.
+                if (lspService.isOfflineMode)
+                  OfflineSessionChip(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => OfflineModeScreen(
+                          lspService: lspService,
+                          bridge: offlineBridge,
+                        ),
+                      ),
+                    ),
+                  ),
+                // Peringatan dompet lama tanpa frasa backup
+                if (_legacyWallet)
+                  GestureDetector(
+                    onTap: () => setState(() => _tabIndex = 3),
+                    child: Container(
+                      margin: const EdgeInsets.fromLTRB(18, 0, 18, 4),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: const Color(0xFFF59E0B)
+                              .withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            color: context.palette.warningIcon,
+                            size: 20,
+                          ),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              context.l10n.legacyStrip,
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: context.palette.warningText,
+                                height: 1.35,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                // Wilayah bergeser Beranda: baris Kirim/Terima +
+                // aktivitas. Pengendalinya juga menggerakkan tab
+                // bar sembunyi/tampil otomatis (_onHomeScroll).
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: _homeScrollController,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Quick actions
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 18),
+                          child: Row(
+                            children: [
+                              _quickAction(
+                                const Icon(
+                                  Icons.arrow_outward_rounded,
+                                  size: 25,
+                                ),
+                                context.l10n.send,
+                                true,
+                                () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => SendScreen(
+                                        lspService: lspService,
+                                        bridge: offlineBridge,
+                                      ),
+                                    ),
+                                  ).then((_) => _refreshDashboard());
+                                },
+                              ),
+                              const SizedBox(width: 10),
+                              // Keamanan: Terima NONAKTIF selama dompet belum punya
+                              // frasa backup (dompet legacy) — dana yang masuk ke
+                              // dompet tanpa frasa tidak bisa dipulihkan bila HP
+                              // hilang/rusak. Strip peringatan di atas menjelaskan
+                              // cara mengaktifkannya (buat dompet berfrasa).
+                              _quickAction(
+                                const Icon(Icons.south_west_rounded, size: 25),
+                                context.l10n.receive,
+                                !_legacyWallet,
+                                () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ReceiveScreen(
+                                        lspService: lspService,
+                                        bridge: offlineBridge,
+                                      ),
+                                    ),
+                                  ).then((_) => _refreshDashboard());
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        // Transactions header
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 22),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                context.l10n.activity,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() => _tabIndex = 2);
+                                  _refreshDashboard();
+                                },
+                                child: Text(
+                                  context.l10n.seeAll,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFF34D399),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        // Transaction list
+                        if (_displayPayments.isEmpty)
+                          Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 22,
+                              vertical: 10,
+                            ),
+                            child: Text(
+                              context.l10n.noActivity,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: context.palette.muted,
+                              ),
+                            ),
+                          )
+                        else
+                          ..._displayPayments.take(5).map(_paymentRow),
+                        const SizedBox(height: 80),
                       ],
                     ),
                   ),
                 ),
-              // Wilayah bergeser Beranda: baris Kirim/Terima +
-              // aktivitas. Pengendalinya juga menggerakkan tab
-              // bar sembunyi/tampil otomatis (_onHomeScroll).
-              Expanded(
-                child: SingleChildScrollView(
-                  controller: _homeScrollController,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-              // Quick actions
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                child: Row(
-                  children: [
-                    _quickAction(
-                        const Icon(Icons.arrow_outward_rounded, size: 25),
-                        context.l10n.send, true, () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              SendScreen(
-                                  lspService: lspService,
-                                  bridge: offlineBridge),
-                        ),
-                      ).then((_) => _refreshDashboard());
-                    }),
-                    const SizedBox(width: 10),
-                    // Keamanan: Terima NONAKTIF selama dompet belum punya
-                    // frasa backup (dompet legacy) — dana yang masuk ke
-                    // dompet tanpa frasa tidak bisa dipulihkan bila HP
-                    // hilang/rusak. Strip peringatan di atas menjelaskan
-                    // cara mengaktifkannya (buat dompet berfrasa).
-                    _quickAction(
-                        const Icon(Icons.south_west_rounded, size: 25),
-                        context.l10n.receive, !_legacyWallet, () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              ReceiveScreen(
-                                  lspService: lspService,
-                                  bridge: offlineBridge),
-                        ),
-                      ).then((_) => _refreshDashboard());
-                    }),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 18),
-              // Transactions header
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 22),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(context.l10n.activity,
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w700)),
-                    GestureDetector(
-                      onTap: () {
-                        setState(() => _tabIndex = 2);
-                        _refreshDashboard();
-                      },
-                      child: Text(context.l10n.seeAll,
-                          style: TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF34D399),
-                              fontWeight: FontWeight.w600)),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 6),
-              // Transaction list
-              if (_displayPayments.isEmpty)
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 22, vertical: 10),
-                  child: Text(context.l10n.noActivity,
-                      style:
-                          TextStyle(fontSize: 13, color: context.palette.muted)),
-                )
-              else
-                ..._displayPayments.take(5).map(_paymentRow),
-              const SizedBox(height: 80),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+              ],
             ),
             const JelajahScreen(),
             _HistoryPage(
-                payments: _historyPayments,
-                rowBuilder: _paymentRow,
-                onExport: _exportHistoryCsv,
-                onFilter: _showHistoryFilter,
-                filterLabel: _historyRangeLabel,
-                emptyMessage: _displayPayments.isEmpty
-                    ? context.l10n.noTransactions
-                    : context.l10n.historyNoTransactionsInPeriod),
+              payments: _historyPayments,
+              rowBuilder: _paymentRow,
+              onExport: _exportHistoryCsv,
+              onFilter: _showHistoryFilter,
+              filterLabel: _historyRangeLabel,
+              emptyMessage: _displayPayments.isEmpty
+                  ? context.l10n.noTransactions
+                  : context.l10n.historyNoTransactionsInPeriod,
+            ),
             _ProfilePage(
               mnemonicWords: _mnemonicWords,
               legacyWallet: _legacyWallet,
@@ -1512,8 +1634,7 @@ class _HomeScreenState extends State<HomeScreen>
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) =>
-                        BackupScreen(mnemonic: _mnemonicWords!),
+                    builder: (_) => BackupScreen(mnemonic: _mnemonicWords!),
                   ),
                 );
               },
@@ -1545,28 +1666,33 @@ class _HomeScreenState extends State<HomeScreen>
           // menampilkan bar, dari jalur pindah tab mana pun.
           heightFactor: _tabIndex != 0 || _tabBarVisible ? 1 : 0,
           child: Container(
-        margin: const EdgeInsets.fromLTRB(18, 0, 18, 20),
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: context.palette.card,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: context.palette.border),
-        ),
-        child: Row(
-          children: [
-            _tab(0, '\u25C9', context.l10n.home),
-            _tab(1, '\u25CD', context.l10n.market),
-            _tab(2, '\u21BA', context.l10n.history),
-            _tab(3, '\u25CB', context.l10n.profile),
-          ],
-        ),
+            margin: const EdgeInsets.fromLTRB(18, 0, 18, 20),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: context.palette.card,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: context.palette.border),
+            ),
+            child: Row(
+              children: [
+                _tab(0, '\u25C9', context.l10n.home),
+                _tab(1, '\u25CD', context.l10n.market),
+                _tab(2, '\u21BA', context.l10n.history),
+                _tab(3, '\u25CB', context.l10n.profile),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _quickAction(Widget icon, String label, bool enabled, VoidCallback onTap) {
+  Widget _quickAction(
+    Widget icon,
+    String label,
+    bool enabled,
+    VoidCallback onTap,
+  ) {
     return Expanded(
       child: Opacity(
         opacity: enabled ? 1.0 : 0.3,
@@ -1596,11 +1722,14 @@ class _HomeScreenState extends State<HomeScreen>
                   child: Center(child: icon),
                 ),
                 const SizedBox(height: 8),
-                Text(label,
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: context.palette.label,
-                        fontWeight: FontWeight.w500)),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: context.palette.label,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ],
             ),
           ),
@@ -1663,9 +1792,11 @@ class _HomeScreenState extends State<HomeScreen>
         ? '\u2014'
         : '${isIn ? '+' : '\u2212'}${context.formatWalletAmountNumber(payment.amountMsat!)}';
     final time = formatTxTime(
-        DateTime.fromMillisecondsSinceEpoch(
-            payment.latestUpdateTimestamp.toInt() * 1000),
-        locale: context.l10n.localeName);
+      DateTime.fromMillisecondsSinceEpoch(
+        payment.latestUpdateTimestamp.toInt() * 1000,
+      ),
+      locale: context.l10n.localeName,
+    );
     return TransactionRow(
       icon: isIn
           ? const Icon(Icons.arrow_downward_rounded, size: 22)
@@ -1676,8 +1807,8 @@ class _HomeScreenState extends State<HomeScreen>
       title: note != null
           ? _noteRowTitle(note)
           : isIn
-              ? context.l10n.received
-              : context.l10n.sent,
+          ? context.l10n.received
+          : context.l10n.sent,
       addr: _shortPaymentId(payment.id),
       tag: tag,
       isIn: isIn,
@@ -1769,7 +1900,8 @@ class _HomeScreenState extends State<HomeScreen>
             borderRadius: BorderRadius.circular(18),
             gradient: active
                 ? const LinearGradient(
-                    colors: [Color(0xFF10B981), Color(0xFF059669)])
+                    colors: [Color(0xFF10B981), Color(0xFF059669)],
+                  )
                 : null,
             boxShadow: active
                 ? [
@@ -1777,23 +1909,29 @@ class _HomeScreenState extends State<HomeScreen>
                       color: const Color(0xFF10B981).withValues(alpha: 0.35),
                       blurRadius: 18,
                       offset: const Offset(0, 6),
-                    )
+                    ),
                   ]
                 : null,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(icon,
-                  style: TextStyle(
-                      fontSize: 20,
-                      color: active ? Colors.white : context.palette.faint)),
+              Text(
+                icon,
+                style: TextStyle(
+                  fontSize: 20,
+                  color: active ? Colors.white : context.palette.faint,
+                ),
+              ),
               const SizedBox(height: 3),
-              Text(label,
-                  style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: active ? Colors.white : context.palette.faint)),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: active ? Colors.white : context.palette.faint,
+                ),
+              ),
             ],
           ),
         ),
@@ -1861,10 +1999,18 @@ class _ProfilePage extends StatelessWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _languageOption(ctx, const Locale('id'),
-                l10n.languageIndonesian, current.languageCode == 'id'),
-            _languageOption(ctx, const Locale('en'), l10n.languageEnglish,
-                current.languageCode == 'en'),
+            _languageOption(
+              ctx,
+              const Locale('id'),
+              l10n.languageIndonesian,
+              current.languageCode == 'id',
+            ),
+            _languageOption(
+              ctx,
+              const Locale('en'),
+              l10n.languageEnglish,
+              current.languageCode == 'en',
+            ),
           ],
         ),
       ),
@@ -1873,7 +2019,11 @@ class _ProfilePage extends StatelessWidget {
   }
 
   Widget _languageOption(
-      BuildContext ctx, Locale locale, String label, bool selected) {
+    BuildContext ctx,
+    Locale locale,
+    String label,
+    bool selected,
+  ) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       title: Text(label),
@@ -1892,15 +2042,16 @@ class _ProfilePage extends StatelessWidget {
         children: [
           Padding(
             padding: EdgeInsets.fromLTRB(22, 22, 22, 10),
-            child: Text(context.l10n.profile,
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+            child: Text(
+              context.l10n.profile,
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+            ),
           ),
           // Baris Tema — toggle Gelap/Terang (tersimpan, sama
           // seperti tombol di header dashboard).
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             decoration: BoxDecoration(
               color: context.palette.card,
               borderRadius: BorderRadius.circular(18),
@@ -1913,27 +2064,38 @@ class _ProfilePage extends StatelessWidget {
                   height: 44,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(14),
-                    gradient: LinearGradient(colors: [
-                      const Color(0xFF10B981).withValues(alpha: 0.25),
-                      const Color(0xFF10B981).withValues(alpha: 0.08),
-                    ]),
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFF10B981).withValues(alpha: 0.25),
+                        const Color(0xFF10B981).withValues(alpha: 0.08),
+                      ],
+                    ),
                   ),
-                  child: const Icon(Icons.brightness_6_rounded,
-                      color: Color(0xFF34D399), size: 20),
+                  child: const Icon(
+                    Icons.brightness_6_rounded,
+                    color: Color(0xFF34D399),
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(width: 13),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(context.l10n.themeTitle,
-                          style: TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.w600)),
+                      Text(
+                        context.l10n.themeTitle,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       const SizedBox(height: 3),
                       Text(
                         context.l10n.themeSubtitle,
                         style: TextStyle(
-                            fontSize: 12, color: context.palette.muted),
+                          fontSize: 12,
+                          color: context.palette.muted,
+                        ),
                       ),
                     ],
                   ),
@@ -1943,7 +2105,8 @@ class _ProfilePage extends StatelessWidget {
                   builder: (context, mode, _) => Switch(
                     value: mode == ThemeMode.dark,
                     onChanged: (dark) => ThemeController.setMode(
-                        dark ? ThemeMode.dark : ThemeMode.light),
+                      dark ? ThemeMode.dark : ThemeMode.light,
+                    ),
                     activeThumbColor: const Color(0xFF10B981),
                   ),
                 ),
@@ -1969,22 +2132,31 @@ class _ProfilePage extends StatelessWidget {
                     height: 44,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
-                      gradient: LinearGradient(colors: [
-                        const Color(0xFF10B981).withValues(alpha: 0.25),
-                        const Color(0xFF10B981).withValues(alpha: 0.08),
-                      ]),
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF10B981).withValues(alpha: 0.25),
+                          const Color(0xFF10B981).withValues(alpha: 0.08),
+                        ],
+                      ),
                     ),
-                    child: const Icon(Icons.language_rounded,
-                        color: Color(0xFF34D399), size: 20),
+                    child: const Icon(
+                      Icons.language_rounded,
+                      color: Color(0xFF34D399),
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 13),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(context.l10n.appLanguage,
-                            style: const TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.w600)),
+                        Text(
+                          context.l10n.appLanguage,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         const SizedBox(height: 3),
                         ValueListenableBuilder<Locale>(
                           valueListenable: LocaleController.locale,
@@ -1993,14 +2165,18 @@ class _ProfilePage extends StatelessWidget {
                                 ? 'English'
                                 : 'Bahasa Indonesia',
                             style: TextStyle(
-                                fontSize: 12, color: context.palette.muted),
+                              fontSize: 12,
+                              color: context.palette.muted,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  Icon(Icons.chevron_right_rounded,
-                      color: context.palette.muted),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: context.palette.muted,
+                  ),
                 ],
               ),
             ),
@@ -2024,27 +2200,38 @@ class _ProfilePage extends StatelessWidget {
                   height: 44,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(14),
-                    gradient: LinearGradient(colors: [
-                      const Color(0xFF10B981).withValues(alpha: 0.25),
-                      const Color(0xFF10B981).withValues(alpha: 0.08),
-                    ]),
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFF10B981).withValues(alpha: 0.25),
+                        const Color(0xFF10B981).withValues(alpha: 0.08),
+                      ],
+                    ),
                   ),
-                  child: const Icon(Icons.straighten_rounded,
-                      color: Color(0xFF34D399), size: 20),
+                  child: const Icon(
+                    Icons.straighten_rounded,
+                    color: Color(0xFF34D399),
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(width: 13),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(context.l10n.unitTitle,
-                          style: const TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.w600)),
+                      Text(
+                        context.l10n.unitTitle,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       const SizedBox(height: 3),
                       Text(
                         context.l10n.unitSubtitle,
                         style: TextStyle(
-                            fontSize: 12, color: context.palette.muted),
+                          fontSize: 12,
+                          color: context.palette.muted,
+                        ),
                       ),
                     ],
                   ),
@@ -2053,10 +2240,11 @@ class _ProfilePage extends StatelessWidget {
                   valueListenable: UnitController.unit,
                   builder: (context, unit, _) => SegmentedButton<DisplayUnit>(
                     segments: const [
+                      ButtonSegment(value: DisplayUnit.nux, label: Text('NUX')),
                       ButtonSegment(
-                          value: DisplayUnit.nux, label: Text('NUX')),
-                      ButtonSegment(
-                          value: DisplayUnit.nusan, label: Text('nusan')),
+                        value: DisplayUnit.nusan,
+                        label: Text('nusan'),
+                      ),
                     ],
                     selected: {unit},
                     onSelectionChanged: (picked) =>
@@ -2065,7 +2253,9 @@ class _ProfilePage extends StatelessWidget {
                     style: SegmentedButton.styleFrom(
                       visualDensity: VisualDensity.compact,
                       textStyle: const TextStyle(
-                          fontSize: 12.5, fontWeight: FontWeight.w700),
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
@@ -2090,36 +2280,49 @@ class _ProfilePage extends StatelessWidget {
                     height: 44,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
-                      gradient: LinearGradient(colors: [
-                        const Color(0xFF10B981).withValues(alpha: 0.25),
-                        const Color(0xFF10B981).withValues(alpha: 0.08),
-                      ]),
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF10B981).withValues(alpha: 0.25),
+                          const Color(0xFF10B981).withValues(alpha: 0.08),
+                        ],
+                      ),
                     ),
-                    child: const Icon(Icons.key_rounded,
-                        color: Color(0xFF34D399), size: 20),
+                    child: const Icon(
+                      Icons.key_rounded,
+                      color: Color(0xFF34D399),
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 13),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(context.l10n.backupWallet,
-                            style: TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.w600)),
+                        Text(
+                          context.l10n.backupWallet,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         const SizedBox(height: 3),
                         Text(
                           legacyWallet
                               ? context.l10n.legacyWalletSubtitle
                               : context.l10n.backupSubtitle,
                           style: TextStyle(
-                              fontSize: 12, color: context.palette.muted),
+                            fontSize: 12,
+                            color: context.palette.muted,
+                          ),
                         ),
                       ],
                     ),
                   ),
                   if (!legacyWallet)
-                    Icon(Icons.chevron_right_rounded,
-                        color: context.palette.muted),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: context.palette.muted,
+                    ),
                 ],
               ),
             ),
@@ -2156,33 +2359,46 @@ class _ProfilePage extends StatelessWidget {
                     height: 44,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
-                      gradient: LinearGradient(colors: [
-                        const Color(0xFF10B981).withValues(alpha: 0.25),
-                        const Color(0xFF10B981).withValues(alpha: 0.08),
-                      ]),
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF10B981).withValues(alpha: 0.25),
+                          const Color(0xFF10B981).withValues(alpha: 0.08),
+                        ],
+                      ),
                     ),
-                    child: const Icon(Icons.restore_rounded,
-                        color: Color(0xFF34D399), size: 20),
+                    child: const Icon(
+                      Icons.restore_rounded,
+                      color: Color(0xFF34D399),
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 13),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(context.l10n.restoreWallet,
-                            style: TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.w600)),
+                        Text(
+                          context.l10n.restoreWallet,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         const SizedBox(height: 3),
                         Text(
                           context.l10n.restoreSubtitle,
                           style: TextStyle(
-                              fontSize: 12, color: context.palette.muted),
+                            fontSize: 12,
+                            color: context.palette.muted,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  Icon(Icons.chevron_right_rounded,
-                      color: context.palette.muted),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: context.palette.muted,
+                  ),
                 ],
               ),
             ),
@@ -2192,9 +2408,7 @@ class _ProfilePage extends StatelessWidget {
           GestureDetector(
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (_) => const PrinterSettingsScreen(),
-              ),
+              MaterialPageRoute(builder: (_) => const PrinterSettingsScreen()),
             ),
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
@@ -2211,33 +2425,46 @@ class _ProfilePage extends StatelessWidget {
                     height: 44,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
-                      gradient: LinearGradient(colors: [
-                        const Color(0xFF10B981).withValues(alpha: 0.25),
-                        const Color(0xFF10B981).withValues(alpha: 0.08),
-                      ]),
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF10B981).withValues(alpha: 0.25),
+                          const Color(0xFF10B981).withValues(alpha: 0.08),
+                        ],
+                      ),
                     ),
-                    child: const Icon(Icons.print_rounded,
-                        color: Color(0xFF34D399), size: 20),
+                    child: const Icon(
+                      Icons.print_rounded,
+                      color: Color(0xFF34D399),
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 13),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(context.l10n.printer,
-                            style: TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.w600)),
+                        Text(
+                          context.l10n.printer,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         const SizedBox(height: 3),
                         Text(
                           context.l10n.printerSubtitle,
                           style: TextStyle(
-                              fontSize: 12, color: context.palette.muted),
+                            fontSize: 12,
+                            color: context.palette.muted,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  Icon(Icons.chevron_right_rounded,
-                      color: context.palette.muted),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: context.palette.muted,
+                  ),
                 ],
               ),
             ),
@@ -2263,33 +2490,46 @@ class _ProfilePage extends StatelessWidget {
                     height: 44,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
-                      gradient: LinearGradient(colors: [
-                        const Color(0xFF10B981).withValues(alpha: 0.25),
-                        const Color(0xFF10B981).withValues(alpha: 0.08),
-                      ]),
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF10B981).withValues(alpha: 0.25),
+                          const Color(0xFF10B981).withValues(alpha: 0.08),
+                        ],
+                      ),
                     ),
-                    child: const Icon(Icons.storefront_rounded,
-                        color: Color(0xFF34D399), size: 20),
+                    child: const Icon(
+                      Icons.storefront_rounded,
+                      color: Color(0xFF34D399),
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 13),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(context.l10n.storeMode,
-                            style: TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.w600)),
+                        Text(
+                          context.l10n.storeMode,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         const SizedBox(height: 3),
                         Text(
                           context.l10n.storeModeSubtitle,
                           style: TextStyle(
-                              fontSize: 12, color: context.palette.muted),
+                            fontSize: 12,
+                            color: context.palette.muted,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  Icon(Icons.chevron_right_rounded,
-                      color: context.palette.muted),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: context.palette.muted,
+                  ),
                 ],
               ),
             ),
@@ -2319,33 +2559,46 @@ class _ProfilePage extends StatelessWidget {
                     height: 44,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
-                      gradient: LinearGradient(colors: [
-                        const Color(0xFF10B981).withValues(alpha: 0.25),
-                        const Color(0xFF10B981).withValues(alpha: 0.08),
-                      ]),
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF10B981).withValues(alpha: 0.25),
+                          const Color(0xFF10B981).withValues(alpha: 0.08),
+                        ],
+                      ),
                     ),
-                    child: const Icon(Icons.hub_rounded,
-                        color: Color(0xFF34D399), size: 20),
+                    child: const Icon(
+                      Icons.hub_rounded,
+                      color: Color(0xFF34D399),
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 13),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(context.l10n.channelsTitle,
-                            style: TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.w600)),
+                        Text(
+                          context.l10n.channelsTitle,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         const SizedBox(height: 3),
                         Text(
                           context.l10n.channelsSubtitle,
                           style: TextStyle(
-                              fontSize: 12, color: context.palette.muted),
+                            fontSize: 12,
+                            color: context.palette.muted,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  Icon(Icons.chevron_right_rounded,
-                      color: context.palette.muted),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: context.palette.muted,
+                  ),
                 ],
               ),
             ),
@@ -2377,33 +2630,46 @@ class _ProfilePage extends StatelessWidget {
                     height: 44,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
-                      gradient: LinearGradient(colors: [
-                        const Color(0xFF10B981).withValues(alpha: 0.25),
-                        const Color(0xFF10B981).withValues(alpha: 0.08),
-                      ]),
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF10B981).withValues(alpha: 0.25),
+                          const Color(0xFF10B981).withValues(alpha: 0.08),
+                        ],
+                      ),
                     ),
-                    child: const Icon(Icons.account_balance_wallet_rounded,
-                        color: Color(0xFF34D399), size: 20),
+                    child: const Icon(
+                      Icons.account_balance_wallet_rounded,
+                      color: Color(0xFF34D399),
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 13),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(context.l10n.onchainTitle,
-                            style: TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.w600)),
+                        Text(
+                          context.l10n.onchainTitle,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         const SizedBox(height: 3),
                         Text(
                           context.l10n.onchainSubtitle,
                           style: TextStyle(
-                              fontSize: 12, color: context.palette.muted),
+                            fontSize: 12,
+                            color: context.palette.muted,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  Icon(Icons.chevron_right_rounded,
-                      color: context.palette.muted),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: context.palette.muted,
+                  ),
                 ],
               ),
             ),
@@ -2424,62 +2690,75 @@ class _ProfilePage extends StatelessWidget {
           // di build testnet, sejajar dengan listener node yang
           // juga hanya dipasang di testnet.
           if (isTestnet)
-          GestureDetector(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => OfflineSpikeScreen(
-                  lspService: lspService,
-                  bridge: offlineBridge,
+            GestureDetector(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => OfflineSpikeScreen(
+                    lspService: lspService,
+                    bridge: offlineBridge,
+                  ),
+                ),
+              ),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: context.palette.card,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: context.palette.border),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFF10B981).withValues(alpha: 0.25),
+                            const Color(0xFF10B981).withValues(alpha: 0.08),
+                          ],
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.bluetooth_rounded,
+                        color: Color(0xFF34D399),
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 13),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            context.l10n.offlineSpike,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            context.l10n.offlineSpikeSubtitle,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: context.palette.muted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: context.palette.muted,
+                    ),
+                  ],
                 ),
               ),
             ),
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: context.palette.card,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: context.palette.border),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      gradient: LinearGradient(colors: [
-                        const Color(0xFF10B981).withValues(alpha: 0.25),
-                        const Color(0xFF10B981).withValues(alpha: 0.08),
-                      ]),
-                    ),
-                    child: const Icon(Icons.bluetooth_rounded,
-                        color: Color(0xFF34D399), size: 20),
-                  ),
-                  const SizedBox(width: 13),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(context.l10n.offlineSpike,
-                            style: TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 3),
-                        Text(
-                          context.l10n.offlineSpikeSubtitle,
-                          style: TextStyle(
-                              fontSize: 12, color: context.palette.muted),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.chevron_right_rounded,
-                      color: context.palette.muted),
-                ],
-              ),
-            ),
-          ),
           // Baris Bagikan Log — kirim berkas log node (ldk_node.log)
           // lewat share sheet untuk membantu pemeriksaan masalah,
           // pola yang sama seperti fitur share logs di Phoenix.
@@ -2500,33 +2779,46 @@ class _ProfilePage extends StatelessWidget {
                     height: 44,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
-                      gradient: LinearGradient(colors: [
-                        const Color(0xFF10B981).withValues(alpha: 0.25),
-                        const Color(0xFF10B981).withValues(alpha: 0.08),
-                      ]),
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF10B981).withValues(alpha: 0.25),
+                          const Color(0xFF10B981).withValues(alpha: 0.08),
+                        ],
+                      ),
                     ),
-                    child: const Icon(Icons.share_rounded,
-                        color: Color(0xFF34D399), size: 20),
+                    child: const Icon(
+                      Icons.share_rounded,
+                      color: Color(0xFF34D399),
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 13),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(context.l10n.shareLog,
-                            style: TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.w600)),
+                        Text(
+                          context.l10n.shareLog,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         const SizedBox(height: 3),
                         Text(
                           context.l10n.shareLogSubtitle,
                           style: TextStyle(
-                              fontSize: 12, color: context.palette.muted),
+                            fontSize: 12,
+                            color: context.palette.muted,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  Icon(Icons.chevron_right_rounded,
-                      color: context.palette.muted),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: context.palette.muted,
+                  ),
                 ],
               ),
             ),
@@ -2550,23 +2842,28 @@ class _ProfilePage extends StatelessWidget {
                 color: const Color(0xFFF59E0B).withValues(alpha: 0.10),
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                    color: const Color(0xFFF59E0B).withValues(alpha: 0.30)),
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.30),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(context.l10n.noPhraseTitle,
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: context.palette.warningText)),
+                  Text(
+                    context.l10n.noPhraseTitle,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: context.palette.warningText,
+                    ),
+                  ),
                   const SizedBox(height: 6),
                   Text(
                     context.l10n.noPhraseBody,
                     style: TextStyle(
-                        fontSize: 12.5,
-                        color: context.palette.label,
-                        height: 1.4),
+                      fontSize: 12.5,
+                      color: context.palette.label,
+                      height: 1.4,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   ElevatedButton(
@@ -2576,8 +2873,7 @@ class _ProfilePage extends StatelessWidget {
                         builder: (ctx) => AlertDialog(
                           backgroundColor: ctx.palette.card,
                           title: Text(ctx.l10n.createNewWalletTitle),
-                          content: Text(
-                              ctx.l10n.deleteOldWalletBody),
+                          content: Text(ctx.l10n.deleteOldWalletBody),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(ctx, false),
@@ -2585,9 +2881,10 @@ class _ProfilePage extends StatelessWidget {
                             ),
                             TextButton(
                               onPressed: () => Navigator.pop(ctx, true),
-                              child: Text(ctx.l10n.deleteAndCreate,
-                                  style:
-                                      TextStyle(color: Color(0xFFEF4444))),
+                              child: Text(
+                                ctx.l10n.deleteAndCreate,
+                                style: TextStyle(color: Color(0xFFEF4444)),
+                              ),
                             ),
                           ],
                         ),
@@ -2680,10 +2977,12 @@ class _UpdateCheckTileState extends State<_UpdateCheckTile> {
               height: 44,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(14),
-                gradient: LinearGradient(colors: [
-                  const Color(0xFF10B981).withValues(alpha: 0.25),
-                  const Color(0xFF10B981).withValues(alpha: 0.08),
-                ]),
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF10B981).withValues(alpha: 0.25),
+                    const Color(0xFF10B981).withValues(alpha: 0.08),
+                  ],
+                ),
               ),
               child: _checking
                   ? const Center(
@@ -2696,31 +2995,39 @@ class _UpdateCheckTileState extends State<_UpdateCheckTile> {
                         ),
                       ),
                     )
-                  : const Icon(Icons.system_update_alt_rounded,
-                      color: Color(0xFF34D399), size: 20),
+                  : const Icon(
+                      Icons.system_update_alt_rounded,
+                      color: Color(0xFF34D399),
+                      size: 20,
+                    ),
             ),
             const SizedBox(width: 13),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(context.l10n.updateCheckTitle,
-                      style: const TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w600)),
+                  Text(
+                    context.l10n.updateCheckTitle,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 3),
                   Text(
                     _checking
                         ? context.l10n.updateChecking
                         : context.l10n.updateCheckSubtitle,
                     style: TextStyle(
-                        fontSize: 12, color: context.palette.muted),
+                      fontSize: 12,
+                      color: context.palette.muted,
+                    ),
                   ),
                 ],
               ),
             ),
             if (!_checking)
-              Icon(Icons.chevron_right_rounded,
-                  color: context.palette.muted),
+              Icon(Icons.chevron_right_rounded, color: context.palette.muted),
           ],
         ),
       ),
@@ -2738,15 +3045,17 @@ class _CommunityCard extends StatelessWidget {
   Future<void> _open(BuildContext context, String url) async {
     var opened = false;
     try {
-      opened = await launchUrl(Uri.parse(url),
-          mode: LaunchMode.externalApplication);
+      opened = await launchUrl(
+        Uri.parse(url),
+        mode: LaunchMode.externalApplication,
+      );
     } catch (_) {
       opened = false;
     }
     if (!opened && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.communityOpenFailed)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.communityOpenFailed)));
     }
   }
 
@@ -2756,15 +3065,19 @@ class _CommunityCard extends StatelessWidget {
       child: Text(
         text,
         style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: context.palette.muted),
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: context.palette.muted,
+        ),
       ),
     );
   }
 
-  Widget _linkRow(BuildContext context,
-      {required IconData icon, required CommunityLink link}) {
+  Widget _linkRow(
+    BuildContext context, {
+    required IconData icon,
+    required CommunityLink link,
+  }) {
     return InkWell(
       onTap: () => _open(context, link.url),
       borderRadius: BorderRadius.circular(10),
@@ -2775,12 +3088,19 @@ class _CommunityCard extends StatelessWidget {
             Icon(icon, size: 18, color: const Color(0xFF34D399)),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(link.label,
-                  style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w600)),
+              child: Text(
+                link.label,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
-            Icon(Icons.open_in_new_rounded,
-                size: 15, color: context.palette.muted),
+            Icon(
+              Icons.open_in_new_rounded,
+              size: 15,
+              color: context.palette.muted,
+            ),
           ],
         ),
       ),
@@ -2807,18 +3127,27 @@ class _CommunityCard extends StatelessWidget {
                 height: 44,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
-                  gradient: LinearGradient(colors: [
-                    const Color(0xFF10B981).withValues(alpha: 0.25),
-                    const Color(0xFF10B981).withValues(alpha: 0.08),
-                  ]),
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF10B981).withValues(alpha: 0.25),
+                      const Color(0xFF10B981).withValues(alpha: 0.08),
+                    ],
+                  ),
                 ),
-                child: const Icon(Icons.groups_rounded,
-                    color: Color(0xFF34D399), size: 20),
+                child: const Icon(
+                  Icons.groups_rounded,
+                  color: Color(0xFF34D399),
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 13),
-              Text(context.l10n.communityTitle,
-                  style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w700)),
+              Text(
+                context.l10n.communityTitle,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ],
           ),
           _groupLabel(context, context.l10n.communityWebsiteLabel),
@@ -2872,13 +3201,14 @@ class _HistoryPage extends StatelessWidget {
   /// "tidak ada transaksi pada periode ini".
   final String emptyMessage;
 
-  const _HistoryPage(
-      {required this.payments,
-      required this.rowBuilder,
-      this.onExport,
-      this.onFilter,
-      required this.filterLabel,
-      required this.emptyMessage});
+  const _HistoryPage({
+    required this.payments,
+    required this.rowBuilder,
+    this.onExport,
+    this.onFilter,
+    required this.filterLabel,
+    required this.emptyMessage,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -2893,14 +3223,21 @@ class _HistoryPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(context.l10n.history,
-                        style: TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.w800)),
+                    Text(
+                      context.l10n.history,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                     SizedBox(height: 2),
-                    Text(filterLabel,
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: context.palette.secondary)),
+                    Text(
+                      filterLabel,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.palette.secondary,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -2927,15 +3264,22 @@ class _HistoryPage extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('\u21BA',
-                            style: TextStyle(
-                                fontSize: 44, color: Color(0xFF34D399))),
+                        Text(
+                          '\u21BA',
+                          style: TextStyle(
+                            fontSize: 44,
+                            color: Color(0xFF34D399),
+                          ),
+                        ),
                         SizedBox(height: 14),
-                        Text(emptyMessage,
-                            style: TextStyle(
-                                fontSize: 13,
-                                color: context.palette.secondary),
-                            textAlign: TextAlign.center),
+                        Text(
+                          emptyMessage,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: context.palette.secondary,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ],
                     ),
                   ),
