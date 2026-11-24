@@ -1156,14 +1156,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // Layar awal bergaya splash: logo + partikel + tagline,
       // tampil selama node LDK + LSPS2 diinisialisasi. Tawaran
       // lewati-ke-offline (G1.1) mengikuti gerbang yang sama
-      // dengan tombol di layar gagal boot (testnet saja) dan
-      // disembunyikan selama boot yang berjalan sudah offline.
-      // CATATAN SYNC MAINNET (G1): pembukaan gerbang di mainnet
-      // wajib mencakup tawaran splash ini juga.
+      // dengan tombol di layar gagal boot dan disembunyikan
+      // selama boot yang berjalan sudah offline. Gerbang Mode
+      // Offline dibuka ke mainnet atas keputusan soak NUX
+      // 25 Nov 2026 (sudah diuji + lolos).
       return SplashScreen(
-        onSkipToOffline: AppConfig.isTestnet && !_bootOfflineMode
-            ? _skipToOfflineBoot
-            : null,
+        onSkipToOffline:
+            !_bootOfflineMode ? _skipToOfflineBoot : null,
       );
     }
     if (_bootError != null) {
@@ -1214,31 +1213,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ),
                   child: Text(context.l10n.bootFailedRetry),
                 ),
-                // Kondisi ekstrem tanpa internet (spike offline,
-                // testnet saja): boot ulang dalam mode offline — node
-                // berjalan tanpa LSP/LSPS2 supaya peering lokal dan
-                // pembayaran lewat channel yang sudah ada tetap bisa.
-                if (AppConfig.isTestnet) ...[
-                  const SizedBox(height: 12),
-                  OutlinedButton(
-                    onPressed: () {
-                      setState(() {
-                        _booting = true;
-                        _bootError = null;
-                      });
-                      _boot(offlineMode: true);
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF10B981),
-                      side: const BorderSide(color: Color(0xFF10B981)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
+                // Kondisi ekstrem tanpa internet: boot ulang dalam
+                // mode offline — node berjalan tanpa LSP/LSPS2 supaya
+                // peering lokal dan pembayaran lewat channel yang
+                // sudah ada tetap bisa.
+                const SizedBox(height: 12),
+                OutlinedButton(
+                  onPressed: () {
+                    setState(() {
+                      _booting = true;
+                      _bootError = null;
+                    });
+                    _boot(offlineMode: true);
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF10B981),
+                    side: const BorderSide(color: Color(0xFF10B981)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                    child: Text(context.l10n.bootOfflineButton),
                   ),
-                ],
+                  child: Text(context.l10n.bootOfflineButton),
+                ),
               ],
             ),
           ),
@@ -2708,13 +2705,12 @@ class _ProfilePage extends StatelessWidget {
           ),
           // Baris Mode Offline — tuas produksi sesi jembatan mode
           // gabung (PR B rancangan tuas Mode Offline): subjudulnya
-          // memantulkan keadaan sesi secara langsung. Baris ini
-          // hanya tampil di build testnet, sama seperti baris Uji
-          // Offline di bawahnya, sampai keputusan soak mainnet
-          // diambil. Layar Uji Offline tetap tinggal sebagai
-          // permukaan diagnostik testnet.
-          if (isTestnet)
-            OfflineModeRow(lspService: lspService, bridge: offlineBridge),
+          // memantulkan keadaan sesi secara langsung. Gerbang
+          // testnet dibuka ke mainnet atas keputusan soak NUX
+          // 25 Nov 2026 (sudah diuji + lolos). Layar Uji Offline
+          // di bawahnya tetap tinggal sebagai permukaan
+          // diagnostik testnet.
+          OfflineModeRow(lspService: lspService, bridge: offlineBridge),
           // Baris Uji Offline — spike jembatan Bluetooth antar-HP
           // (tahap 1: dua node tersambung sebagai peer tanpa
           // internet). Layar eksperimental khusus testnet; tidak

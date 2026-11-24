@@ -88,20 +88,19 @@ class LspService {
       // dan sync header dari electrs gagal.
       network: isTestnet ? Network.nusacoinTestnet : Network.nusacoin,
       storageDirPath: storagePath,
-      // Khusus testnet (spike offline): node juga mendengarkan di
-      // localhost supaya jembatan Bluetooth bisa menyambungkan
-      // peer masuk dari HP lain di dekatnya (lihat
-      // offline_bridge.dart). Tanpa announcementAddresses alamat
-      // ini tidak diumumkan ke jaringan gossip, dan mainnet tidak
-      // berubah sama sekali.
-      listeningAddresses: isTestnet
-          ? [
-              SocketAddress.tcpIpV4(
-                addr: U8Array4(Uint8List.fromList([127, 0, 0, 1])),
-                port: OfflineBridgeService.nodeListenPort,
-              ),
-            ]
-          : null,
+      // Node juga mendengarkan di localhost supaya jembatan
+      // Bluetooth bisa menyambungkan peer masuk dari HP lain di
+      // dekatnya (lihat offline_bridge.dart). Tanpa
+      // announcementAddresses alamat ini tidak diumumkan ke
+      // jaringan gossip — tidak membuka node ke publik. Dulu
+      // khusus testnet; keputusan soak NUX 25 Nov 2026 (sudah
+      // diuji + lolos) membuka Mode Offline ke mainnet.
+      listeningAddresses: [
+        SocketAddress.tcpIpV4(
+          addr: U8Array4(Uint8List.fromList([127, 0, 0, 1])),
+          port: OfflineBridgeService.nodeListenPort,
+        ),
+      ],
       trustedPeers0Conf: [PublicKey(hex: lspNodeId)],
       probingLiquidityLimitMultiplier: BigInt.from(3),
       // Mode offline: node boleh start walaupun electrs tidak
