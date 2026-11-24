@@ -18,6 +18,11 @@ const _peerId =
 
 OutPoint _fundingTxo(String txid) => OutPoint(txid: Txid(hash: txid), vout: 0);
 
+/// Bentuk pendek id node seperti `_shortId` di layar (10 awal …
+/// 6 akhir) — dipakai ekspektasi tes id node kartu LSP.
+String _shortNodeId(String hex) =>
+    '${hex.substring(0, 10)}…${hex.substring(hex.length - 6)}';
+
 ChannelDetails _channel(
   String counterpartyHex, {
   bool usable = true,
@@ -1236,6 +1241,58 @@ void main() {
       );
       expect(tester.takeException(), isNull);
       expect(find.textContaining('Dibuka'), findsNothing);
+    });
+
+    testWidgets('kartu channel LSP menampilkan id node di bawah '
+        'judul', (tester) async {
+      await _pumpScreen(
+        tester,
+        service: _FakeLspService(
+          channels: [
+            _channel(
+              AppConfig.lspNodeId,
+              fundingTxo: _fundingTxo('dd' * 32),
+              confirmations: 6,
+              confirmationsRequired: 6,
+            ),
+          ],
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      final shortId = _shortNodeId(AppConfig.lspNodeId);
+      expect(find.text(shortId), findsOneWidget);
+      // Di bawah judul "Via LSP" (di atas baris status "Siap").
+      expect(
+        tester.getTopLeft(find.text(shortId)).dy,
+        lessThan(tester.getTopLeft(find.text('Siap')).dy),
+      );
+    });
+
+    testWidgets('kartu channel LSP menunggu: id node di atas batang '
+        'kemajuan', (tester) async {
+      await _pumpScreen(
+        tester,
+        service: _FakeLspService(
+          channels: [
+            _channel(
+              AppConfig.lspNodeId,
+              usable: false,
+              fundingTxo: _fundingTxo('dd' * 32),
+              confirmations: 2,
+              confirmationsRequired: 6,
+            ),
+          ],
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      final shortId = _shortNodeId(AppConfig.lspNodeId);
+      expect(find.text(shortId), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text(shortId)).dy,
+        lessThan(
+          tester.getTopLeft(find.byType(LinearProgressIndicator)).dy,
+        ),
+      );
     });
   });
 }

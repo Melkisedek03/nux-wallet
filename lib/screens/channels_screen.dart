@@ -1408,6 +1408,22 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
               ),
             ],
           ),
+          // ID node lawan pada kartu LSP (NUX, 25 Nov 2026): kartu
+          // direct sudah menampilkan id node (di bawah label jenis),
+          // kartu LSP belum — tanpa ini pengguna tidak bisa melihat
+          // channel ini terhubung ke node mana. Duduk di bawah judul
+          // "Via LSP" dan di atas batang kemajuan (bila ada) — gaya
+          // persis id node channel direct (11, monospace, redup).
+          if (isLsp) ...[
+            const SizedBox(height: 4),
+            Text(
+              _shortId(ch.counterpartyNodeId.hex),
+              style: TextStyle(
+                  fontSize: 11,
+                  fontFamily: 'monospace',
+                  color: context.palette.muted),
+            ),
+          ],
           // Status di barisnya sendiri (R3): sebelumnya status
           // duduk di Row judul tanpa batas lebar — teks status
           // mengambil lebar intrinsiknya duluan, mendesak label
