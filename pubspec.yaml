@@ -74,6 +74,13 @@ dependencies:
   # dari kartu Komunitas di tab Profil.
   url_launcher: ^6.3.2
 
+  # Tampilkan kebijakan privasi (di-host di GitHub Pages) sebagai
+  # WebView di dalam aplikasi — layar persetujuan sekali sesudah
+  # instalasi (centangan aktif hanya sesudah gulir sampai bawah)
+  # dan tautan baca di kaki tab Profil. Lihat
+  # lib/screens/privacy_policy_screen.dart.
+  webview_flutter: ^4.13.0
+
   # Pemindai QR invoice lewat kamera (layar Kirim → tombol Scan QR).
   mobile_scanner: ^7.4.2
   image_picker: ^1.2.4

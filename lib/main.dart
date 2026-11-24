@@ -28,6 +28,7 @@ import 'screens/onchain_screen.dart';
 import 'screens/offline_spike_screen.dart';
 import 'screens/offline_mode_screen.dart';
 import 'screens/printer_settings_screen.dart';
+import 'screens/privacy_policy_screen.dart';
 import 'screens/store_mode_screen.dart';
 import 'screens/transaction_detail_screen.dart';
 import 'services/bolt12_service.dart';
@@ -40,6 +41,7 @@ import 'services/offline_mode_utils.dart';
 import 'services/path_ready_watcher.dart';
 import 'services/csv_export.dart';
 import 'services/history_filter.dart';
+import 'services/privacy_consent.dart';
 import 'services/update_service.dart';
 import 'services/wallet_seed_store.dart';
 import 'unit_controller.dart';
@@ -756,18 +758,36 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // Dompet baru dilewati — layar frasa backup didahulukan;
       // pemeriksaan berjalan pada buka berikutnya.
       if (!_isNewWallet) _cekUpdateOtomatis();
-      if (_isNewWallet && mounted) {
+      if (mounted) {
+        final wasNewWallet = _isNewWallet;
         _isNewWallet = false;
-        // Dompet baru: tampilkan frasa backup sekali sebelum user
-        // memakai dompet — frasa ini satu-satunya cadangan dananya.
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted || _mnemonicWords == null) return;
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => BackupScreen(mnemonic: _mnemonicWords!),
-            ),
-          );
+        // Gerbang persetujuan kebijakan privasi (sekali): tampil
+        // sesudah boot, sebelum layar frasa backup dompet baru —
+        // user wajib gulir kebijakan sampai bawah baru centangan
+        // aktif (keputusan NUX 25 Nov 2026). Pengguna lama yang
+        // memperbarui aplikasi melihatnya sekali juga.
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if (!mounted) return;
+          final accepted = await PrivacyConsentStore.isAccepted();
+          if (!accepted && mounted) {
+            final ok = await Navigator.push<bool>(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const PrivacyPolicyScreen.consent(),
+              ),
+            );
+            if (ok == true) await PrivacyConsentStore.setAccepted();
+          }
+          if (wasNewWallet && mounted && _mnemonicWords != null) {
+            // Dompet baru: tampilkan frasa backup sekali sebelum user
+            // memakai dompet — frasa ini satu-satunya cadangan dananya.
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => BackupScreen(mnemonic: _mnemonicWords!),
+              ),
+            );
+          }
         });
       }
     } catch (e) {
@@ -1642,6 +1662,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               onRestoreWallet: _restoreWalletWithPhrase,
               onShareLog: _shareNodeLog,
               onCheckUpdate: _cekUpdateManual,
+              onOpenPrivacyPolicy: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const PrivacyPolicyScreen.read(),
+                  ),
+                );
+              },
               onOpenStoreMode: () {
                 Navigator.push(
                   context,
@@ -1975,6 +2003,9 @@ class _ProfilePage extends StatelessWidget {
   /// memakai node dompet yang sama.
   final VoidCallback onOpenStoreMode;
 
+  /// Buka kebijakan privasi (mode baca) — tautan di kaki halaman.
+  final VoidCallback onOpenPrivacyPolicy;
+
   const _ProfilePage({
     required this.mnemonicWords,
     required this.legacyWallet,
@@ -1985,6 +2016,7 @@ class _ProfilePage extends StatelessWidget {
     required this.onShareLog,
     required this.onCheckUpdate,
     required this.onOpenStoreMode,
+    required this.onOpenPrivacyPolicy,
   });
 
   /// Dialog pilih bahasa — dua opsi, yang aktif bertanda centang.
@@ -2920,6 +2952,20 @@ class _ProfilePage extends StatelessWidget {
           // adalah nomor run CI pembuat APK-nya, jadi build yang
           // terpasang bisa dicocokkan dengan run pembuatnya.
           const Center(child: _AppVersionLabel()),
+          // Tautan Kebijakan Privasi di kaki halaman — baca ulang
+          // kebijakan di WebView dalam aplikasi (tanpa centangan).
+          Center(
+            child: TextButton(
+              onPressed: onOpenPrivacyPolicy,
+              child: Text(
+                context.l10n.privacyPolicy,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: context.palette.muted,
+                ),
+              ),
+            ),
+          ),
           const SizedBox(height: 80),
         ],
       ),

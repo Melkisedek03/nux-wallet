@@ -1409,5 +1409,12 @@
   },
   "closeForceDaysNote": "Di jaringan saat ini, 144 blok ≈ 10 hari.",
   "closeForceButton": "Tutup Paksa",
-  "closeForceStarted": "Tutup paksa dimulai. Dana akan tersapu ke dompet on-chain sesudah jeda pengaman berakhir."
+  "closeForceStarted": "Tutup paksa dimulai. Dana akan tersapu ke dompet on-chain sesudah jeda pengaman berakhir.",
+  "privacyPolicy": "Kebijakan Privasi",
+  "privacyConsentCheck": "Saya telah membaca dan menyetujui Kebijakan Privasi",
+  "privacyConsentContinue": "Lanjut",
+  "privacyScrollHint": "Gulir sampai ke bawah untuk mengaktifkan centangan",
+  "privacyLoadFailed": "Kebijakan privasi gagal dimuat. Periksa koneksi internet Anda lalu coba lagi.",
+  "privacyRetry": "Muat ulang",
+  "privacySkipForNow": "Lewati untuk sekarang"
 }

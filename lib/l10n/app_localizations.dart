@@ -4711,6 +4711,48 @@ abstract class AppLocalizations {
   /// In id, this message translates to:
   /// **'Tutup paksa dimulai. Dana akan tersapu ke dompet on-chain sesudah jeda pengaman berakhir.'**
   String get closeForceStarted;
+
+  /// No description provided for @privacyPolicy.
+  ///
+  /// In id, this message translates to:
+  /// **'Kebijakan Privasi'**
+  String get privacyPolicy;
+
+  /// No description provided for @privacyConsentCheck.
+  ///
+  /// In id, this message translates to:
+  /// **'Saya telah membaca dan menyetujui Kebijakan Privasi'**
+  String get privacyConsentCheck;
+
+  /// No description provided for @privacyConsentContinue.
+  ///
+  /// In id, this message translates to:
+  /// **'Lanjut'**
+  String get privacyConsentContinue;
+
+  /// No description provided for @privacyScrollHint.
+  ///
+  /// In id, this message translates to:
+  /// **'Gulir sampai ke bawah untuk mengaktifkan centangan'**
+  String get privacyScrollHint;
+
+  /// No description provided for @privacyLoadFailed.
+  ///
+  /// In id, this message translates to:
+  /// **'Kebijakan privasi gagal dimuat. Periksa koneksi internet Anda lalu coba lagi.'**
+  String get privacyLoadFailed;
+
+  /// No description provided for @privacyRetry.
+  ///
+  /// In id, this message translates to:
+  /// **'Muat ulang'**
+  String get privacyRetry;
+
+  /// No description provided for @privacySkipForNow.
+  ///
+  /// In id, this message translates to:
+  /// **'Lewati untuk sekarang'**
+  String get privacySkipForNow;
 }
 
 class _AppLocalizationsDelegate

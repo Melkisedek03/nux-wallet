@@ -2623,4 +2623,27 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get closeForceStarted =>
       'Force close has started. Funds will be swept to your on-chain wallet after the safety delay ends.';
+
+  @override
+  String get privacyPolicy => 'Privacy Policy';
+
+  @override
+  String get privacyConsentCheck =>
+      'I have read and agree to the Privacy Policy';
+
+  @override
+  String get privacyConsentContinue => 'Continue';
+
+  @override
+  String get privacyScrollHint => 'Scroll to the bottom to enable the checkbox';
+
+  @override
+  String get privacyLoadFailed =>
+      'The privacy policy failed to load. Check your internet connection and try again.';
+
+  @override
+  String get privacyRetry => 'Reload';
+
+  @override
+  String get privacySkipForNow => 'Skip for now';
 }

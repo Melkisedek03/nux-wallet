@@ -1409,5 +1409,12 @@
   },
   "closeForceDaysNote": "On the current network, 144 blocks ≈ 10 days.",
   "closeForceButton": "Force Close",
-  "closeForceStarted": "Force close has started. Funds will be swept to your on-chain wallet after the safety delay ends."
+  "closeForceStarted": "Force close has started. Funds will be swept to your on-chain wallet after the safety delay ends.",
+  "privacyPolicy": "Privacy Policy",
+  "privacyConsentCheck": "I have read and agree to the Privacy Policy",
+  "privacyConsentContinue": "Continue",
+  "privacyScrollHint": "Scroll to the bottom to enable the checkbox",
+  "privacyLoadFailed": "The privacy policy failed to load. Check your internet connection and try again.",
+  "privacyRetry": "Reload",
+  "privacySkipForNow": "Skip for now"
 }
