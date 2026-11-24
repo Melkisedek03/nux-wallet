@@ -1,5 +1,6 @@
-Perbaikan keamanan dompet dan Kelola Channel:
-- Seed dan frasa pemulihan kini disimpan di penyimpanan aman perangkat (Android Keystore), bukan lagi berkas biasa — dompet yang sudah ada dipindahkan otomatis saat aplikasi dibuka
-- Dialog tutup-paksa kini menampilkan angka konkret: delay 144 blok, perkiraan terbuka sekitar blok N, dan catatan ~10 hari di mainnet
-- Halaman Dompet On-chain kini menampilkan progres deposit: nominal, konfirmasi x/6, dan txid (ketuk untuk salin)
-- Kartu channel diperbaiki: status tidak lagi melipat, ada status "Menutup…" saat tutup berjalan, dan hitungan konfirmasi tidak melebihi kebutuhan
+Perbaikan Mode Offline dan kartu channel:
+- Kartu channel yang masih menunggu kini menampilkan bilah progres konfirmasi hijau di bawah baris status
+- Splash kini menawarkan "Lanjutkan tanpa internet" sesudah 20 detik tersambung, tanpa menunggu boot gagal dulu
+- Sesi yang dibuka tanpa internet kini ditandai chip di Beranda, di bawah kartu saldo
+- Kegagalan tersambung kini menampilkan pesan jelas (mis. Bluetooth atau Lokasi mati) beserta solusinya
+- Layar Terima kini menjelaskan kenapa Kode Bayar Statis tidak bisa dipakai tanpa internet

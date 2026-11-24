@@ -1,5 +1,6 @@
-Wallet security and Channel Management fixes:
-- The seed and recovery phrase are now stored in the device secure storage (Android Keystore), no longer in plain files — existing wallets are moved automatically when the app opens
-- The force-close dialog now shows concrete numbers: a 144-block delay, an estimated unlock around block N, and a ~10-day note on mainnet
-- The On-chain Wallet page now shows deposit progress: amount, x/6 confirmations, and the txid (tap to copy)
-- Channel cards fixed: status no longer folds, a "Closing…" state shows while a close is in flight, and confirmation counts never exceed the requirement
+Offline Mode and channel card fixes:
+- Pending channel cards now show a green confirmation progress bar under the status line
+- The splash now offers "Continue without internet" after 20 seconds of connecting, without waiting for the boot to fail first
+- Sessions booted without internet are now marked by a chip on the Home screen, under the balance card
+- Connection failures now show a clear message (e.g. Bluetooth or Location off) with what to do about it
+- The Receive screen now explains why the Static Payment Code cannot be used without internet
