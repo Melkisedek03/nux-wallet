@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ELNUX Privacy Policy</title>
+<style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.6;color:#1a1a1a;max-width:720px;margin:0 auto;padding:24px 20px 48px}h1{font-size:1.6em;border-bottom:1px solid #ddd;padding-bottom:.3em}h2{font-size:1.25em;margin-top:1.5em}ul{padding-left:1.4em}li{margin:.35em 0}a{color:#0b6e4f}.lang{font-size:.9em;color:#555;margin-bottom:1em}</style>
+</head>
+<body>
+<h1>ELNUX Privacy Policy</h1>
+<p><a href="https://nusanian.github.io/nux-wallet/kebijakan-privasi-elnux.html">Versi Bahasa Indonesia</a></p>
+<p><strong>Effective date:</strong> 29 October 2026</p>
+<p><strong>Developer:</strong> The ELNUX development team (Nusanian)
+<strong>Contact:</strong> taobotapp@gmail.com</p>
+<p>This document explains what data the ELNUX app collects, stores, and sends, and what data we never touch. ELNUX is a self-custodial Lightning Network wallet for Nusacoin (NUX).</p>
+<h2>1. What self-custody means, and why it matters for your privacy</h2>
+<p>Self-custody means your wallet keys are in your hands, not ours.</p>
+<ul>
+<li>Your 12-word backup phrase and your wallet keys are created and stored <strong>only on your device</strong>.</li>
+<li>We <strong>do not hold, do not keep a copy of, and cannot recover</strong> your phrase or your keys. If you lose your phrase and lose or break your device, your funds cannot be recovered by anyone, including us.</li>
+<li>We <strong>do not hold your funds</strong>. Your funds are in your Lightning channels and, when a channel is closed, on the Nusacoin blockchain — not in an account with us.</li>
+</ul>
+<p>Because of this, most of the "data" in this policy never reaches us at all: it only exists on your device.</p>
+<h2>2. Data we do NOT collect</h2>
+<p>ELNUX does not ask you to create an account, and we do not collect:</p>
+<ul>
+<li>your name, email address, phone number, or home address;</li>
+<li>your photos, contacts, location, or other device data that is not needed;</li>
+<li>any account password — ELNUX has no account password, because there is no account.</li>
+</ul>
+<p>We also do not use advertising trackers, do not run third-party analytics, and do not sell any data to anyone, because we do not hold your personal data to sell.</p>
+<h2>3. Data stored only on your device</h2>
+<p>The following is stored locally on your device, in the app's private storage area, which other apps cannot normally access:</p>
+<ul>
+<li><strong>Your backup phrase and wallet seed.</strong> The 12-word phrase is stored as a separate file, and the 64-byte seed derived from it is stored as a separate file. Both exist only on your device and are never sent to any server.</li>
+<li><strong>Lightning channel data.</strong> Channel status, payment history, and your Lightning node data are stored on your device.</li>
+<li><strong>App settings.</strong> Your dark/light theme choice, your language choice, and — if you later choose one — your chosen LSP profile. These settings are stored on your device.</li>
+<li><strong>Balance and history.</strong> Your balance and payment history are shown from node data on your device, not from a server account.</li>
+</ul>
+<p>Uninstalling the app generally deletes this local data from your device. Warning: uninstalling without backing up your phrase permanently loses access to your funds (see section 7).</p>
+<h2>4. Data sent so the wallet can work</h2>
+<p>For the wallet to send and receive Lightning payments, it must connect to two kinds of servers. This is the only data sent off your device, and it is only sent because you are using the wallet:</p>
+<h3>a. Lightning Service Provider (LSP)</h3>
+<p>By default, ELNUX connects to the official Nusacoin LSP. If in the future you choose another LSP from an official list or enter your own LSP, this data will go to the LSP you chose, not to the default LSP.</p>
+<p>What is sent to the LSP:</p>
+<ul>
+<li>your device's IP address (visible to any server you connect to over the internet, just like any website);</li>
+<li>your Lightning node's identity (its public key) and the data needed to open channels and route payments, including invoices you pay or receive and their amounts;</li>
+<li>the LSP service access token, if the LSP operator requires one.</li>
+</ul>
+<p>The LSP needs this data to open channels for you (including instant/JIT channels), forward payments, and return channel information to you. The LSP does not receive your phrase or your seed, and it cannot take funds from your channels merely by routing a payment.</p>
+<h3>b. Electrum server (blockchain data)</h3>
+<p>ELNUX uses an Electrum server to read Nusacoin blockchain data (for example block headers and transaction information related to your wallet), because a phone wallet does not download the entire blockchain.</p>
+<p>The Electrum server can see your IP address and the blockchain data requests your wallet sends. It does not receive your phrase or your seed.</p>
+<p>The current default server is the Electrum server operated together with the LSP above. If you later use a different LSP profile, the Electrum server used will be the one included in that profile.</p>
+<h2>5. Device permissions used by the app</h2>
+<p>ELNUX only requests the following permissions, each used only for its function:</p>
+<ul>
+<li><strong>Internet.</strong> To connect to the LSP and the Electrum server. Without it, the wallet cannot send or receive.</li>
+<li><strong>Camera.</strong> Only when you tap the Scan QR button, to read an invoice QR code. Camera images are processed on your device and are not sent anywhere.</li>
+<li><strong>Vibrate.</strong> To vibrate when a payment is received and when a payment is confirmed. No data is sent.</li>
+</ul>
+<p>In addition, ELNUX uses the clipboard only when you tap Paste or Copy yourself: pasting an invoice you copied, or copying an invoice or phrase you asked for. The app does not read the clipboard in the background and does not send clipboard contents to any server.</p>
+<p>ELNUX does not request access to location, microphone, contacts, photos, or files outside its own app storage area.</p>
+<h2>6. Third parties</h2>
+<p>Apart from the LSP and Electrum server in section 4, ELNUX does not send data to any other third party. There is no:</p>
+<ul>
+<li>analytics service;</li>
+<li>advertising network;</li>
+<li>cross-app tracker;</li>
+<li>service that buys or trades user data.</li>
+</ul>
+<p>If you later use a third-party LSP or Electrum server, that operator's privacy policy applies to the data you send to their servers. We recommend using only operators you trust.</p>
+<h2>7. Security and your responsibility</h2>
+<p>We designed ELNUX so that your keys never leave your device. But the safety of your funds also depends on you:</p>
+<ul>
+<li><strong>Back up your 12-word phrase somewhere safe and offline</strong> (for example written on paper and kept in a safe place). Never send your phrase to anyone, including us or anyone claiming to be technical support. Anyone who holds your phrase can take your funds.</li>
+<li><strong>Keep your device secure.</strong> A rooted, jailbroken, or shared device is easier to compromise. Keys on a compromised device are no longer safe, no matter what the app does.</li>
+<li><strong>Losing your phrase means losing your funds.</strong> There is no "forgot phrase" button, no recovery by email, and no backup on our servers.</li>
+<li><strong>Check before you pay.</strong> Lightning payments are instant and cannot be cancelled. ELNUX shows a confirmation dialog before paying, but the amount and destination remain your responsibility to check.</li>
+</ul>
+<p>Your phrase and seed are currently stored in the app's private storage area on your device. Moving key storage to the operating system's secure storage (Keychain on iOS / Keystore on Android) is planned as a further hardening step; until that hardening is complete, the statement above — that keys exist only on your device and are never sent — remains true, but you should not assume your keys are hardware-encrypted.</p>
+<h2>8. Retention and deletion</h2>
+<ul>
+<li>Local data on your device is kept while the app is installed and the wallet exists.</li>
+<li>The Restore Phrase feature permanently deletes the currently active wallet and all of its data before restoring a wallet from a new phrase. This deletion cannot be undone.</li>
+<li>Uninstalling the app generally deletes all local ELNUX data from your device, including the seed and phrase stored in the app. Back up your phrase before uninstalling.</li>
+<li>Because we do not store your personal data on a server, there is no "account" for us to delete on your behalf. To delete your local footprint, delete the app from your device after backing up your phrase. Server connection logs (for example IP address and connection time), if any exist, are operational logs of the LSP/Electrum server and are used only to run and secure the server, not for advertising or user profiling.</li>
+</ul>
+<h2>9. Children</h2>
+<p>ELNUX is intended for adult users who can legally hold crypto assets in their jurisdiction. We do not knowingly collect personal data from children under 13, because we do not collect personal data from anyone (section 2). A parent or guardian who learns that a minor is using ELNUX is asked to contact us using the contact above.</p>
+<h2>10. Changes to this policy</h2>
+<p>If this policy changes — for example because ELNUX adds LSP operators, adds features, or changes how data is handled — we will update the effective date above and announce it where this policy is published. Changes that reduce your privacy protection will be announced before they take effect. Continuing to use ELNUX after a change takes effect means you accept the updated policy.</p>
+<h2>11. Contact and your rights</h2>
+<p>Because ELNUX does not collect your personal data on a server, most of your privacy rights are exercised directly on your device: you can view, back up, and delete your data using the app and your device settings.</p>
+<p>For questions, requests, or reports about this policy, contact us at: taobotapp@gmail.com.</p>
+<p>If you are in a jurisdiction that grants rights to access, correct, or delete personal data, and you believe we hold your personal data (for example through an operator's server logs), send your request to the contact above describing the data you mean. We will respond in accordance with applicable law.</p>
+</body>
+</html>

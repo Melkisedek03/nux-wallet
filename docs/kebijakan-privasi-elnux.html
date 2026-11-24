@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kebijakan Privasi ELNUX</title>
+<style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.6;color:#1a1a1a;max-width:720px;margin:0 auto;padding:24px 20px 48px}h1{font-size:1.6em;border-bottom:1px solid #ddd;padding-bottom:.3em}h2{font-size:1.25em;margin-top:1.5em}ul{padding-left:1.4em}li{margin:.35em 0}a{color:#0b6e4f}.lang{font-size:.9em;color:#555;margin-bottom:1em}</style>
+</head>
+<body>
+<h1>Kebijakan Privasi ELNUX</h1>
+<p><a href="https://nusanian.github.io/nux-wallet/privacy-policy-elnux.html">English version</a></p>
+<p><strong>Tanggal berlaku:</strong> 29 Oktober 2026</p>
+<p><strong>Pengembang:</strong> Tim pengembang ELNUX (Nusanian)
+<strong>Kontak:</strong> taobotapp@gmail.com</p>
+<p>Dokumen ini menjelaskan data apa yang dikumpulkan, disimpan, dan dikirim oleh aplikasi ELNUX, serta data apa yang tidak pernah kami sentuh. ELNUX adalah dompet Lightning Network untuk Nusacoin (NUX) yang bersifat kustodi sendiri (<em>self-custodial</em>).</p>
+<h2>1. Apa itu dompet kustodi sendiri, dan kenapa itu penting untuk privasi Anda</h2>
+<p>Kustodi sendiri artinya kunci dompet Anda ada di tangan Anda, bukan di tangan kami.</p>
+<ul>
+<li>Frasa backup 12 kata dan kunci dompet Anda dibuat dan disimpan <strong>hanya di perangkat Anda</strong>.</li>
+<li>Kami <strong>tidak memiliki, tidak menyimpan salinan, dan tidak bisa memulihkan</strong> frasa atau kunci Anda. Kalau frasa hilang dan perangkat hilang atau rusak, dana tidak bisa dipulihkan oleh siapa pun, termasuk kami.</li>
+<li>Kami <strong>tidak memegang dana Anda</strong>. Dana Anda ada di channel Lightning Anda dan, pada saat penutupan channel, di blockchain Nusacoin — bukan di rekening kami.</li>
+</ul>
+<p>Karena itu, sebagian besar "data" dalam kebijakan ini sebenarnya tidak pernah sampai ke kami sama sekali: data itu hanya ada di perangkat Anda.</p>
+<h2>2. Data yang TIDAK kami kumpulkan</h2>
+<p>ELNUX tidak meminta Anda membuat akun, dan kami tidak mengumpulkan:</p>
+<ul>
+<li>nama, alamat email, nomor telepon, atau alamat rumah Anda;</li>
+<li>foto, kontak, lokasi, atau data perangkat lain yang tidak diperlukan;</li>
+<li>kata sandi akun apa pun — ELNUX tidak punya kata sandi akun, karena tidak ada akun.</li>
+</ul>
+<p>Kami juga tidak menggunakan pelacak iklan, tidak menjalankan analitik pihak ketiga, dan tidak menjual data apa pun kepada siapa pun, karena tidak ada data pribadi Anda yang kami miliki untuk dijual.</p>
+<h2>3. Data yang tersimpan hanya di perangkat Anda</h2>
+<p>Berikut ini disimpan secara lokal di perangkat Anda, di area penyimpanan pribadi aplikasi yang tidak bisa diakses aplikasi lain dalam kondisi normal:</p>
+<ul>
+<li><strong>Frasa backup dan seed dompet.</strong> Frasa 12 kata disimpan sebagai berkas terpisah, dan seed 64 byte yang diturunkan dari frasa itu disimpan sebagai berkas terpisah. Keduanya hanya ada di perangkat Anda dan tidak pernah dikirim ke server mana pun.</li>
+<li><strong>Data channel Lightning.</strong> Status channel, riwayat pembayaran, dan data node Lightning Anda disimpan di perangkat Anda.</li>
+<li><strong>Pengaturan aplikasi.</strong> Pilihan tema gelap/terang, pilihan bahasa, dan — bila Anda nanti memilihnya — profil LSP pilihan Anda. Pengaturan ini disimpan di perangkat Anda.</li>
+<li><strong>Saldo dan riwayat.</strong> Saldo dan riwayat pembayaran ditampilkan dari data node di perangkat Anda, bukan dari akun server.</li>
+</ul>
+<p>Menghapus aplikasi umumnya menghapus data lokal ini dari perangkat Anda. Perhatian: menghapus aplikasi tanpa mencadangkan frasa berarti kehilangan akses ke dana Anda secara permanen (lihat bagian 7).</p>
+<h2>4. Data yang dikirim agar dompet bisa berfungsi</h2>
+<p>Agar bisa mengirim dan menerima pembayaran Lightning, dompet Anda harus terhubung ke dua jenis server. Ini adalah satu-satunya pengiriman data ke luar perangkat, dan hanya terjadi karena Anda memakai dompetnya:</p>
+<h3>a. Penyedia layanan Lightning (LSP)</h3>
+<p>Secara default, ELNUX terhubung ke LSP resmi Nusacoin. Jika di masa depan Anda memilih LSP lain dari daftar resmi atau memasukkan LSP sendiri, data ini akan terkirim ke LSP pilihan Anda itu, bukan ke LSP default.</p>
+<p>Yang terkirim ke LSP:</p>
+<ul>
+<li>alamat IP perangkat Anda (terlihat oleh server mana pun yang Anda hubungi lewat internet, sama seperti situs web mana pun);</li>
+<li>identitas node Lightning Anda (kunci publik node) dan data yang diperlukan untuk membuka channel dan merutekan pembayaran, termasuk invoice yang Anda bayar atau terima dan jumlahnya;</li>
+<li>token akses layanan LSP, bila operator LSP mensyaratkannya.</li>
+</ul>
+<p>LSP memerlukan data ini untuk membuka channel untuk Anda (termasuk channel instan/JIT), meneruskan pembayaran, dan mengembalikan informasi channel kepada Anda. LSP tidak menerima frasa atau seed Anda, dan tidak bisa mengambil dana dari channel Anda hanya karena ia merutekan pembayaran.</p>
+<h3>b. Server Electrum (data blockchain)</h3>
+<p>ELNUX memakai server Electrum untuk membaca data blockchain Nusacoin (misalnya header blok dan informasi transaksi yang berkaitan dengan dompet Anda), karena dompet di HP tidak mengunduh seluruh blockchain.</p>
+<p>Server Electrum dapat melihat alamat IP Anda dan permintaan data blockchain yang dikirim dompet Anda. Server ini tidak menerima frasa atau seed Anda.</p>
+<p>Server default saat ini adalah server Electrum yang dioperasikan bersama LSP di atas. Bila Anda memakai profil LSP lain di masa depan, server Electrum yang dipakai adalah server yang termasuk dalam profil tersebut.</p>
+<h2>5. Izin perangkat yang dipakai aplikasi</h2>
+<p>ELNUX hanya meminta izin berikut, dan masing-masing dipakai hanya untuk fungsinya:</p>
+<ul>
+<li><strong>Internet.</strong> Untuk terhubung ke LSP dan server Electrum. Tanpa ini dompet tidak bisa mengirim atau menerima.</li>
+<li><strong>Kamera.</strong> Hanya saat Anda menekan tombol Scan QR, untuk membaca QR invoice. Gambar kamera diproses di perangkat dan tidak dikirim ke mana pun.</li>
+<li><strong>Getar.</strong> Untuk memberi getaran saat pembayaran diterima dan saat konfirmasi pembayaran. Tidak ada data yang dikirim.</li>
+</ul>
+<p>Selain itu, ELNUX memakai clipboard hanya saat Anda sendiri menekan tombol Tempel atau Salin: menempel invoice yang Anda salin, atau menyalin invoice/frasa yang Anda minta. Aplikasi tidak membaca clipboard di latar belakang dan tidak mengirim isi clipboard ke server.</p>
+<p>ELNUX tidak meminta akses lokasi, mikrofon, kontak, foto, atau berkas di luar area penyimpanan aplikasinya sendiri.</p>
+<h2>6. Pihak ketiga</h2>
+<p>Selain LSP dan server Electrum di bagian 4, ELNUX tidak mengirim data ke pihak ketiga mana pun. Tidak ada:</p>
+<ul>
+<li>layanan analitik;</li>
+<li>jaringan iklan;</li>
+<li>pelacak lintas aplikasi;</li>
+<li>layanan yang membeli atau memperjualbelikan data pengguna.</li>
+</ul>
+<p>Bila Anda memakai LSP atau server Electrum pihak ketiga di masa depan, kebijakan privasi operator tersebut berlaku untuk data yang Anda kirim ke server mereka. Kami menganjurkan Anda hanya memakai operator yang Anda percayai.</p>
+<h2>7. Keamanan dan tanggung jawab Anda</h2>
+<p>Kami merancang ELNUX supaya kunci Anda tidak pernah meninggalkan perangkat. Namun keamanan dana Anda juga bergantung pada Anda:</p>
+<ul>
+<li><strong>Cadangkan frasa 12 kata di tempat yang aman dan luring</strong> (misalnya ditulis di kertas dan disimpan di tempat aman). Jangan pernah mengirim frasa kepada siapa pun, termasuk kepada kami atau kepada siapa pun yang mengaku sebagai dukungan teknis. Siapa pun yang memegang frasa Anda bisa mengambil dana Anda.</li>
+<li><strong>Jaga perangkat Anda.</strong> Perangkat yang sudah di-root, sudah di-jailbreak, atau dipakai bersama orang lain lebih mudah disusupi. Kunci di perangkat yang sudah disusupi tidak lagi aman, apa pun yang dilakukan aplikasi.</li>
+<li><strong>Kehilangan frasa berarti kehilangan dana.</strong> Tidak ada tombol "lupa frasa", tidak ada pemulihan lewat email, dan tidak ada cadangan di server kami.</li>
+<li><strong>Periksa sebelum membayar.</strong> Pembayaran Lightning bersifat instan dan tidak bisa dibatalkan. ELNUX menampilkan dialog konfirmasi sebelum membayar, tetapi nominal dan tujuan tetap tanggung jawab Anda untuk diperiksa.</li>
+</ul>
+<p>Saat ini frasa dan seed disimpan di area penyimpanan pribadi aplikasi di perangkat Anda. Pemindahan penyimpanan kunci ke penyimpanan aman sistem operasi (Keychain di iOS / Keystore di Android) direncanakan sebagai pengerasan lanjutan; sampai pengerasan itu selesai, pernyataan di atas — bahwa kunci hanya ada di perangkat dan tidak pernah dikirim — tetap berlaku, tetapi Anda tidak boleh menganggap kunci itu terenkripsi oleh perangkat keras.</p>
+<h2>8. Penyimpanan dan penghapusan data</h2>
+<ul>
+<li>Data lokal di perangkat Anda tersimpan selama aplikasi terpasang dan dompet masih ada.</li>
+<li>Fitur Restore Phrase menghapus dompet yang sedang aktif secara permanen beserta seluruh datanya sebelum memulihkan dompet dari frasa baru. Penghapusan ini tidak bisa dibatalkan.</li>
+<li>Menghapus aplikasi (uninstall) umumnya menghapus seluruh data lokal ELNUX dari perangkat Anda, termasuk seed dan frasa yang tersimpan di aplikasi. Cadangkan frasa sebelum menghapus aplikasi.</li>
+<li>Karena kami tidak menyimpan data pribadi Anda di server, tidak ada "akun" yang bisa kami hapuskan atas nama Anda. Untuk menghapus jejak lokal, hapus aplikasi dari perangkat Anda setelah mencadangkan frasa. Log koneksi server (misalnya alamat IP dan waktu koneksi), bila ada, adalah log operasional server LSP/Electrum dan hanya dipakai untuk menjalankan dan mengamankan server, bukan untuk iklan atau pembuatan profil pengguna.</li>
+</ul>
+<h2>9. Anak-anak</h2>
+<p>ELNUX ditujukan untuk pengguna dewasa yang secara sah dapat memegang aset kripto di yurisdiksinya. Kami tidak secara sadar mengumpulkan data pribadi dari anak di bawah 13 tahun, karena kami memang tidak mengumpulkan data pribadi dari siapa pun (bagian 2). Orang tua atau wali yang mengetahui anak di bawah umur memakai ELNUX diminta menghubungi kami lewat kontak di atas.</p>
+<h2>10. Perubahan kebijakan ini</h2>
+<p>Bila kebijakan ini berubah — misalnya karena ELNUX menambah operator LSP, menambah fitur, atau mengubah cara data ditangani — kami akan memperbarui tanggal berlaku di atas dan mengumumkannya di tempat kebijakan ini dipublikasikan. Perubahan yang mengurangi perlindungan privasi Anda akan diumumkan sebelum berlaku. Terus memakai ELNUX setelah perubahan berlaku berarti Anda menerima kebijakan yang diperbarui.</p>
+<h2>11. Kontak dan hak Anda</h2>
+<p>Karena ELNUX tidak mengumpulkan data pribadi Anda di server, sebagian besar hak privasi Anda dilaksanakan langsung di perangkat Anda: Anda bisa melihat, mencadangkan, dan menghapus data Anda dengan memakai aplikasi dan pengaturan perangkat Anda.</p>
+<p>Untuk pertanyaan, permintaan, atau laporan mengenai kebijakan ini, hubungi kami di: taobotapp@gmail.com.</p>
+<p>Bila Anda berada di yurisdiksi yang memberikan hak akses, koreksi, atau penghapusan data pribadi, dan Anda yakin kami memegang data pribadi Anda (misalnya lewat log server operator), sampaikan permintaan Anda ke kontak di atas dengan menjelaskan data yang Anda maksud. Kami akan menanggapi sesuai hukum yang berlaku.</p>
+</body>
+</html>
