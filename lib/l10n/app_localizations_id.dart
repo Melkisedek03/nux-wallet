@@ -65,6 +65,16 @@ class AppLocalizationsId extends AppLocalizations {
   String get bootOfflineButton => 'Lanjutkan tanpa internet';
 
   @override
+  String get bootTakingLong => 'Lama tersambung?';
+
+  @override
+  String get bootSkippingToOffline => 'Menyiapkan mode offline…';
+
+  @override
+  String get offlineSessionChip =>
+      'Tanpa internet — hanya jalur yang sudah siap yang bisa dipakai';
+
+  @override
   String get bootGenericError => 'Terjadi kendala saat memulai dompet.';
 
   @override
@@ -463,6 +473,10 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get staticCodeFailed => 'Gagal membuat kode bayar. Coba lagi.';
+
+  @override
+  String get staticCodeOfflineNote =>
+      'Kode Bayar Statis tidak bisa dipakai tanpa internet — terima lewat invoice di atas.';
 
   @override
   String get staticOfferDescription => 'Kode bayar ELNUX';
@@ -2060,6 +2074,26 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get offlineModeStartFailed => 'Mode Offline gagal dimulai. Coba lagi.';
+
+  @override
+  String get offlineModeConnectFailed =>
+      'Tidak bisa tersambung ke perangkat ini. Dekatkan kedua HP, lalu coba lagi.';
+
+  @override
+  String get offlineModeStartFailedPermission =>
+      'Izinkan Bluetooth dan Lokasi untuk ELNUX';
+
+  @override
+  String get offlineModeStartFailedLocation =>
+      'Nyalakan Lokasi untuk memakai Mode Offline';
+
+  @override
+  String get offlineModeStartFailedBluetooth =>
+      'Nyalakan Bluetooth untuk memakai Mode Offline';
+
+  @override
+  String get offlineModeStartFailedUnknown =>
+      'Mode Offline gagal dimulai. Pastikan Bluetooth dan Lokasi menyala, lalu coba lagi.';
 
   @override
   String get offlineModeMakePath => 'Buat Jalur Pembayaran';

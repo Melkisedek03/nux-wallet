@@ -221,6 +221,58 @@ OfflineBridgeService _unlinkedBridgeWithPeer() {
   return bridge;
 }
 
+/// Mock saluran Nearby: mulai iklan/pencarian dan permintaan
+/// sambung bisa dibuat gagal per tes. Metode lain mengembalikan
+/// null — plugin memperlakukannya sebagai false/void, sesuai
+/// perilaku platform yang tidak mengembalikan nilai.
+void _mockNearby({bool startOk = true, bool connectOk = true}) {
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(const MethodChannel('nearby_connections'), (
+        call,
+      ) async {
+        switch (call.method) {
+          case 'startAdvertising':
+          case 'startDiscovery':
+            return startOk;
+          case 'requestConnection':
+            return connectOk;
+          default:
+            return null;
+        }
+      });
+}
+
+/// Mock saluran permission_handler untuk uji penyebab kegagalan
+/// mulai (G2.3): izin bisa ditolak per nilai, layanan bisa
+/// dimatikan. Nilai izin: locationWhenInUse=5, bluetoothScan=28,
+/// bluetoothAdvertise=29, bluetoothConnect=30; layanan:
+/// location=3, bluetooth=21. Status: ditolak=0, diizinkan=1;
+/// layanan: mati=0, nyala=1.
+void _mockStartCause({
+  Set<int> deniedPermissions = const {},
+  int locationService = 1,
+  int bluetoothService = 1,
+}) {
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(
+        const MethodChannel('flutter.baseflow.com/permissions/methods'),
+        (call) async {
+          if (call.method == 'checkPermissionStatus') {
+            return deniedPermissions.contains(call.arguments) ? 0 : 1;
+          }
+          if (call.method == 'checkServiceStatus') {
+            if (call.arguments == 3) return locationService;
+            if (call.arguments == 21) return bluetoothService;
+            return 1;
+          }
+          if (call.method == 'requestPermissions') {
+            return <int, int>{};
+          }
+          return null;
+        },
+      );
+}
+
 /// Mock saluran permission_handler: Permission.notification = 17;
 /// checkPermissionStatus mengembalikan 0 (ditolak) / 1 (diizinkan).
 void _mockNotificationPermission({required bool granted}) {
@@ -240,14 +292,19 @@ void _mockNotificationPermission({required bool granted}) {
 }
 
 void main() {
-  // Mock izin dipasang per tes; tanpa pembersihan, mock dari satu
-  // tes bocor ke tes berikutnya dalam berkas yang sama.
+  // Mock izin dan Nearby dipasang per tes; tanpa pembersihan, mock
+  // dari satu tes bocor ke tes berikutnya dalam berkas yang sama.
   tearDown(() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-          const MethodChannel('flutter.baseflow.com/permissions/methods'),
-          null,
-        );
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(
+      const MethodChannel('flutter.baseflow.com/permissions/methods'),
+      null,
+    );
+    messenger.setMockMethodCallHandler(
+      const MethodChannel('nearby_connections'),
+      null,
+    );
   });
 
   group('OfflineModeScreen', () {
@@ -920,6 +977,220 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(find.text('Kode perangkat saya'), findsOneWidget);
+    });
+  });
+
+  group('Bungkus awam: kegagalan sambung + mulai (G3.1, G2.3)', () {
+    /// Jembatan sesi hidup mode gabung dengan satu kandidat —
+    /// keadaan awal untuk uji ketukan Sambungkan.
+    OfflineBridgeService _discoveringBridgeWithCandidate() {
+      SharedPreferences.setMockInitialValues({});
+      final bridge = OfflineBridgeService();
+      bridge.sessionActive = true;
+      bridge.role = OfflineBridgeRole.combined;
+      bridge.phase = OfflineBridgePhase.discovering;
+      bridge.discovered.add(const DiscoveredHost('e1', 'ELNUX-035d4490'));
+      return bridge;
+    }
+
+    const _gagalSambung =
+        'Tidak bisa tersambung ke perangkat ini. Dekatkan kedua HP, lalu coba lagi.';
+    const _gagalGenerik = 'Mode Offline gagal dimulai. Coba lagi.';
+
+    /// Ketuk Sambungkan dan tunggu rantai sambung selesai dalam
+    /// waktu nyata. connectCombined mengikat ServerSocket nyata,
+    /// dan soket nyata HARUS berjalan di dalam runAsync — di dalam
+    /// zona fake-async, bind-nya selesai tetapi teardown tes
+    /// menggantung dan tes tidak pernah dianggap selesai.
+    /// Selesainya rantai dibaca dari lastError, yang hanya diisi
+    /// di ujung cabang gagal; tenggat 5 detik menjaga tes tetap
+    /// gagal (bukan menggantung) bila rantai tidak pernah selesai.
+    Future<void> _tapConnectAndWait(
+      WidgetTester tester,
+      OfflineBridgeService bridge,
+    ) async {
+      bridge.lastError = null;
+      await tester.runAsync(() async {
+        await tester.tap(find.text('Sambungkan'));
+        final deadline = DateTime.now().add(const Duration(seconds: 5));
+        while (bridge.lastError == null && DateTime.now().isBefore(deadline)) {
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+        }
+      });
+    }
+
+    testWidgets('G3.1 ketuk Sambungkan gagal: snackbar tampil sekali', (
+      tester,
+    ) async {
+      _mockNearby(connectOk: false);
+      final bridge = _discoveringBridgeWithCandidate();
+      try {
+        await tester.pumpWidget(
+          _app(
+            OfflineModeScreen(lspService: _FakeLspService(), bridge: bridge),
+          ),
+        );
+        await _pumpManual(tester);
+        await _tapConnectAndWait(tester, bridge);
+        await _pumpManual(tester);
+        expect(tester.takeException(), isNull);
+        expect(find.text(_gagalSambung), findsOneWidget);
+      } finally {
+        // Bersihkan SEBELUM mock dicabut tearDown: stop()
+        // memanggil metode Nearby + menutup soket tamu yang
+        // dibuka connectCombined — penutupannya di dalam runAsync
+        // karena soketnya nyata (alasan yang sama seperti
+        // _tapConnectAndWait).
+        await tester.runAsync(() => bridge.stop());
+      }
+    });
+
+    testWidgets('G3.1 sambung otomatis gagal: tanpa snackbar', (tester) async {
+      _mockNearby(connectOk: false);
+      final bridge = _discoveringBridgeWithCandidate();
+      try {
+        await tester.pumpWidget(
+          _app(
+            OfflineModeScreen(lspService: _FakeLspService(), bridge: bridge),
+          ),
+        );
+        await _pumpManual(tester);
+        // Meniru sambung-ulang otomatis: jembatan dipanggil
+        // langsung, bukan lewat ketukan tombol. Di dalam runAsync
+        // karena connectCombined mengikat soket nyata.
+        await tester.runAsync(
+          () => bridge.connectCombined(
+            const DiscoveredHost('e1', 'ELNUX-035d4490'),
+          ),
+        );
+        await _pumpManual(tester);
+        expect(tester.takeException(), isNull);
+        expect(find.text(_gagalSambung), findsNothing);
+      } finally {
+        await tester.runAsync(() => bridge.stop());
+      }
+    });
+
+    testWidgets('G3.1 dua ketukan gagal: satu snackbar per percobaan', (
+      tester,
+    ) async {
+      _mockNearby(connectOk: false);
+      final bridge = _discoveringBridgeWithCandidate();
+      try {
+        await tester.pumpWidget(
+          _app(
+            OfflineModeScreen(lspService: _FakeLspService(), bridge: bridge),
+          ),
+        );
+        await _pumpManual(tester);
+        await _tapConnectAndWait(tester, bridge);
+        await _pumpManual(tester);
+        expect(find.text(_gagalSambung), findsOneWidget);
+        // Tutup snackbar pertama secara eksplisit sebelum percobaan
+        // kedua — tanpa ini, snackbar kedua mengantre dan tidak
+        // terhitung. Timer durasi snackbar dibuat di dalam runAsync
+        // (zona waktu nyata), jadi pompa waktu palsu tidak bisa
+        // menghilangkannya; animasi keluarnya sendiri berjalan
+        // pada jam palsu.
+        final context = tester.element(find.byType(OfflineModeScreen));
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        await tester.pumpAndSettle();
+        expect(find.text(_gagalSambung), findsNothing);
+        await _tapConnectAndWait(tester, bridge);
+        await _pumpManual(tester);
+        expect(find.text(_gagalSambung), findsOneWidget);
+      } finally {
+        await tester.runAsync(() => bridge.stop());
+      }
+    });
+
+    /// Nyalakan sesi dengan Nearby yang gagal mulai, jalankan
+    /// [check] sesudah probe penyebab selesai dan kartu error
+    /// diperbarui, lalu hentikan jembatan. Pemeriksaan HARUS di
+    /// dalam try: stop() mengembalikan fase ke idle dan kartu
+    /// error hilang.
+    Future<void> _driveStartFailure(
+      WidgetTester tester, {
+      required void Function() mockPermissions,
+      required void Function() check,
+    }) async {
+      _mockNearby(startOk: false);
+      mockPermissions();
+      SharedPreferences.setMockInitialValues({});
+      final bridge = OfflineBridgeService();
+      try {
+        await tester.pumpWidget(
+          _app(
+            OfflineModeScreen(lspService: _FakeLspService(), bridge: bridge),
+          ),
+        );
+        await _pumpManual(tester);
+        await tester.tap(find.byType(Switch));
+        // Rantai async: mulai jembatan (Nearby mock) + probe
+        // penyebab (4 cek izin + 2 cek layanan) + setState.
+        for (var i = 0; i < 6; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+        expect(tester.takeException(), isNull);
+        expect(bridge.phase, OfflineBridgePhase.error);
+        check();
+      } finally {
+        await tester.runAsync(() => bridge.stop());
+      }
+    }
+
+    testWidgets('G2.3 izin ditolak: kartu menyebut izin', (tester) async {
+      await _driveStartFailure(
+        tester,
+        mockPermissions: () => _mockStartCause(deniedPermissions: {28}),
+        check: () => expect(
+          find.text('Izinkan Bluetooth dan Lokasi untuk ELNUX'),
+          findsOneWidget,
+        ),
+      );
+    });
+
+    testWidgets('G2.3 Lokasi mati: kartu menyebut Lokasi', (tester) async {
+      await _driveStartFailure(
+        tester,
+        mockPermissions: () => _mockStartCause(locationService: 0),
+        check: () => expect(
+          find.text('Nyalakan Lokasi untuk memakai Mode Offline'),
+          findsOneWidget,
+        ),
+      );
+    });
+
+    testWidgets('G2.3 Bluetooth mati: kartu menyebut Bluetooth', (
+      tester,
+    ) async {
+      await _driveStartFailure(
+        tester,
+        mockPermissions: () => _mockStartCause(bluetoothService: 0),
+        check: () => expect(
+          find.text('Nyalakan Bluetooth untuk memakai Mode Offline'),
+          findsOneWidget,
+        ),
+      );
+    });
+
+    testWidgets('G2.3 penyebab tidak diketahui: fallback menyebut tindakan', (
+      tester,
+    ) async {
+      await _driveStartFailure(
+        tester,
+        mockPermissions: () => _mockStartCause(),
+        check: () {
+          expect(
+            find.text(
+              'Mode Offline gagal dimulai. Pastikan Bluetooth dan Lokasi menyala, lalu coba lagi.',
+            ),
+            findsOneWidget,
+          );
+          // Pesan generik lama tidak boleh tampil lagi di kartu ini.
+          expect(find.text(_gagalGenerik), findsNothing);
+        },
+      );
     });
   });
 }
