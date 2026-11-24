@@ -200,14 +200,31 @@ String formatTxTime(DateTime time, {DateTime? now, String locale = 'id'}) {
     return '$hh.$mm';
   }
   if (diffDays == 1) return locale == 'en' ? 'Yesterday' : 'Kemarin';
-  const monthsId = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-    'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
-  ];
-  const monthsEn = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ];
-  final months = locale == 'en' ? monthsEn : monthsId;
+  final months = locale == 'en' ? _monthsEn : _monthsId;
   return '${time.day} ${months[time.month - 1]}';
+}
+
+/// Singkatan bulan untuk format tanggal (dipakai [formatTxTime] dan
+/// [formatFullDateTime]).
+const _monthsId = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+  'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
+];
+const _monthsEn = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+/// Format tanggal + jam LENGKAP waktu setempat (zona waktu HP) —
+/// untuk "kapan channel dibuat" di kartu Kelola Channel.
+///
+/// Bentuk: '25 Nov 2026, 14.32' (jam 24 jam gaya aplikasi, pemisah
+/// '.' seperti [formatTxTime]). Berbeda dari [formatTxTime] yang
+/// relatif ("Kemarin", "25 Nov"): waktu pembuatan harus mutlak
+/// supaya tetap benar dibaca kapan pun.
+String formatFullDateTime(DateTime time, {String locale = 'id'}) {
+  final months = locale == 'en' ? _monthsEn : _monthsId;
+  final hh = time.hour.toString().padLeft(2, '0');
+  final mm = time.minute.toString().padLeft(2, '0');
+  return '${time.day} ${months[time.month - 1]} ${time.year}, $hh.$mm';
 }

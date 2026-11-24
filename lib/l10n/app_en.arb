@@ -1416,5 +1416,6 @@
   "privacyScrollHint": "Scroll to the bottom to enable the checkbox",
   "privacyLoadFailed": "The privacy policy failed to load. Check your internet connection and try again.",
   "privacyRetry": "Reload",
-  "privacySkipForNow": "Skip for now"
+  "privacySkipForNow": "Skip for now",
+  "channelOpenedLabel": "Opened"
 }

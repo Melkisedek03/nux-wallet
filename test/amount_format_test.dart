@@ -234,4 +234,27 @@ void main() {
       expect(UnitController.unit.value, DisplayUnit.nusan);
     });
   });
+
+  group('formatFullDateTime', () {
+    test('tanggal + jam lengkap, bulan id', () {
+      expect(
+        formatFullDateTime(DateTime(2026, 11, 25, 14, 32)),
+        '25 Nov 2026, 14.32',
+      );
+    });
+
+    test('jam & menit satu digit di-nol-kan', () {
+      expect(
+        formatFullDateTime(DateTime(2026, 1, 5, 9, 5)),
+        '5 Jan 2026, 09.05',
+      );
+    });
+
+    test('bulan mengikuti locale en', () {
+      expect(
+        formatFullDateTime(DateTime(2026, 5, 3, 8, 7), locale: 'en'),
+        '3 May 2026, 08.07',
+      );
+    });
+  });
 }

@@ -1416,5 +1416,6 @@
   "privacyScrollHint": "Gulir sampai ke bawah untuk mengaktifkan centangan",
   "privacyLoadFailed": "Kebijakan privasi gagal dimuat. Periksa koneksi internet Anda lalu coba lagi.",
   "privacyRetry": "Muat ulang",
-  "privacySkipForNow": "Lewati untuk sekarang"
+  "privacySkipForNow": "Lewati untuk sekarang",
+  "channelOpenedLabel": "Dibuka"
 }

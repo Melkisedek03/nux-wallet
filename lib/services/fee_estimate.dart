@@ -104,6 +104,28 @@ BigInt? parseTxFee(Object? json) {
   return BigInt.from(fee.toInt());
 }
 
+/// Parse waktu blok (waktu setempat HP) transaksi [txid] dari
+/// respons `/tx/{txid}` electrs yang sudah di-decode — field
+/// `status.block_time` (detik Unix, UTC) dari blok yang
+/// mengonfirmasi transaksi pendanaan.
+///
+/// Inilah "kapan channel dibuat" yang benar: LDK `ChannelDetails`
+/// TIDAK membawa waktu pembuatan sama sekali, jadi waktu lahir
+/// channel dibaca dari waktu konfirmasi transaksi pendanaannya —
+/// berlaku juga untuk channel lama (bukan "pertama tercatat"
+/// sesudah update). Null bila transaksi belum terkonfirmasi
+/// (`status.block_time` tidak ada), responsnya bukan peta, atau
+/// nilainya bukan angka positif. `DateTime.fromMillisecondsSinceEpoch`
+/// tanpa `isUtc` mengembalikan waktu setempat HP, sesuai permintaan.
+DateTime? parseFundingBlockTime(Object? json) {
+  if (json is! Map) return null;
+  final status = json['status'];
+  if (status is! Map) return null;
+  final blockTime = status['block_time'];
+  if (blockTime is! num || blockTime <= 0) return null;
+  return DateTime.fromMillisecondsSinceEpoch(blockTime.toInt() * 1000);
+}
+
 /// Pengambil perkiraan + biaya pasti. Klien HTTP bisa disuntik
 /// (tes) — bawaan memakai klien baru.
 class FeeEstimateService {
@@ -158,6 +180,23 @@ class FeeEstimateService {
           .timeout(feeEstimateTimeout);
       if (respons.statusCode != 200) return null;
       return parseTxFee(jsonDecode(respons.body));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Waktu blok (waktu setempat HP) transaksi [txid] dari field
+  /// `status.block_time` endpoint `/tx/{txid}` — "kapan channel
+  /// dibuat" untuk kartu Kelola Channel. Null bila pengambilan
+  /// atau parse-nya gagal (mis. transaksi belum terkonfirmasi,
+  /// luring) — pemanggil menyembunyikan baris waktunya.
+  Future<DateTime?> fetchFundingBlockTime(String txid) async {
+    try {
+      final respons = await _client
+          .get(Uri.parse('${AppConfig.electrsRestBase}/tx/$txid'))
+          .timeout(feeEstimateTimeout);
+      if (respons.statusCode != 200) return null;
+      return parseFundingBlockTime(jsonDecode(respons.body));
     } catch (_) {
       return null;
     }

@@ -144,4 +144,63 @@ void main() {
       expect(await service.fetchTipHeight(), isNull);
     });
   });
+
+  group('parseFundingBlockTime', () {
+    test('block_time sah menjadi DateTime waktu setempat', () {
+      final hasil = parseFundingBlockTime({
+        'status': {'confirmed': true, 'block_time': 1764028350},
+      });
+      expect(hasil, isNotNull);
+      // Bandingkan epoch supaya tes tidak bergantung zona waktu mesin.
+      expect(hasil!.millisecondsSinceEpoch, 1764028350 * 1000);
+      expect(hasil.isUtc, isFalse);
+    });
+
+    test('transaksi belum terkonfirmasi (tanpa block_time) berarti null', () {
+      expect(
+        parseFundingBlockTime({
+          'status': {'confirmed': false},
+        }),
+        isNull,
+      );
+    });
+
+    test('tanpa status / bukan peta / block_time bukan angka berarti null', () {
+      expect(parseFundingBlockTime({'fee': 250}), isNull);
+      expect(parseFundingBlockTime('bukan peta'), isNull);
+      expect(
+        parseFundingBlockTime({
+          'status': {'block_time': '1764028350'},
+        }),
+        isNull,
+      );
+      expect(
+        parseFundingBlockTime({
+          'status': {'block_time': 0},
+        }),
+        isNull,
+      );
+    });
+  });
+
+  group('fetchFundingBlockTime', () {
+    test('200 + block_time sah berarti DateTime', () async {
+      final client = MockClient((request) async {
+        expect(request.url.path, '/tx/dd');
+        return http.Response(
+          '{"status":{"confirmed":true,"block_time":1764028350}}',
+          200,
+        );
+      });
+      final service = FeeEstimateService(client: client);
+      final hasil = await service.fetchFundingBlockTime('dd');
+      expect(hasil?.millisecondsSinceEpoch, 1764028350 * 1000);
+    });
+
+    test('gagal ambil berarti null', () async {
+      final client = MockClient((_) async => http.Response('error', 500));
+      final service = FeeEstimateService(client: client);
+      expect(await service.fetchFundingBlockTime('dd'), isNull);
+    });
+  });
 }

@@ -2650,4 +2650,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get privacySkipForNow => 'Lewati untuk sekarang';
+
+  @override
+  String get channelOpenedLabel => 'Dibuka';
 }

@@ -130,6 +130,14 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
   // txid yang gagal diambil tidak diulangi selama layar hidup.
   final Map<String, BigInt> _fundingFees = {};
   final Set<String> _fundingFeeTried = {};
+  // Waktu blok transaksi pendanaan per txid (waktu setempat HP) —
+  // "kapan channel dibuat" di kartu: diambil sekali per txid dari
+  // REST electrs begitu konfirmasi pertama tercatat; txid yang
+  // gagal diambil tidak diulangi selama layar hidup. Baris waktunya
+  // disembunyikan bila waktunya belum diketahui (belum terkonfirmasi
+  // atau pengambilan gagal) — fail-open seperti baris biaya.
+  final Map<String, DateTime> _fundingBlockTimes = {};
+  final Set<String> _fundingBlockTimeTried = {};
   // Penjaga dalam-penerbangan pembukaan channel — tombol terkunci
   // selama panggilan openChannel berjalan.
   bool _openingChannel = false;
@@ -222,6 +230,18 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
           _maybeFetchFundingFee(ch);
         }
       }
+      // Waktu dibuat (best-effort): untuk SEMUA channel yang
+      // pendanaannya sudah terkonfirmasi, ambil waktu blok
+      // transaksi pendanaannya dari REST electrs — sekali per
+      // txid, gagal-diam. Berbeda dari biaya di atas yang hanya
+      // untuk pembukaan yang dilacak kunjungan ini, waktu dibuat
+      // dibutuhkan setiap kartu (termasuk channel lama).
+      for (final ch in sorted) {
+        if (ch.fundingTxo?.txid.hash != null &&
+            (ch.confirmations ?? 0) >= 1) {
+          _maybeFetchFundingBlockTime(ch);
+        }
+      }
       setState(() {
         _channels = sorted;
         _loading = false;
@@ -293,6 +313,24 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
     });
   }
 
+  /// Ambil waktu blok transaksi pendanaan [channel] dari REST
+  /// electrs — sekali per txid; gagal-diam (baris waktunya tidak
+  /// tampil). Pola yang sama dengan [_maybeFetchFundingFee].
+  void _maybeFetchFundingBlockTime(ChannelDetails channel) {
+    final txid = channel.fundingTxo?.txid.hash;
+    if (txid == null) return;
+    if (_fundingBlockTimes.containsKey(txid) ||
+        _fundingBlockTimeTried.contains(txid)) {
+      return;
+    }
+    _fundingBlockTimeTried.add(txid);
+    _feeEstimates.fetchFundingBlockTime(txid).then((waktu) {
+      if (waktu != null && mounted) {
+        setState(() => _fundingBlockTimes[txid] = waktu);
+      }
+    });
+  }
+
   static String _shortId(String hex) {
     if (hex.length <= 20) return hex;
     return '${hex.substring(0, 10)}…${hex.substring(hex.length - 6)}';
@@ -339,7 +377,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
   Future<void> _konfirmasiTutup(ChannelDetails ch) async {
     final isLsp = _isLsp(ch);
     final saldo =
-        formatNusan(countedChannelBalanceMsat(ch));
+        context.formatWalletAmount(countedChannelBalanceMsat(ch));
     final jadi = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1410,10 +1448,22 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
           ],
           const SizedBox(height: 8),
           Text(
-            '${l10n.channelCapacity} ${formatNusan(ch.channelValueSats * BigInt.from(1000))} • ${l10n.channelYourBalance} ${formatNusan(countedChannelBalanceMsat(ch))}',
+            '${l10n.channelCapacity} ${context.formatWalletAmount(ch.channelValueSats * BigInt.from(1000))} • ${l10n.channelYourBalance} ${context.formatWalletAmount(countedChannelBalanceMsat(ch))}',
             style:
                 TextStyle(fontSize: 12.5, color: context.palette.muted),
           ),
+          // Waktu dibuat (dari waktu blok transaksi pendanaan):
+          // tampil bila sudah diambil; disembunyikan bila belum
+          // diketahui — channel yang belum terkonfirmasi belum
+          // punya waktu blok, dan pengambilan yang gagal tidak
+          // menampilkan baris setengah jadi.
+          if (_fundingBlockTimes[ch.fundingTxo?.txid.hash] != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              '${l10n.channelOpenedLabel} ${formatFullDateTime(_fundingBlockTimes[ch.fundingTxo?.txid.hash]!, locale: Localizations.localeOf(context).languageCode)}',
+              style: TextStyle(fontSize: 12, color: context.palette.muted),
+            ),
+          ],
           // Txid pendanaan (PR 2 rancangan Kelola Channel):
           // tampil lengkap di SETIAP kartu channel, bisa diketuk
           // untuk menyalin — catatan menetap dari fundingTxo

@@ -4753,6 +4753,12 @@ abstract class AppLocalizations {
   /// In id, this message translates to:
   /// **'Lewati untuk sekarang'**
   String get privacySkipForNow;
+
+  /// No description provided for @channelOpenedLabel.
+  ///
+  /// In id, this message translates to:
+  /// **'Dibuka'**
+  String get channelOpenedLabel;
 }
 
 class _AppLocalizationsDelegate

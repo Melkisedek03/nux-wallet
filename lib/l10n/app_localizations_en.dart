@@ -2646,4 +2646,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get privacySkipForNow => 'Skip for now';
+
+  @override
+  String get channelOpenedLabel => 'Opened';
 }
