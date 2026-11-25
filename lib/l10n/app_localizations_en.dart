@@ -212,7 +212,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get market => 'Explore';
 
   @override
-  String get jelajahSource => 'Market price — qutrade.io';
+  String get jelajahSource => 'Market price — CoinPaprika';
 
   @override
   String jelajahUpdated(String time) {

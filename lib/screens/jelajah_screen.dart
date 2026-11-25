@@ -13,11 +13,11 @@ import '../utils/format.dart';
 /// Dua seksi dalam satu halaman bergulir:
 ///
 /// 1. **Info Pasar** (baca-saja): harga NUX terakhir dalam IDR dari
-///    data pasar publik qutrade.io (kurs konversi USDT/IDR Indodax),
-///    perubahan antar penutupan harian, tinggi blok dari electrs
-///    tim, dan cap waktu pembaruan. Seksi disembunyikan dengan
-///    anggun bila sumber harga tidak terjangkau — tidak pernah
-///    menampilkan angka nol atau angka basi tanpa cap waktu.
+///    kuotasi langsung CoinPaprika (satu panggilan), perubahan 24
+///    jam bergulir, tinggi blok dari electrs tim, dan cap waktu
+///    pembaruan. Seksi disembunyikan dengan anggun bila sumber
+///    harga tidak terjangkau — tidak pernah menampilkan angka nol
+///    atau angka basi tanpa cap waktu.
 /// 2. **Direktori Toko**: daftar toko Mode Toko terkurasi tim dari
 ///    berkas registri statis. Kartu toko murni informasi (nama,
 ///    wilayah, jam, catatan, lencana program poin) dengan satu
@@ -162,9 +162,7 @@ class _JelajahScreenState extends State<JelajahScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                hargaIdr != null
-                    ? _formatIdr(hargaIdr)
-                    : '${_formatUsdt(info.lastUsdt)} USDT',
+                _formatIdr(hargaIdr),
                 style: const TextStyle(
                     fontSize: 26, fontWeight: FontWeight.w800),
               ),
@@ -189,7 +187,6 @@ class _JelajahScreenState extends State<JelajahScreen> {
           const SizedBox(height: 4),
           Text(
             [
-              if (hargaIdr != null) '${_formatUsdt(info.lastUsdt)} USDT',
               if (perubahan != null) context.l10n.jelajahChange24h,
               context.l10n.jelajahUpdated(_jam(info.fetchedAt)),
             ].join('  ·  '),
@@ -218,18 +215,6 @@ class _JelajahScreenState extends State<JelajahScreen> {
   String _formatIdr(double nilai) {
     if (nilai >= 20) return 'Rp ${formatRupiah(nilai.round())}';
     return 'Rp ${nilai.toStringAsFixed(2).replaceAll('.', ',')}';
-  }
-
-  /// Harga USDT dengan presisi pasar (maks 6 desimal, nol ekor
-  /// dibuang, minimal 2 desimal).
-  String _formatUsdt(double nilai) {
-    var teks = nilai.toStringAsFixed(6);
-    while (teks.contains('.') &&
-        teks.endsWith('0') &&
-        teks.split('.').last.length > 2) {
-      teks = teks.substring(0, teks.length - 1);
-    }
-    return teks;
   }
 
   // ------------------------------------------------------------------

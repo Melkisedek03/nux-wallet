@@ -25,19 +25,15 @@ class AppConfig {
   static const String jelajahRegistryUrl =
       'https://github.com/Nusanian/nux-wallet/releases/download/Data/jelajah-registry.json';
 
-  /// Basis API datafeed publik qutrade.io (TradingView UDF) — sumber
-  /// harga NUX baca-saja untuk seksi Info Pasar tab Jelajah. Endpoint
-  /// candle hariannya memakai token resolusi "1D" (bukan "D").
-  static const String qutradeDatafeedBase =
-      'https://qutrade.io/api/spot/tradingview';
-
-  /// Ticker publik USDT/IDR (Indodax) — hanya dipakai sebagai kurs
-  /// konversi agar harga NUX dari qutrade dapat ditampilkan dalam IDR.
-  /// Bentuk endpoint mengikuti dokumentasi resmi Indodax di GitHub
-  /// (indodax-official-api-docs, Public-RestAPI): /api/ticker/<pair>,
-  /// tanpa kunci API.
-  static const String usdtIdrTickerUrl =
-      'https://indodax.com/api/ticker/usdtidr';
+  /// Ticker publik CoinPaprika — kuotasi LANGSUNG NUX/IDR untuk
+  /// seksi Info Pasar tab Jelajah, satu panggilan. Menggantikan dua
+  /// hop lama (candle qutrade NUX/USDT + kurs Indodax USDT/IDR):
+  /// satu sumber lebih sedikit untuk gagal, dan harga rupiah tidak
+  /// lagi bergantung pada kurs konversi. Kuotasi NUX/USDT
+  /// CoinPaprika menjawab HTTP 400 — selalu pakai kuotasi IDR
+  /// langsung ini, tanpa kunci API.
+  static const String coinpaprikaTickerUrl =
+      'https://api.coinpaprika.com/v1/tickers/nux-nusacoin?quotes=IDR';
 
   /// Basis REST electrs publik milik tim — statistik jaringan ringan
   /// (tinggi blok terkini) untuk tab Jelajah.

@@ -473,7 +473,7 @@ abstract class AppLocalizations {
   /// No description provided for @jelajahSource.
   ///
   /// In id, this message translates to:
-  /// **'Harga pasar — qutrade.io'**
+  /// **'Harga pasar — CoinPaprika'**
   String get jelajahSource;
 
   /// No description provided for @jelajahUpdated.

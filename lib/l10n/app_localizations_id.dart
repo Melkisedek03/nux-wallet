@@ -212,7 +212,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get market => 'Jelajah';
 
   @override
-  String get jelajahSource => 'Harga pasar — qutrade.io';
+  String get jelajahSource => 'Harga pasar — CoinPaprika';
 
   @override
   String jelajahUpdated(String time) {
